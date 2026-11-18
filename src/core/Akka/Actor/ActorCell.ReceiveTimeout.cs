@@ -34,12 +34,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The configured inactivity interval, or <c>null</c> when receive timeout is disabled.
         /// </summary>
         public TimeSpan? ReceiveTimeout => _receiveTimeoutDuration;
 
         /// <summary>
-        /// TBD
+        /// Schedules the next receive timeout or cancels it when no timeout is configured.
         /// </summary>
         public void CheckReceiveTimeout(bool reschedule = true)
         {
@@ -78,4 +78,3 @@ namespace Akka.Actor
         }
     }
 }
-

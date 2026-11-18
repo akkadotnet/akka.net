@@ -1,0 +1,422 @@
+using Akka.Actor;
+using Akka.Reminders.Sharding;
+using Akka.Reminders.Storage;
+using Akka.TestKit;
+
+namespace Akka.Reminders.Tests;
+
+/// <summary>
+/// Issue #150: a recurring reminder has at most one live delivered occurrence, and a retry never
+/// resets the next occurrence.
+/// </summary>
+public partial class ReminderSchedulerTimingSpecs
+{
+    [Fact(DisplayName = "Should_ExpirePreviousUnackedOccurrence_When_NextOccurrenceIsSentEarly")]
+    public async Task Should_ExpirePreviousUnackedOccurrence_When_NextOccurrenceIsSentEarly()
+    {
+        var (scheduler, entity, region) = Setup("latest-only");
+        var key = new ReminderKey("series");
+        var t0 = VirtualTime.Now;
+        await ScheduleAsync(scheduler, entity, key, t0.AddSeconds(5), TimeSpan.FromSeconds(2));
+
+        VirtualTime.Advance(TimeSpan.FromSeconds(5));
+        Assert.Equal(t0.AddSeconds(5), await NextDeliveryAsync(region)); // sent, never acked
+
+        // Another reminder wakes the scheduler at t0+6.5, inside MaxSlippage (1 s) of the t0+7 slot.
+        await ScheduleAsync(scheduler, entity, new ReminderKey("other"), t0.AddSeconds(6.5), null);
+        VirtualTime.Advance(TimeSpan.FromSeconds(1.5));
+
+        await AwaitStatusAsync(scheduler, entity, key, t0.AddSeconds(7), ReminderCompletionStatus.AwaitingAck);
+        Assert.Equal(ReminderCompletionStatus.Expired, (await StatusAsync(scheduler, entity, key, t0.AddSeconds(5)))?.CompletionStatus);
+
+        var lateAck = await scheduler.Ask<ReminderProtocol.ReminderAckResponse>(
+            new ReminderProtocol.ReminderAck(entity, key, t0.AddSeconds(5)), ReplyTimeout, Ct);
+        Assert.Equal(ReminderAckResponseCode.NotFound, lateAck.ResponseCode);
+    }
+
+    // Seeds storage directly: an older occurrence still waits as a retry although its next slot was
+    // already sent and acked. The scheduler itself no longer produces this state (sending the next
+    // slot early expires the older one), but a version before this fix, or a failed lookup, can leave it.
+    [Fact(DisplayName = "Should_LeaveNextOccurrenceAlone_When_AnOlderOccurrenceIsRetried")]
+    public async Task Should_LeaveNextOccurrenceAlone_When_AnOlderOccurrenceIsRetried()
+    {
+        var (entity, key, t0) = (new ReminderEntity("retry-region", "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromSeconds(10);
+        var storage = new InMemoryReminderStorage();
+
+        // The first occurrence (due t0-5) was sent once and its retry is due now; its next slot (t0+5)
+        // was already sent early and acked.
+        var first = new ScheduledReminder(entity, key, t0, "payload", interval, AttemptCount: 1,
+            DeliveryDeadlineUtc: t0.AddSeconds(5), OccurrenceDueTimeUtc: t0.AddSeconds(-5));
+        var next = new ScheduledReminder(entity, key, t0.AddSeconds(5), "payload", interval,
+            DeliveryDeadlineUtc: t0.AddSeconds(15), OccurrenceDueTimeUtc: t0.AddSeconds(5));
+        await storage.UpsertReminderOccurrencesAsync([first, next], Ct);
+        await storage.MarkRemindersAsAwaitingAckAsync([new AwaitingAckReminder(entity, key, next.DueTimeUtc, t0, t0.AddSeconds(10))], Ct);
+        Assert.True((await storage.AcknowledgeReminderAsync(entity, key, next.DueTimeUtc, t0, Ct)).Success);
+
+        var region = CreateTestProbe();
+        _resolver.RegisterShardRegion("retry-region", region);
+        var scheduler = StartScheduler(DedicatedSettings(), storage, "retry-keeps-next");
+
+        Assert.Equal(first.DueTimeUtc, await NextDeliveryAsync(region)); // the retry goes out
+        Assert.Equal(ReminderCompletionStatus.Delivered, (await StatusAsync(scheduler, entity, key, next.DueTimeUtc))?.CompletionStatus);
+    }
+
+    private static ReminderSettings LatestOnlySettings(double maxBackoffSeconds = 600) => new()
+    {
+        MaxSlippage = TimeSpan.FromSeconds(1),
+        AckTimeout = TimeSpan.FromSeconds(3),
+        RetryBackoffBase = TimeSpan.FromSeconds(0.1),
+        MaxRetryBackoff = TimeSpan.FromSeconds(maxBackoffSeconds),
+        MaxDeliveryAttempts = 1000,
+        StorageTimeout = TimeSpan.FromSeconds(30)
+    };
+
+    private sealed record Sent(double At, string Key, double Due);
+
+    /// <summary>
+    /// Moves virtual time forward in small steps until <paramref name="untilSeconds"/> after
+    /// <paramref name="t0"/>, lets the scheduler finish after each step, and records (and optionally acks)
+    /// what it sent. The step never lands on a timer's exact tick.
+    /// </summary>
+    private async Task DriveAsync(IActorRef scheduler, TestProbe region, DateTimeOffset t0, double untilSeconds, List<Sent> sent,
+        Func<bool> ack, Func<Task>? afterStep = null)
+    {
+        async Task SyncAsync()
+        {
+            for (var i = 0; i < 3; i++)
+                await StatusAsync(scheduler, new ReminderEntity("sync", "sync"), new ReminderKey("sync"), DateTimeOffset.UnixEpoch);
+        }
+
+        while ((VirtualTime.Now - t0).TotalSeconds < untilSeconds)
+        {
+            VirtualTime.Advance(TimeSpan.FromMilliseconds(50) + TimeSpan.FromTicks(7));
+            await SyncAsync();
+            var at = Math.Round((VirtualTime.Now - t0).TotalSeconds, 2);
+            while (region.HasMessages)
+            {
+                var envelope = await region.ExpectMsgAsync<ReminderEnvelope<string>>(ReplyTimeout, cancellationToken: Ct);
+                sent.Add(new Sent(at, envelope.Key.Name, Math.Round((envelope.DueTimeUtc - t0).TotalSeconds, 2)));
+                if (ack())
+                    await scheduler.Ask<ReminderProtocol.ReminderAckResponse>(
+                        new ReminderProtocol.ReminderAck(envelope.Entity, envelope.Key, envelope.DueTimeUtc), ReplyTimeout, Ct);
+            }
+
+            if (afterStep is not null)
+                await afterStep();
+            await SyncAsync();
+        }
+    }
+
+    // The sequence from issue #150, through real scheduler passes.
+    [Fact(DisplayName = "Should_SendEachSlotOnce_When_AnUnackedSlotIsRetriedAfterTheNextSlotWasSentEarlyAndAcked (#150)")]
+    public async Task Should_SendEachSlotOnce_When_AnUnackedSlotIsRetriedAfterTheNextSlotWasSentEarlyAndAcked()
+    {
+        var (scheduler, entity, region) = Setup("issue-150", settings: LatestOnlySettings());
+        var series = new ReminderKey("A");
+        var t0 = VirtualTime.Now;
+        await ScheduleAsync(scheduler, entity, series, t0, TimeSpan.FromSeconds(10));
+
+        var sent = new List<Sent>();
+        var acking = false;
+        await DriveAsync(scheduler, region, t0, 8.85, sent, () => acking); // first slot sent and retried, never acked
+        acking = true;
+        await ScheduleAsync(scheduler, entity, new ReminderKey("B"), t0.AddSeconds(9.0), null); // wakes the scheduler at 9.0 s
+        await DriveAsync(scheduler, region, t0, 12.5, sent, () => acking);
+
+        Assert.Single(sent, s => s.Key == "A" && s.Due == 10); // sent early at 9.0 s, acked, and not again at 10 s
+        Assert.Equal(ReminderCompletionStatus.Pending, (await StatusAsync(scheduler, entity, series, t0.AddSeconds(20)))?.CompletionStatus);
+    }
+
+    // The shard region is gone from the start and comes back inside the slippage window of the next slot.
+    // That slot's retry row then sorts before the older occurrence's retry row in the same chunk.
+    [Fact(DisplayName = "Should_NotCommitOneRowAsExpiredAndSent_When_NextOccurrenceIsProcessedBeforeThePreviousOne")]
+    public async Task Should_NotCommitOneRowAsExpiredAndSent_When_NextOccurrenceIsProcessedBeforeThePreviousOne()
+    {
+        var conflicting = new List<string>();
+        var storage = new FailableReminderStorage(new InMemoryReminderStorage())
+        {
+            OnCommit = batch =>
+            {
+                lock (conflicting)
+                    conflicting.AddRange(batch.CompletedReminders.Concat(batch.ActiveCompletions)
+                        .Where(c => batch.AwaitingAckReminders.Any(a => a.Entity == c.Entity && a.Key == c.Key && a.DueTimeUtc == c.DueTimeUtc))
+                        .Select(c => c.DueTimeUtc.ToString("O")));
+            }
+        };
+        var (scheduler, entity, region) = Setup("region-returns", storage, LatestOnlySettings(maxBackoffSeconds: 0.3));
+        var series = new ReminderKey("A");
+        var t0 = VirtualTime.Now;
+        await ScheduleAsync(scheduler, entity, series, t0, TimeSpan.FromSeconds(10));
+        _resolver.UnregisterShardRegion(entity.ShardRegionName);
+
+        var sent = new List<Sent>();
+        var back = false;
+        await DriveAsync(scheduler, region, t0, 11.0, sent, () => true, async () =>
+        {
+            // Come back once the 10 s slot has itself been put back for a retry.
+            if (!back && (await StatusAsync(scheduler, entity, series, t0.AddSeconds(10)))?.AttemptCount > 0)
+            {
+                back = true;
+                _resolver.RegisterShardRegion(entity.ShardRegionName, region);
+            }
+        });
+
+        Assert.True(back);
+        Assert.Empty(conflicting);
+        Assert.Contains(sent, s => s.Key == "A" && s.Due == 10 && s.At < 10); // the pass that saw the region again delivered
+    }
+
+    [Fact(DisplayName = "Should_DeliverEverything_When_ARepeatIntervalIsLongerThanTheTimeSinceYearOne")]
+    public async Task Should_DeliverEverything_When_ARepeatIntervalIsLongerThanTheTimeSinceYearOne()
+    {
+        var (scheduler, entity, region) = Setup("huge-interval", settings: LatestOnlySettings());
+        var t0 = VirtualTime.Now;
+        await ScheduleAsync(scheduler, entity, new ReminderKey("huge"), t0.AddSeconds(1), TimeSpan.FromDays(365.25 * 3000));
+        await ScheduleAsync(scheduler, entity, new ReminderKey("normal"), t0.AddSeconds(2), null);
+
+        // Not DriveAsync: a scheduler that keeps crashing would not answer its sync queries.
+        var keys = new List<string>();
+        for (var i = 0; i < 80 && keys.Count < 2; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromMilliseconds(50) + TimeSpan.FromTicks(7));
+            await Task.Delay(25, Ct);
+            while (region.HasMessages)
+                keys.Add((await region.ExpectMsgAsync<ReminderEnvelope<string>>(ReplyTimeout, cancellationToken: Ct)).Key.Name);
+        }
+
+        Assert.Contains("huge", keys);
+        Assert.Contains("normal", keys);
+    }
+
+    // A zero interval makes "the previous occurrence" the occurrence itself; it must not expire itself.
+    [Fact(DisplayName = "Should_DeliverEverything_When_ARepeatIntervalIsZero")]
+    public async Task Should_DeliverEverything_When_ARepeatIntervalIsZero()
+    {
+        var (scheduler, entity, region) = Setup("zero-interval", settings: LatestOnlySettings());
+        var t0 = VirtualTime.Now;
+        await ScheduleAsync(scheduler, entity, new ReminderKey("zero"), t0.AddSeconds(2), TimeSpan.Zero);
+        await ScheduleAsync(scheduler, entity, new ReminderKey("normal"), t0.AddSeconds(1.2), null);
+
+        var keys = new List<string>();
+        for (var i = 0; i < 80 && !(keys.Contains("zero") && keys.Contains("normal")); i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromMilliseconds(50) + TimeSpan.FromTicks(7));
+            await Task.Delay(25, Ct);
+            while (region.HasMessages)
+                keys.Add((await region.ExpectMsgAsync<ReminderEnvelope<string>>(ReplyTimeout, cancellationToken: Ct)).Key.Name);
+        }
+
+        Assert.Contains("zero", keys);
+        Assert.Contains("normal", keys);
+    }
+
+    // Issue #8965. A series every 2 s with MaxSlippage 5 s: an older slot (due +1 s, a retry) and the newest
+    // slot (due +5 s, a retry) wait together. The fetch hands them to one pass, in When order.
+    private sealed record SeededSeries(IActorRef Scheduler, ReminderEntity Entity, ReminderKey Key, DateTimeOffset T0,
+        TestProbe Region, List<string> Conflicts);
+
+    private static ReminderSettings SeededSeriesSettings(int chunkSize) => new()
+    {
+        MaxSlippage = TimeSpan.FromSeconds(5),
+        AckTimeout = TimeSpan.FromSeconds(30),
+        RetryBackoffBase = TimeSpan.FromSeconds(0.1),
+        MaxRetryBackoff = TimeSpan.FromMinutes(10),
+        MaxDeliveryAttempts = 10,
+        StorageTimeout = TimeSpan.FromSeconds(30),
+        DeliveryCommitChunkSize = chunkSize
+    };
+
+    private async Task<SeededSeries> StartSeededSeriesAsync(string name, int chunkSize, double olderWhen, double newestWhen,
+        int missingResolves, int missingFrom = int.MaxValue, int missingTo = int.MaxValue)
+    {
+        var (entity, key, t0) = (new ReminderEntity(name + "-region", "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromSeconds(2);
+        ScheduledReminder Row(double due, double when) => new(entity, key, t0.AddSeconds(when), "payload", interval, AttemptCount: 1,
+            DeliveryDeadlineUtc: t0.AddSeconds(due + 2), OccurrenceDueTimeUtc: t0.AddSeconds(due));
+
+        var inner = new InMemoryReminderStorage();
+        await inner.UpsertReminderOccurrencesAsync([Row(1, olderWhen), Row(5, newestWhen)], Ct);
+
+        // A commit may not write, move or send a row that it also ends.
+        var conflicts = new List<string>();
+        var storage = new FailableReminderStorage(inner)
+        {
+            OnCommit = batch =>
+            {
+                var ended = batch.ActiveCompletions.Select(c => c.DueTimeUtc).ToHashSet();
+                lock (conflicts)
+                    conflicts.AddRange(batch.PendingUpserts.Select(r => r.DueTimeUtc)
+                        .Concat(batch.PendingInserts.Select(r => r.DueTimeUtc))
+                        .Concat(batch.AwaitingAckReminders.Select(a => a.DueTimeUtc))
+                        .Where(ended.Contains).Select(due => due.ToString("O")));
+            }
+        };
+
+        var region = CreateTestProbe();
+        var resolver = new FlappingShardRegionResolver(region, missingResolves, missingFrom, missingTo);
+        var settings = SeededSeriesSettings(chunkSize);
+        var scheduler = Sys.ActorOf(Props.Create(() => new ReminderScheduler(settings, resolver, storage, Sys.Scheduler)), name);
+        await StatusAsync(scheduler, entity, key, t0.AddSeconds(1)); // the scheduler has loaded the seeded rows
+        return new SeededSeries(scheduler, entity, key, t0, region, conflicts);
+    }
+
+    private async Task AssertOnlyTheNewestSlotWasSentAsync(SeededSeries series)
+    {
+        // The first fetch is due at the retry time of the first row, 0.5 s.
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(series.T0.AddSeconds(5), await NextDeliveryAsync(series.Region));
+
+        // Later retry times of the older row pass. None of them may send it.
+        for (var i = 0; i < 4; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromSeconds(0.5));
+            await series.Region.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Ct);
+        }
+
+        Assert.Empty(series.Conflicts);
+        Assert.Equal(ReminderCompletionStatus.Expired, (await StatusAsync(series.Scheduler, series.Entity, series.Key, series.T0.AddSeconds(1)))?.CompletionStatus);
+        Assert.Equal(ReminderCompletionStatus.AwaitingAck, (await StatusAsync(series.Scheduler, series.Entity, series.Key, series.T0.AddSeconds(5)))?.CompletionStatus);
+        Assert.Equal(ReminderCompletionStatus.Pending, (await StatusAsync(series.Scheduler, series.Entity, series.Key, series.T0.AddSeconds(7)))?.CompletionStatus);
+    }
+
+    // The newest slot is first in the fetched snapshot. Sent in one chunk, it ends the older slot even though
+    // that slot is the second slot back; with chunk size 1 the older row comes up in a later chunk.
+    [Theory(DisplayName = "Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheNewestIsFirstInThePass (#8965)")]
+    [InlineData(100)]
+    [InlineData(1)]
+    public async Task Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheNewestIsFirstInThePass(int chunkSize)
+    {
+        var series = await StartSeededSeriesAsync("newest-first-" + chunkSize, chunkSize, olderWhen: 0.6, newestWhen: 0.5, missingResolves: 0);
+        await AssertOnlyTheNewestSlotWasSentAsync(series);
+    }
+
+    // The region is missing for the older row, which is first in the pass, and back for the newest one. The
+    // older row is put back as a retry in the same commit that ends it, or in the commit before it.
+    [Theory(DisplayName = "Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheRegionReturnsBetweenTwoRowsOfOnePass (#8965)")]
+    [InlineData(100)]
+    [InlineData(1)]
+    public async Task Should_EndTheOlderSlotsAndSendOnlyTheNewest_When_TheRegionReturnsBetweenTwoRowsOfOnePass(int chunkSize)
+    {
+        var series = await StartSeededSeriesAsync("flap-" + chunkSize, chunkSize, olderWhen: 0.5, newestWhen: 0.6, missingResolves: 1);
+        await AssertOnlyTheNewestSlotWasSentAsync(series);
+    }
+
+    // The region is up for the older row and gone again for the newest one. The older slot is sent first, in
+    // order, and the newest is put back as a retry. When the region is back, the newest goes out and ends the
+    // older one, which must not be sent again.
+    [Fact(DisplayName = "Should_SendTheOlderSlotBeforeTheNewest_When_TheRegionGoesAwayBetweenTwoRowsOfOnePass (#8965)")]
+    public async Task Should_SendTheOlderSlotBeforeTheNewest_When_TheRegionGoesAwayBetweenTwoRowsOfOnePass()
+    {
+        // Lookup 1 is the older row and lookup 2 the newest one, which finds no region. Later lookups find it.
+        var series = await StartSeededSeriesAsync("flap-away", 1, olderWhen: 0.5, newestWhen: 0.6, missingResolves: 0, missingFrom: 2, missingTo: 3);
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(series.T0.AddSeconds(1), await NextDeliveryAsync(series.Region)); // older first: in order
+
+        var sent = new List<double> { 1 };
+        for (var i = 0; i < 12; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromSeconds(0.25));
+            await Task.Delay(30, Ct);
+            while (series.Region.HasMessages)
+                sent.Add((await series.Region.ExpectMsgAsync<ReminderEnvelope<string>>(ReplyTimeout, cancellationToken: Ct)).DueTimeUtc.Subtract(series.T0).TotalSeconds);
+        }
+
+        Assert.Empty(series.Conflicts);
+        Assert.Contains(5d, sent);
+        Assert.Equal(sent.OrderBy(due => due), sent); // never an older slot after a newer one
+        Assert.Single(sent, due => due == 1); // and the older slot only once
+    }
+
+    // A stale row later in the pass rolls forward onto the oldest slot that is still live. The newest slot,
+    // sent earlier in the pass, has ended that slot, so it must not come back as a Pending row.
+    [Fact(DisplayName = "Should_NotWriteAnEndedSlotAgain_When_AStaleRowLaterInThePassRollsForwardOntoIt (#8965)")]
+    public async Task Should_NotWriteAnEndedSlotAgain_When_AStaleRowLaterInThePassRollsForwardOntoIt()
+    {
+        var (entity, key, t0) = (new ReminderEntity("roll-region", "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromSeconds(2);
+        ScheduledReminder Row(double due, double when, double deadline) => new(entity, key, t0.AddSeconds(when), "payload", interval, AttemptCount: 1,
+            DeliveryDeadlineUtc: t0.AddSeconds(deadline), OccurrenceDueTimeUtc: t0.AddSeconds(due));
+
+        // The newest slot (due +5 s) comes first. The stale slot (due -7 s, deadline -5 s) comes second and is
+        // past its deadline, so it rolls forward onto the slot due -1 s, the oldest one still live at +0.5 s.
+        var inner = new InMemoryReminderStorage();
+        await inner.UpsertReminderOccurrencesAsync([Row(5, 0.5, 7), Row(-7, 1.0, -5)], Ct);
+        var region = CreateTestProbe();
+        var resolver = new FlappingShardRegionResolver(region, 0);
+        var settings = SeededSeriesSettings(chunkSize: 1);
+        var scheduler = Sys.ActorOf(Props.Create(() => new ReminderScheduler(settings, resolver, inner, Sys.Scheduler)), "roll-forward-onto-ended");
+        await StatusAsync(scheduler, entity, key, t0);
+
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(t0.AddSeconds(5), await NextDeliveryAsync(region));
+        for (var i = 0; i < 4; i++)
+        {
+            VirtualTime.Advance(TimeSpan.FromSeconds(0.5));
+            await region.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Ct);
+        }
+
+        Assert.NotEqual(ReminderCompletionStatus.Pending, (await StatusAsync(scheduler, entity, key, t0.AddSeconds(-1)))?.CompletionStatus);
+        Assert.Equal(ReminderCompletionStatus.AwaitingAck, (await StatusAsync(scheduler, entity, key, t0.AddSeconds(5)))?.CompletionStatus);
+    }
+
+    // The interval is far below MaxSlippage, so one early send would end thousands of older slots (millions for
+    // a one-tick interval). The scheduler ends at most 256 per send, so one commit stays small.
+    [Theory(DisplayName = "Should_EndAtMostTheCapOfOlderOccurrences_When_AVeryShortIntervalIsSentEarly (#8965)")]
+    [InlineData(TimeSpan.TicksPerMillisecond)]
+    [InlineData(1)]
+    public async Task Should_EndAtMostTheCapOfOlderOccurrences_When_AVeryShortIntervalIsSentEarly(long intervalTicks)
+    {
+        var (entity, key, t0) = (new ReminderEntity("cap-region-" + intervalTicks, "e1"), new ReminderKey("series"), VirtualTime.Now);
+        var interval = TimeSpan.FromTicks(intervalTicks);
+
+        // One row, due 5 s out (the edge of MaxSlippage) and waiting for a retry at +0.5 s: it goes out 4.5 s early.
+        var inner = new InMemoryReminderStorage();
+        await inner.UpsertReminderOccurrencesAsync([new ScheduledReminder(entity, key, t0.AddSeconds(0.5), "payload", interval,
+            AttemptCount: 1, DeliveryDeadlineUtc: t0.AddSeconds(5).Add(interval), OccurrenceDueTimeUtc: t0.AddSeconds(5))], Ct);
+
+        var ended = new List<int>();
+        var storage = new FailableReminderStorage(inner)
+        {
+            OnCommit = batch =>
+            {
+                lock (ended)
+                    ended.Add(batch.ActiveCompletions.Count(c => c.Entity == entity && c.Key == key));
+            }
+        };
+
+        var region = CreateTestProbe();
+        var resolver = new FlappingShardRegionResolver(region, 0);
+        var settings = SeededSeriesSettings(chunkSize: 100);
+        var scheduler = Sys.ActorOf(Props.Create(() => new ReminderScheduler(settings, resolver, storage, Sys.Scheduler)), "cap-" + intervalTicks);
+        await StatusAsync(scheduler, entity, key, t0);
+
+        VirtualTime.Advance(TimeSpan.FromSeconds(0.5) + TimeSpan.FromTicks(1));
+        Assert.Equal(t0.AddSeconds(5), await NextDeliveryAsync(region));
+
+        lock (ended)
+        {
+            Assert.NotEmpty(ended);
+            Assert.InRange(ended.Max(), 1, 256);
+        }
+    }
+
+    /// <summary>
+    /// Answers the first <c>missingResolves</c> lookups with "no shard region", then every lookup with the probe,
+    /// except lookups <c>missingFrom</c> up to <c>missingTo</c> (exclusive), which are missing too.
+    /// </summary>
+    private sealed class FlappingShardRegionResolver(IActorRef region, int missingResolves, int missingFrom = int.MaxValue, int missingTo = int.MaxValue)
+        : IShardRegionResolver
+    {
+        private int _lookups;
+
+        public IActorRef? TryResolve(ReminderEntity entity)
+        {
+            var lookup = Interlocked.Increment(ref _lookups);
+            return lookup <= missingResolves || (lookup >= missingFrom && lookup < missingTo) ? null : region;
+        }
+
+        public void DeliverReminder(ReminderEntity entity, ReminderEnvelope envelope, IActorRef? sender = null)
+            => region.Tell(envelope, sender ?? ActorRefs.NoSender);
+    }
+}

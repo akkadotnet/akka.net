@@ -46,7 +46,7 @@ public sealed partial class AkkaSerializerGenerator
     /// assembly type reachable (directly, or nested arbitrarily deep through other referenced-assembly
     /// types) from <paramref name="messages"/>' and <paramref name="serializers"/>' own foreign
     /// Object/union references, PLUS -- as of Decisions 19 and 21 -- every referenced-assembly
-    /// protocol or marked-union-base implementor <paramref name="facts"/>' own walk found (see
+    /// protocol or union-base implementor <paramref name="facts"/>' own walk found (see
     /// <see cref="CompilationFacts.ReferencedAssemblyImplementorsByProtocol"/>), the same way
     /// <c>ExtractMessageCore</c> resolves a local type. This is the "construction extraction" for a
     /// plain (non-generic) referenced-assembly implementor: it needs no symbol beyond the one this
@@ -230,7 +230,7 @@ public sealed partial class AkkaSerializerGenerator
                 CollectForeignReferences(schema, seen);
         }
 
-        // Decisions 19 and 21: every referenced-assembly protocol/marked-union-base implementor
+        // Decisions 19 and 21: every referenced-assembly protocol/union-base implementor
         // CompilationFacts' own walk found also needs its full schema extracted here -- it is a
         // plain (non-generic, per ComputeReferencedAssemblyImplementors) type, so the SAME
         // resolve-by-metadata-name walk this method already runs for a locally-named foreign type

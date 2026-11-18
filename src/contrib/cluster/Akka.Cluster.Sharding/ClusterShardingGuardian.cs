@@ -28,20 +28,20 @@ namespace Akka.Cluster.Sharding
             : INoSerializationVerificationNeeded;
 
         /// <summary>
-        /// TBD
+        /// Internal reply indicating that a shard region or proxy has been started.
         /// </summary>
         [Serializable]
         public sealed class Started : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// The actor reference of the started shard region or proxy.
             /// </summary>
             public readonly IActorRef ShardRegion;
 
             /// <summary>
-            /// TBD
+            /// Creates a successful guardian reply for the started shard region or proxy.
             /// </summary>
-            /// <param name="shardRegion">TBD</param>
+            /// <param name="shardRegion">The actor reference of the started region or proxy.</param>
             public Started(IActorRef shardRegion)
             {
                 ShardRegion = shardRegion;
@@ -49,44 +49,44 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Internal guardian command to start a shard region for an entity type.
         /// </summary>
         [Serializable]
         public sealed class Start : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// The entity type name to register with sharding.
             /// </summary>
             public readonly string TypeName;
             /// <summary>
-            /// TBD
+            /// Factory that creates actor properties for an entity id.
             /// </summary>
             public readonly Func<string, Props> EntityProps;
             /// <summary>
-            /// TBD
+            /// The sharding settings for the region and its coordinator.
             /// </summary>
             public readonly ClusterShardingSettings Settings;
             
             public readonly IMessageExtractor MessageExtractor;
             
             /// <summary>
-            /// TBD
+            /// The allocation and rebalance strategy for shards of this entity type.
             /// </summary>
             public readonly IShardAllocationStrategy AllocationStrategy;
             /// <summary>
-            /// TBD
+            /// The message sent to an entity during shard handoff to request that it stops.
             /// </summary>
             public readonly object HandOffStopMessage;
 
             /// <summary>
-            /// TBD
+            /// Creates a guardian command containing the configuration needed to start a shard region.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="entityProps">TBD</param>
-            /// <param name="settings">TBD</param>
-            /// <param name="extractor"></param>
-            /// <param name="allocationStrategy">TBD</param>
-            /// <param name="handOffStopMessage">TBD</param>
+            /// <param name="typeName">The entity type name to register.</param>
+            /// <param name="entityProps">A factory that creates actor properties for an entity id.</param>
+            /// <param name="settings">The settings for this shard region and its coordinator.</param>
+            /// <param name="extractor">The functions used to extract entity ids, shard ids, and entity messages.</param>
+            /// <param name="allocationStrategy">The strategy used to allocate and rebalance shards.</param>
+            /// <param name="handOffStopMessage">The message sent to an entity when its shard is handed off.</param>
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="typeName"/> or <paramref name="entityProps"/> is undefined.
             /// </exception>
@@ -110,28 +110,28 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Internal guardian command to start a proxy for an entity type without hosting its entities on this node.
         /// </summary>
         [Serializable]
         public sealed class StartProxy : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// The entity type name to register with the proxy.
             /// </summary>
             public readonly string TypeName;
             /// <summary>
-            /// TBD
+            /// The sharding settings used by the proxy.
             /// </summary>
             public readonly ClusterShardingSettings Settings;
 
             public IMessageExtractor MessageExtractor;
 
             /// <summary>
-            /// TBD
+            /// Creates a guardian command containing the configuration needed to start a shard proxy.
             /// </summary>
-            /// <param name="typeName">TBD</param>
-            /// <param name="settings">TBD</param>
-            /// <param name="messageExtractor"></param>
+            /// <param name="typeName">The entity type name to register.</param>
+            /// <param name="settings">The settings used by the proxy.</param>
+            /// <param name="messageExtractor">The functions used to extract entity ids, shard ids, and entity messages.</param>
             /// <exception cref="ArgumentException">
             /// This exception is thrown when the specified <paramref name="typeName"/> is undefined.
             /// </exception>
@@ -163,7 +163,7 @@ namespace Akka.Cluster.Sharding
         private readonly ConcurrentDictionary<IActorRef, string> _typeLookup = new();
 
         /// <summary>
-        /// TBD
+        /// Creates the guardian with the dictionaries used to track started regions and proxies.
         /// </summary>
         public ClusterShardingGuardian(
             ConcurrentDictionary<string, IActorRef> regions,

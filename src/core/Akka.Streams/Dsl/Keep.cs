@@ -17,55 +17,55 @@ namespace Akka.Streams.Dsl
     public static class Keep
     {
         /// <summary>
-        /// TBD
+        /// Selects the first value and discards the second.
         /// </summary>
-        /// <typeparam name="TLeft">TBD</typeparam>
-        /// <typeparam name="TRight">TBD</typeparam>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TLeft">The type of the value to keep.</typeparam>
+        /// <typeparam name="TRight">The type of the value to discard.</typeparam>
+        /// <param name="left">The first value.</param>
+        /// <param name="right">The second value.</param>
+        /// <returns><paramref name="left"/>.</returns>
         public static TLeft Left<TLeft, TRight>(TLeft left, TRight right) => left;
 
         /// <summary>
-        /// TBD
+        /// Selects the second value and discards the first.
         /// </summary>
-        /// <typeparam name="TLeft">TBD</typeparam>
-        /// <typeparam name="TRight">TBD</typeparam>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TLeft">The type of the value to discard.</typeparam>
+        /// <typeparam name="TRight">The type of the value to keep.</typeparam>
+        /// <param name="left">The first value.</param>
+        /// <param name="right">The second value.</param>
+        /// <returns><paramref name="right"/>.</returns>
         public static TRight Right<TLeft, TRight>(TLeft left, TRight right) => right;
 
         /// <summary>
-        /// TBD
+        /// Keeps both values as a tuple in their original order.
         /// </summary>
-        /// <typeparam name="TLeft">TBD</typeparam>
-        /// <typeparam name="TRight">TBD</typeparam>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TLeft">The type of the first value.</typeparam>
+        /// <typeparam name="TRight">The type of the second value.</typeparam>
+        /// <param name="left">The first value.</param>
+        /// <param name="right">The second value.</param>
+        /// <returns>A tuple containing <paramref name="left"/> followed by <paramref name="right"/>.</returns>
         public static (TLeft, TRight) Both<TLeft, TRight>(TLeft left, TRight right) => (left, right);
 
         /// <summary>
-        /// TBD
+        /// Discards both values and returns <see cref="NotUsed"/>.
         /// </summary>
-        /// <typeparam name="TLeft">TBD</typeparam>
-        /// <typeparam name="TRight">TBD</typeparam>
-        /// <param name="left">TBD</param>
-        /// <param name="right">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TLeft">The type of the first value.</typeparam>
+        /// <typeparam name="TRight">The type of the second value.</typeparam>
+        /// <param name="left">The first value, which is discarded.</param>
+        /// <param name="right">The second value, which is discarded.</param>
+        /// <returns>The <see cref="NotUsed"/> singleton.</returns>
         public static NotUsed None<TLeft, TRight>(TLeft left, TRight right) => NotUsed.Instance;
 
         private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof(Keep).GetMethod(nameof(Right)).MethodHandle;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the supplied function is the <see cref="Right{TLeft,TRight}"/> selector.
         /// </summary>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="T3">TBD</typeparam>
-        /// <param name="fn">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The type of the first input.</typeparam>
+        /// <typeparam name="T2">The type of the second input.</typeparam>
+        /// <typeparam name="T3">The function's result type.</typeparam>
+        /// <param name="fn">The function to inspect.</param>
+        /// <returns><see langword="true"/> when <paramref name="fn"/> is the generic <see cref="Right{TLeft,TRight}"/> method; otherwise, <see langword="false"/>.</returns>
         public static bool IsRight<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
             return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().MethodHandle.Value == KeepRightMethodhandle.Value;
@@ -74,13 +74,13 @@ namespace Akka.Streams.Dsl
         private static readonly RuntimeMethodHandle KeepLeftMethodhandle = typeof(Keep).GetMethod(nameof(Left)).MethodHandle;
 
         /// <summary>
-        /// TBD
+        /// Determines whether the supplied function is the <see cref="Left{TLeft,TRight}"/> selector.
         /// </summary>
-        /// <typeparam name="T1">TBD</typeparam>
-        /// <typeparam name="T2">TBD</typeparam>
-        /// <typeparam name="T3">TBD</typeparam>
-        /// <param name="fn">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T1">The type of the first input.</typeparam>
+        /// <typeparam name="T2">The type of the second input.</typeparam>
+        /// <typeparam name="T3">The function's result type.</typeparam>
+        /// <param name="fn">The function to inspect.</param>
+        /// <returns><see langword="true"/> when <paramref name="fn"/> is the generic <see cref="Left{TLeft,TRight}"/> method; otherwise, <see langword="false"/>.</returns>
         public static bool IsLeft<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
             return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().MethodHandle.Value == KeepLeftMethodhandle.Value;

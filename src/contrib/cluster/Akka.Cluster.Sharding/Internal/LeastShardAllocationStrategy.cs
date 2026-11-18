@@ -40,7 +40,7 @@ namespace Akka.Cluster.Sharding.Internal
         private readonly double _relativeLimit;
 
         /// <summary>
-        /// TBD
+        /// Creates a strategy with per-round absolute and relative rebalance limits.
         /// </summary>
         /// <param name="absoluteLimit">The maximum number of shards that will be rebalanced in one rebalance round</param>
         /// <param name="relativeLimit">Fraction (&lt; 1.0) of total number of (known) shards that will be rebalanced in one rebalance round</param>
@@ -51,11 +51,11 @@ namespace Akka.Cluster.Sharding.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Selects shards to rebalance when there is no rebalance already in progress.
         /// </summary>
-        /// <param name="currentShardAllocations">TBD</param>
-        /// <param name="rebalanceInProgress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="currentShardAllocations">The shards currently allocated to each region.</param>
+        /// <param name="rebalanceInProgress">The shard identifiers whose rebalance has not completed.</param>
+        /// <returns>The shard identifiers selected for a rebalance round, or an empty set when no rebalance is started.</returns>
         public override Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
         {
             int Limit(int numberOfShards)

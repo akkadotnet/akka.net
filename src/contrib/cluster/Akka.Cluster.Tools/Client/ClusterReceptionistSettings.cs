@@ -12,16 +12,16 @@ using Akka.Configuration;
 namespace Akka.Cluster.Tools.Client
 {
     /// <summary>
-    /// TBD
+    /// Settings that control receptionist placement, contact-point selection, response tunnels, and client failure detection.
     /// </summary>
     public sealed class ClusterReceptionistSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Create settings from the default configuration "akka.cluster.client.receptionist".
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system whose configuration supplies receptionist settings.</param>
+        /// <exception cref="ConfigurationException">Thrown when the actor system has no receptionist configuration.</exception>
+        /// <returns>Settings loaded from <c>akka.cluster.client.receptionist</c>.</returns>
         public static ClusterReceptionistSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
@@ -36,8 +36,8 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Create settings from a configuration with the same layout as the default configuration "akka.cluster.client.receptionist".
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">Configuration with the layout of <c>akka.cluster.client.receptionist</c>.</param>
+        /// <returns>Settings parsed from the supplied configuration.</returns>
         public static ClusterReceptionistSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
@@ -91,14 +91,14 @@ namespace Akka.Cluster.Tools.Client
         public TimeSpan FailureDetectionInterval { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates receptionist settings with the supplied role, contact count, tunnel timeout, and heartbeat timing.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <param name="numberOfContacts">TBD</param>
-        /// <param name="responseTunnelReceiveTimeout">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="acceptableHeartbeatPause">TBD</param>
-        /// <param name="failureDetectionInterval">TBD</param>
+        /// <param name="role">Cluster role on which to start the receptionist; null or empty allows all members.</param>
+        /// <param name="numberOfContacts">Maximum number of receptionist contact points returned to a client.</param>
+        /// <param name="responseTunnelReceiveTimeout">Idle timeout for a client response tunnel.</param>
+        /// <param name="heartbeatInterval">Expected interval between client heartbeat messages.</param>
+        /// <param name="acceptableHeartbeatPause">Additional heartbeat delay tolerated before a client is considered unreachable.</param>
+        /// <param name="failureDetectionInterval">Interval at which the receptionist checks client heartbeat deadlines.</param>
         public ClusterReceptionistSettings(
             string role,
             int numberOfContacts,
@@ -116,51 +116,51 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the receptionist role changed.
         /// </summary>
-        /// <param name="role">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="role">Role on which the receptionist should run; null leaves the current role unchanged, while empty clears the role restriction.</param>
+        /// <returns>A copy of these settings with the role changed according to <paramref name="role"/>.</returns>
         public ClusterReceptionistSettings WithRole(string role)
         {
             return Copy(role: role);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with no role restriction for the receptionist.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copy of these settings that allows the receptionist on all cluster members.</returns>
         public ClusterReceptionistSettings WithoutRole()
         {
             return Copy(role: "");
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the maximum number of contact points changed.
         /// </summary>
-        /// <param name="numberOfContacts">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="numberOfContacts">Maximum contact points to return to each client.</param>
+        /// <returns>A copy of these settings with the supplied contact count.</returns>
         public ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts)
         {
             return Copy(numberOfContacts: numberOfContacts);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the response tunnel's idle timeout changed.
         /// </summary>
-        /// <param name="responseTunnelReceiveTimeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="responseTunnelReceiveTimeout">New idle timeout for response tunnels.</param>
+        /// <returns>A copy of these settings with the supplied timeout.</returns>
         public ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(TimeSpan responseTunnelReceiveTimeout)
         {
             return Copy(responseTunnelReceiveTimeout: responseTunnelReceiveTimeout);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with client heartbeat and deadline-check intervals changed.
         /// </summary>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="acceptableHeartbeatPause">TBD</param>
-        /// <param name="failureDetectionInterval">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="heartbeatInterval">Expected interval between client heartbeat messages.</param>
+        /// <param name="acceptableHeartbeatPause">Additional heartbeat delay tolerated before a client is considered unreachable.</param>
+        /// <param name="failureDetectionInterval">Interval at which the receptionist checks client heartbeat deadlines.</param>
+        /// <returns>A copy of these settings with the supplied timing values.</returns>
         public ClusterReceptionistSettings WithHeartbeat(TimeSpan heartbeatInterval, TimeSpan acceptableHeartbeatPause, TimeSpan failureDetectionInterval)
         {
             return Copy(

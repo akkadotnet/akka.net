@@ -44,14 +44,14 @@ namespace Akka.Actor
         //      ...
         //    }		
         /// <summary>
-        /// TBD
+        /// Creates a local actor reference and initializes its actor cell and mailbox.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="mailboxType">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
+        /// <param name="system">The actor system that owns the actor.</param>
+        /// <param name="props">The configuration used to create the actor instance.</param>
+        /// <param name="dispatcher">The dispatcher that runs the actor.</param>
+        /// <param name="mailboxType">The mailbox type used by the actor cell.</param>
+        /// <param name="supervisor">The actor reference supervising this actor.</param>
+        /// <param name="path">The actor's path.</param>
         public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType,
             IInternalActorRef supervisor, ActorPath path)
         {

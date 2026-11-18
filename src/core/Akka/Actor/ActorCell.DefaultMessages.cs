@@ -113,9 +113,9 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// TBD
+        /// Handles framework messages that are processed automatically by the actor cell.
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The envelope containing the automatic message.</param>
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>
@@ -168,7 +168,7 @@ namespace Akka.Actor
         /// <summary>
         /// This is only intended to be called from TestKit's TestActorRef
         /// </summary>
-        /// <param name="envelope">TBD</param>
+        /// <param name="envelope">The envelope to deliver while preserving its sender and current-message state.</param>
         public void ReceiveMessageForTest(Envelope envelope)
         {
             var message = envelope.Message;
@@ -364,10 +364,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Atomically replaces the actor cell's mailbox and returns the previous mailbox.
         /// </summary>
-        /// <param name="mailbox">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="mailbox">The mailbox to install.</param>
+        /// <returns>The mailbox that was installed before the swap, or <c>null</c> if none was set.</returns>
         internal Mailbox? SwapMailbox(Mailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to {1}", Self, mailbox);
@@ -564,4 +564,3 @@ namespace Akka.Actor
         }
     }
 }
-

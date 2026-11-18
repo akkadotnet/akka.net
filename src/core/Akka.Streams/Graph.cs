@@ -31,7 +31,7 @@ namespace Akka.Streams
     /// <summary>
     /// </summary>
     /// <typeparam name="TShape">Type-level accessor for the shape parameter of this graph.</typeparam>
-    /// <typeparam name="TMaterialized">TBD</typeparam>
+    /// <typeparam name="TMaterialized">Type of the value produced when the graph is materialized.</typeparam>
     public interface IGraph<out TShape, out TMaterialized> : IGraph<TShape> where TShape : Shape
     {
         /// <summary>
@@ -41,8 +41,8 @@ namespace Akka.Streams
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">Attributes to assign and seal on this graph.</param>
+        /// <returns>A graph with the supplied attributes sealed.</returns>
         IGraph<TShape, TMaterialized> WithAttributes(Attributes attributes);
 
         /// <summary>
@@ -52,21 +52,21 @@ namespace Akka.Streams
         /// operation has no effect on an empty Flow (because the attributes apply
         /// only to the contained processing stages).
         /// </summary>
-        /// <param name="attributes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="attributes">Attributes to add to this graph.</param>
+        /// <returns>A graph with the supplied attributes added.</returns>
         IGraph<TShape, TMaterialized> AddAttributes(Attributes attributes);
 
         /// <summary>
         /// Add a name attribute to this Graph.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">Name assigned to this graph.</param>
+        /// <returns>A graph with the name attribute added.</returns>
         IGraph<TShape, TMaterialized> Named(string name);
 
         /// <summary>
         /// Put an asynchronous boundary around this Graph.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A graph with an asynchronous boundary added.</returns>
         IGraph<TShape, TMaterialized> Async();
     }
 

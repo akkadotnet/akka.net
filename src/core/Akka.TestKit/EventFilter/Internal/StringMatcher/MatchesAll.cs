@@ -20,19 +20,19 @@ public class MatchesAll : IStringMatcher
     public static IStringMatcher Instance { get; } = new MatchesAll();
 
     /// <summary>
-    /// TBD
+    /// Matches every string.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to inspect.</param>
+    /// <returns>Always <c>true</c>.</returns>
     public bool IsMatch(string s)
     {
         return true;
     }
 
     /// <summary>
-    /// TBD
+    /// Returns an empty description because this matcher adds no filtering condition.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>An empty string.</returns>
     public override string ToString()
     {
         return "";

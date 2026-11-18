@@ -1,0 +1,9 @@
+﻿case: formatter-element-list-of-address
+message-type: ListOfAddressMessage
+manifest: list-of-address-v1
+serializer-id: 122001
+byte-count: 38
+
+0000  81 01 92 94 a4 61 6b 6b  61 a3 73 79 73 a9 6c 6f  |.....akka.sys.lo|
+0010  63 61 6c 68 6f 73 74 cd  09 f8 94 a4 61 6b 6b 61  |calhost.....akka|
+0020  a3 73 79 73 c0 c0                                 |.sys..|

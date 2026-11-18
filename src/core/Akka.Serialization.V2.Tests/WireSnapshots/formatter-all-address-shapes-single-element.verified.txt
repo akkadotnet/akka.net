@@ -1,0 +1,33 @@
+﻿case: formatter-all-address-shapes-single-element
+message-type: AddressPositions
+manifest: address-positions-v1
+serializer-id: 122001
+byte-count: 429
+
+0000  de 00 11 01 91 94 a4 61  6b 6b 61 a3 73 79 73 a9  |.......akka.sys.|
+0010  6c 6f 63 61 6c 68 6f 73  74 cd 09 f8 02 91 94 a8  |localhost.......|
+0020  61 6b 6b 61 2e 74 63 70  a5 6f 74 68 65 72 a8 31  |akka.tcp.other.1|
+0030  30 2e 30 2e 30 2e 32 cd  0f d5 03 91 94 a4 61 6b  |0.0.0.2.......ak|
+0040  6b 61 a3 73 79 73 c0 c0  04 91 94 a4 61 6b 6b 61  |ka.sys......akka|
+0050  a3 73 79 73 a9 6c 6f 63  61 6c 68 6f 73 74 cd 09  |.sys.localhost..|
+0060  f8 05 91 94 a8 61 6b 6b  61 2e 74 63 70 a5 6f 74  |.....akka.tcp.ot|
+0070  68 65 72 a8 31 30 2e 30  2e 30 2e 32 cd 0f d5 06  |her.10.0.0.2....|
+0080  91 94 a4 61 6b 6b 61 a3  73 79 73 c0 c0 07 91 94  |...akka.sys.....|
+0090  a4 61 6b 6b 61 a3 73 79  73 a9 6c 6f 63 61 6c 68  |.akka.sys.localh|
+00a0  6f 73 74 cd 09 f8 08 81  94 a4 61 6b 6b 61 a3 73  |ost.......akka.s|
+00b0  79 73 a9 6c 6f 63 61 6c  68 6f 73 74 cd 09 f8 01  |ys.localhost....|
+00c0  09 81 94 a8 61 6b 6b 61  2e 74 63 70 a5 6f 74 68  |....akka.tcp.oth|
+00d0  65 72 a8 31 30 2e 30 2e  30 2e 32 cd 0f d5 a1 72  |er.10.0.0.2....r|
+00e0  0a 81 94 a4 61 6b 6b 61  a3 73 79 73 c0 c0 02 0b  |....akka.sys....|
+00f0  81 a1 6b 94 a4 61 6b 6b  61 a3 73 79 73 a9 6c 6f  |..k..akka.sys.lo|
+0100  63 61 6c 68 6f 73 74 cd  09 f8 0c 81 a1 6b 94 a8  |calhost......k..|
+0110  61 6b 6b 61 2e 74 63 70  a5 6f 74 68 65 72 a8 31  |akka.tcp.other.1|
+0120  30 2e 30 2e 30 2e 32 cd  0f d5 0d 81 a1 6b 94 a4  |0.0.0.2......k..|
+0130  61 6b 6b 61 a3 73 79 73  c0 c0 0e 81 94 a4 61 6b  |akka.sys......ak|
+0140  6b 61 a3 73 79 73 a9 6c  6f 63 61 6c 68 6f 73 74  |ka.sys.localhost|
+0150  cd 09 f8 94 a8 61 6b 6b  61 2e 74 63 70 a5 6f 74  |.....akka.tcp.ot|
+0160  68 65 72 a8 31 30 2e 30  2e 30 2e 32 cd 0f d5 0f  |her.10.0.0.2....|
+0170  91 c0 10 91 91 94 a4 61  6b 6b 61 a3 73 79 73 a9  |.......akka.sys.|
+0180  6c 6f 63 61 6c 68 6f 73  74 cd 09 f8 11 81 a1 6b  |localhost......k|
+0190  91 94 a8 61 6b 6b 61 2e  74 63 70 a5 6f 74 68 65  |...akka.tcp.othe|
+01a0  72 a8 31 30 2e 30 2e 30  2e 32 cd 0f d5           |r.10.0.0.2...|

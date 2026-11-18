@@ -2,6 +2,8 @@
   href: index.md
 - name: Transports
   href: transports.md
+- name: Migrating From DotNetty to Artery
+  href: dotnetty-to-artery.md
 - name: Remote Messaging
   href: messaging.md
 - name: Deploying Actors Remotely
@@ -10,5 +12,9 @@
   href: deathwatch.md
 - name: Network Security
   href: security.md
+- name: Rotating TLS Certificates
+  href: certificate-rotation.md
+- name: TLS for Akka.IO, Akka.Streams, and Artery
+  href: tls-for-io-streams-artery.md
 - name: Performance Optimization
   href: performance.md

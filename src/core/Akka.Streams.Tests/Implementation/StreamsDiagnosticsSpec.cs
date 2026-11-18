@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -76,7 +77,7 @@ namespace Akka.Streams.Tests.Implementation
             foreach (var a in stopped)
             {
                 var stageType = a.GetTagItem("stream.stage.type") as string ?? "<none>";
-                Output.WriteLine($"[span] name='{a.OperationName}' traceId={a.TraceId} spanId={a.SpanId} parentId={a.ParentSpanId} stream.stage.type={stageType}");
+                Output?.WriteLine($"[span] name='{a.OperationName}' traceId={a.TraceId} spanId={a.SpanId} parentId={a.ParentSpanId} stream.stage.type={stageType}");
             }
 
             // We expect at least:
@@ -97,7 +98,7 @@ namespace Akka.Streams.Tests.Implementation
             distinctTraceIds.Should().HaveCount(1, "all stream spans should share one trace id");
 
             // The Select stage span must have a parent (it should not be a root).
-            selectStage.ParentSpanId.Should().NotBe(default(ActivitySpanId),
+            selectStage!.ParentSpanId.Should().NotBe(default(ActivitySpanId),
                 "Select stage span must parent to an upstream span");
         }
 
@@ -148,11 +149,11 @@ namespace Akka.Streams.Tests.Implementation
 
             userSpans.Should().HaveCount(1, "user span inside SelectAsync lambda should have been created");
             var userSpan = userSpans[0];
-            Output.WriteLine($"user.work span: traceId={userSpan.TraceId} parentSpanId={userSpan.ParentSpanId}");
+            Output?.WriteLine($"user.work span: traceId={userSpan.TraceId} parentSpanId={userSpan.ParentSpanId}");
 
             // Dump stream spans for diagnosis
             foreach (var a in collector.StoppedActivities)
-                Output.WriteLine($"[stream] {a.OperationName} trace={a.TraceId} span={a.SpanId} parent={a.ParentSpanId}");
+                Output?.WriteLine($"[stream] {a.OperationName} trace={a.TraceId} span={a.SpanId} parent={a.ParentSpanId}");
 
             // The user's span should share the same TraceId as the stream spans, proving
             // end-to-end trace continuity from actor → Source.Queue → SelectAsync → user code.
@@ -258,6 +259,105 @@ namespace Akka.Streams.Tests.Implementation
                 "when the producer has no Activity.Current, ingress capture is a no-op and no " +
                 "stream spans are created — this is the cardinality guard that keeps background " +
                 "tick-driven streams invisible to tracing");
+        }
+
+        [Theory(DisplayName = "Should_PreserveFeedbackAndIsolateCallbackContexts_When_TracingIsPresentOrAbsent")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_preserve_feedback_and_isolate_callback_contexts_when_tracing_is_present_or_absent(bool traced)
+        {
+            using var collector = new StreamsActivityCollector();
+            var ((queue, callback), completion) = Source.Queue<int>(1, OverflowStrategy.Fail)
+                .ViaMaterialized(new CallbackContextStage(), Keep.Both)
+                .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
+                .Run(_materializer);
+            var observed = new ConcurrentQueue<ActivityContext?>();
+            Activity.Current.Should().BeNull("the untraced callback must start without an ambient context");
+            using var producer = traced ? new Activity("callback.producer").Start() : null;
+
+            (await callback.InvokeWithFeedback(() => observed.Enqueue(Activity.Current?.Context)).WaitAsync(TimeSpan.FromSeconds(3)))
+                .Should().Be(Done.Instance);
+            Activity.Current.Should().BeSameAs(producer, "the interpreter must not alter the caller's scope");
+            producer?.Stop();
+            Activity.Current.Should().BeNull();
+            (await callback.InvokeWithFeedback(() => observed.Enqueue(Activity.Current?.Context)).WaitAsync(TimeSpan.FromSeconds(3)))
+                .Should().Be(Done.Instance);
+
+            queue.Complete();
+            await completion.WaitAsync(TimeSpan.FromSeconds(3));
+            var contexts = observed.ToArray();
+            contexts.Should().HaveCount(2, "successful feedback follows execution of each callback");
+            contexts[1].Should().BeNull("an untraced callback must not inherit the previous callback's ingress scope");
+            if (traced)
+            {
+                contexts[0].Should().NotBeNull();
+                var ingress = collector.StoppedActivities.Should().ContainSingle(a =>
+                    a.OperationName.StartsWith("akka.stream.ingress") && a.TraceId == producer!.TraceId).Subject;
+                ingress.ParentSpanId.Should().Be(producer!.SpanId);
+                contexts[0]!.Value.Should().Be(ingress.Context,
+                    "the handler must execute inside the ingress Activity, rather than merely capture its producer");
+            }
+            else
+            {
+                contexts[0].Should().BeNull();
+                collector.StartedActivities.Should().BeEmpty();
+            }
+        }
+
+        [Fact(DisplayName = "Should_StopIngressActivityAndFailFeedback_When_TracedCallbackThrows")]
+        public async Task Should_stop_ingress_activity_and_fail_feedback_when_traced_callback_throws()
+        {
+            using var collector = new StreamsActivityCollector();
+            var ((_, callback), completion) = Source.Queue<int>(1, OverflowStrategy.Fail)
+                .ViaMaterialized(new CallbackContextStage(), Keep.Both)
+                .ToMaterialized(Sink.Ignore<int>(), Keep.Both)
+                .Run(_materializer);
+            using var producer = new Activity("callback.throwing-producer").Start();
+            ActivityContext? observed = null;
+            var failure = new TestException("traced callback failed");
+            Func<Task> invoke = async () => await callback.InvokeWithFeedback(() =>
+            {
+                observed = Activity.Current?.Context;
+                throw failure;
+            }).WaitAsync(TimeSpan.FromSeconds(3));
+
+            (await invoke.Should().ThrowAsync<TestException>()).Which.Should().BeSameAs(failure);
+            Func<Task> finished = async () => await completion.WaitAsync(TimeSpan.FromSeconds(3));
+            (await finished.Should().ThrowAsync<TestException>()).Which.Should().BeSameAs(failure);
+            Activity.Current.Should().BeSameAs(producer);
+            observed.Should().NotBeNull();
+            var ingress = collector.StoppedActivities.Should().ContainSingle(a =>
+                a.OperationName.StartsWith("akka.stream.ingress") && a.TraceId == producer.TraceId).Subject;
+            observed!.Value.Should().Be(ingress.Context);
+            ingress.ParentSpanId.Should().Be(producer.SpanId);
+        }
+
+        private sealed class CallbackContextStage : GraphStageWithMaterializedValue<FlowShape<int, int>, IAsyncCallback<Action>>
+        {
+            private readonly Inlet<int> _in = new("callback-context.in");
+            private readonly Outlet<int> _out = new("callback-context.out");
+
+            public CallbackContextStage() => Shape = new FlowShape<int, int>(_in, _out);
+
+            public override FlowShape<int, int> Shape { get; }
+
+            public override ILogicAndMaterializedValue<IAsyncCallback<Action>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+            {
+                var logic = new Logic(this);
+                return new LogicAndMaterializedValue<IAsyncCallback<Action>>(logic, logic.Callback);
+            }
+
+            private sealed class Logic : GraphStageLogic
+            {
+                public Logic(CallbackContextStage stage) : base(stage.Shape)
+                {
+                    Callback = GetTypedAsyncCallback<Action>(action => action());
+                    SetHandler(stage._in, onPush: () => Push(stage._out, Grab(stage._in)));
+                    SetHandler(stage._out, onPull: () => Pull(stage._in));
+                }
+
+                public IAsyncCallback<Action> Callback { get; }
+            }
         }
 
     }

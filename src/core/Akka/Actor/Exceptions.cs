@@ -116,10 +116,10 @@ namespace Akka.Actor
     public class ActorInterruptedException : AkkaException
     {
         /// <summary>
-        /// TBD
+        /// Creates an exception indicating that an actor was interrupted while processing messages.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="message">A message describing the interruption.</param>
+        /// <param name="cause">The exception that caused the interruption, if any.</param>
         public ActorInterruptedException(string message = null, Exception cause = null) : base(message, cause) { }
 
         /// <summary>
@@ -548,4 +548,3 @@ namespace Akka.Actor
         }
     }
 }
-

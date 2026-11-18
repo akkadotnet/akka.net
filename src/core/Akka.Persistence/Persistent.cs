@@ -16,7 +16,7 @@ using Akka.Persistence.Serialization;
 namespace Akka.Persistence
 {
     /// <summary>
-    /// TBD
+    /// Identifies a persistent entity and the journal and snapshot store plugins that service it.
     /// </summary>
     public interface IPersistentIdentity
     {
@@ -50,17 +50,17 @@ namespace Akka.Persistence
     public interface IPersistentEnvelope
     {
         /// <summary>
-        /// TBD
+        /// Payload carried by the persistent envelope.
         /// </summary>
         object Payload { get; }
 
         /// <summary>
-        /// TBD
+        /// Sender associated with the persistent envelope.
         /// </summary>
         IActorRef Sender { get; }
 
         /// <summary>
-        /// TBD
+        /// Number of persistent messages contained in the envelope.
         /// </summary>
         int Size { get; }
     }
@@ -97,7 +97,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="AtomicWrite"/> class.
         /// </summary>
-        /// <param name="event">TBD</param>
+        /// <param name="event">Persistent representation to include in the atomic write.</param>
         public AtomicWrite(IPersistentRepresentation @event) : this(ImmutableArray.Create(@event))
         {
         }
@@ -105,7 +105,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="AtomicWrite"/> class.
         /// </summary>
-        /// <param name="payload">TBD</param>
+        /// <param name="payload">Non-empty list of persistent representations with the same persistence identifier.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="payload"/> is empty
         /// or the specified <paramref name="payload"/> contains messages from different <see cref="IPersistentRepresentation.PersistenceId"/>.
@@ -143,27 +143,27 @@ namespace Akka.Persistence
         public object Payload { get; }
 
         /// <summary>
-        /// TBD
+        /// Sender associated with this write; atomic writes use <see cref="ActorRefs.NoSender"/>.
         /// </summary>
         public IActorRef Sender { get; }
 
         /// <summary>
-        /// TBD
+        /// Number of persistent representations in this atomic write.
         /// </summary>
         public int Size { get; }
 
         /// <summary>
-        /// TBD
+        /// Persistence identifier shared by all representations in this atomic write.
         /// </summary>
         public string PersistenceId { get; }
 
         /// <summary>
-        /// TBD
+        /// Sequence number of the first representation in this atomic write.
         /// </summary>
         public long LowestSequenceNr { get; }
 
         /// <summary>
-        /// TBD
+        /// Sequence number of the last representation in this atomic write.
         /// </summary>
         public long HighestSequenceNr { get; }
 
@@ -251,21 +251,21 @@ namespace Akka.Persistence
         /// Creates a new persistent message with the specified <paramref name="timestamp"/>.
         /// </summary>
         /// <param name="timestamp">The time the event was stored, in ticks.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A copy of this persistent representation with the specified timestamp.</returns>
         IPersistentRepresentation WithTimestamp(long timestamp);
 
         /// <summary>
         /// Creates a new persistent message with the specified <paramref name="payload"/>.
         /// </summary>
         /// <param name="payload">This persistent message's payload.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A copy of this persistent representation with the specified payload.</returns>
         IPersistentRepresentation WithPayload(object payload);
 
         /// <summary>
         /// Creates a new persistent message with the specified <paramref name="manifest"/>.
         /// </summary>
         /// <param name="manifest">The persistent payload's manifest.</param>
-        /// <returns>TBD</returns>
+        /// <returns>A copy of this persistent representation with the specified manifest.</returns>
         IPersistentRepresentation WithManifest(string manifest);
 
         /// <summary>
@@ -281,14 +281,14 @@ namespace Akka.Persistence
         IActorRef Sender { get; }
 
         /// <summary>
-        /// Creates a new deep copy of this message.
+        /// Creates a new persistent representation with the specified metadata values.
         /// </summary>
-        /// <param name="sequenceNr">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="isDeleted">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="writerGuid">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="sequenceNr">Sequence number for the copy.</param>
+        /// <param name="persistenceId">Persistence identifier for the copy.</param>
+        /// <param name="isDeleted">Whether the copy is marked as deleted.</param>
+        /// <param name="sender">Sender associated with the copy.</param>
+        /// <param name="writerGuid">Writer identifier associated with the copy.</param>
+        /// <returns>A new representation with the specified sequence number, persistence identifier, deletion state, sender, and writer identifier. The payload and manifest are retained; the timestamp is not copied.</returns>
         IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender, string writerGuid);
     }
 
@@ -307,14 +307,14 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="Persistent"/> class.
         /// </summary>
-        /// <param name="payload">TBD</param>
-        /// <param name="sequenceNr">TBD</param>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="manifest">TBD</param>
-        /// <param name="isDeleted">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="writerGuid">TBD</param>
-        /// <param name="timestamp">TBD</param>
+        /// <param name="payload">Event payload.</param>
+        /// <param name="sequenceNr">Sequence number assigned to the event.</param>
+        /// <param name="persistenceId">Identifier of the persistent actor that owns the event.</param>
+        /// <param name="manifest">Event adapter manifest associated with the payload.</param>
+        /// <param name="isDeleted">Whether the representation is marked as deleted.</param>
+        /// <param name="sender">Actor that sent the event.</param>
+        /// <param name="writerGuid">Unique identifier of the persistent actor writing the event.</param>
+        /// <param name="timestamp">Event storage timestamp in ticks, or zero when undefined.</param>
         public Persistent(object payload, long sequenceNr = 0L, string persistenceId = null, string manifest = null, bool isDeleted = false, IActorRef sender = null, string writerGuid = null, long timestamp = 0L)
         {
             Payload = payload;

@@ -18,7 +18,7 @@ using Akka.Serialization;
 namespace Akka.Remote.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Remote.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.Remote's serializers, bindings and ids. They register as defaults when the module is deployed; Remote.conf carries no rows for them.
     /// </summary>
     internal sealed class RemoteSerializers : ModuleSerializers
     {
@@ -50,7 +50,7 @@ namespace Akka.Remote.Serialization
                     typeof(RemoteWatcher.Heartbeat),
                     typeof(RemoteWatcher.HeartbeatRsp),
                     typeof(RemoteRouterConfig))),
-            // the only built-in serializer with its own settings block; without Remote.conf, use Remote.conf's default
+            // the only built-in serializer with its own settings block; without Remote.conf, use the same default Remote.conf sets
             SerializerDetails.Create("primitive",
                 new PrimitiveSerializers(system,
                     system.Settings.Config.GetConfig("akka.actor.serialization-settings.primitive") ?? PrimitiveDefaults),

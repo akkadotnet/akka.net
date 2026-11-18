@@ -18,16 +18,16 @@ using Akka.Remote;
 namespace Akka.Cluster.Tools.Client
 {
     /// <summary>
-    /// TBD
+    /// Immutable settings that control how a cluster client discovers receptionists, buffers messages, and monitors connections.
     /// </summary>
     public sealed class ClusterClientSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Create settings from the default configuration 'akka.cluster.client'.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system whose configuration supplies the cluster client settings.</param>
+        /// <exception cref="ConfigurationException">Thrown when the actor system has no cluster client configuration.</exception>
+        /// <returns>Settings loaded from the actor system's <c>akka.cluster.client</c> configuration.</returns>
         public static ClusterClientSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
@@ -47,8 +47,8 @@ namespace Akka.Cluster.Tools.Client
         /// <summary>
         /// Create settings from a configuration with the same layout as the default configuration 'akka.cluster.client'.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="config">Configuration with the layout of <c>akka.cluster.client</c>.</param>
+        /// <returns>Settings parsed from the supplied configuration.</returns>
         public static ClusterClientSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
@@ -133,16 +133,16 @@ namespace Akka.Cluster.Tools.Client
         public bool VerboseLogging { get; }
         
         /// <summary>
-        /// TBD
+        /// Creates settings using the legacy serialization format.
         /// </summary>
-        /// <param name="initialContacts">TBD</param>
-        /// <param name="establishingGetContactsInterval">TBD</param>
-        /// <param name="refreshContactsInterval">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="acceptableHeartbeatPause">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="reconnectTimeout">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="initialContacts">Receptionist actor paths contacted when establishing or reconnecting.</param>
+        /// <param name="establishingGetContactsInterval">Interval between contact requests while establishing a connection.</param>
+        /// <param name="refreshContactsInterval">Interval at which the connected client requests refreshed contact points.</param>
+        /// <param name="heartbeatInterval">Interval between receptionist heartbeat checks.</param>
+        /// <param name="acceptableHeartbeatPause">Additional delay tolerated beyond the heartbeat interval before declaring contact lost.</param>
+        /// <param name="bufferSize">Maximum number of messages buffered while no receptionist connection is available; zero disables buffering.</param>
+        /// <param name="reconnectTimeout">Optional time after which the client stops if it cannot reconnect.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="bufferSize"/> is outside the supported range.</exception>
         [Obsolete("Use constructor with useLegacySerialization argument instead. Since 1.5.15")]
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
@@ -165,17 +165,17 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// TBD
+        /// Creates settings with the supplied reconnect and serialization options.
         /// </summary>
-        /// <param name="initialContacts">TBD</param>
-        /// <param name="establishingGetContactsInterval">TBD</param>
-        /// <param name="refreshContactsInterval">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="acceptableHeartbeatPause">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="reconnectTimeout">TBD</param>
-        /// <param name="useLegacySerialization">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="initialContacts">Receptionist actor paths contacted when establishing or reconnecting.</param>
+        /// <param name="establishingGetContactsInterval">Interval between contact requests while establishing a connection.</param>
+        /// <param name="refreshContactsInterval">Interval at which the connected client requests refreshed contact points.</param>
+        /// <param name="heartbeatInterval">Interval between receptionist heartbeat checks.</param>
+        /// <param name="acceptableHeartbeatPause">Additional delay tolerated beyond the heartbeat interval before declaring contact lost.</param>
+        /// <param name="bufferSize">Maximum number of messages buffered while no receptionist connection is available; zero disables buffering.</param>
+        /// <param name="reconnectTimeout">Optional time after which the client stops if it cannot reconnect.</param>
+        /// <param name="useLegacySerialization">Whether cluster client protocol messages use the default object serializer.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="bufferSize"/> is outside the supported range.</exception>
         [Obsolete("Use constructor with useInitialContactsDiscovery and discoverySettings argument instead. Since 1.5.25")]
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
@@ -201,20 +201,20 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// TBD
+        /// Creates settings for contact discovery, connection timing, buffering, serialization, and logging.
         /// </summary>
-        /// <param name="initialContacts">TBD</param>
-        /// <param name="establishingGetContactsInterval">TBD</param>
-        /// <param name="refreshContactsInterval">TBD</param>
-        /// <param name="heartbeatInterval">TBD</param>
-        /// <param name="acceptableHeartbeatPause">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="useInitialContactsDiscovery">TBD</param>
-        /// <param name="discoverySettings">TBD</param>
-        /// <param name="reconnectTimeout">TBD</param>
-        /// <param name="useLegacySerialization">TBD</param>
-        /// <param name="verboseLogging">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="initialContacts">Receptionist actor paths contacted when establishing or reconnecting.</param>
+        /// <param name="establishingGetContactsInterval">Interval between contact requests while establishing a connection.</param>
+        /// <param name="refreshContactsInterval">Interval at which the connected client requests refreshed contact points.</param>
+        /// <param name="heartbeatInterval">Interval between receptionist heartbeat checks.</param>
+        /// <param name="acceptableHeartbeatPause">Additional delay tolerated beyond the heartbeat interval before declaring contact lost.</param>
+        /// <param name="bufferSize">Maximum number of messages buffered while no receptionist connection is available; must be between 0 and 10000.</param>
+        /// <param name="useInitialContactsDiscovery">Whether to discover initial contacts before connecting to a receptionist.</param>
+        /// <param name="discoverySettings">Settings used when initial contact discovery is enabled; <see langword="null"/> selects the empty settings.</param>
+        /// <param name="reconnectTimeout">Optional time after which the client stops if it cannot reconnect.</param>
+        /// <param name="useLegacySerialization">Whether cluster client protocol messages use the default object serializer.</param>
+        /// <param name="verboseLogging">Whether to enable verbose cluster client logging.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="bufferSize"/> is outside the supported range.</exception>
         public ClusterClientSettings(
             IImmutableSet<ActorPath> initialContacts,
             TimeSpan establishingGetContactsInterval,
@@ -247,11 +247,11 @@ namespace Akka.Cluster.Tools.Client
         }
         
         /// <summary>
-        /// TBD
+        /// Returns a copy using the specified initial receptionist contact paths.
         /// </summary>
-        /// <param name="initialContacts">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="initialContacts">Non-empty set of receptionist actor paths to contact initially.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="initialContacts"/> is empty.</exception>
+        /// <returns>A copy of these settings with the specified initial contacts.</returns>
         public ClusterClientSettings WithInitialContacts(IImmutableSet<ActorPath> initialContacts)
         {
             if (initialContacts.Count == 0)
@@ -263,50 +263,50 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the interval between contact requests while establishing a connection changed.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">New interval between contact requests during connection establishment.</param>
+        /// <returns>A copy of these settings with the supplied interval.</returns>
         public ClusterClientSettings WithEstablishingGetContactsInterval(TimeSpan value)
         {
             return Copy(establishingGetContactsInterval: value);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the contact-point refresh interval changed.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">New interval at which the connected client requests updated contacts.</param>
+        /// <returns>A copy of these settings with the supplied interval.</returns>
         public ClusterClientSettings WithRefreshContactsInterval(TimeSpan value)
         {
             return Copy(refreshContactsInterval: value);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the receptionist heartbeat interval changed.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="value">New interval between heartbeat checks.</param>
+        /// <returns>A copy of these settings with the supplied interval.</returns>
         public ClusterClientSettings WithHeartbeatInterval(TimeSpan value)
         {
             return Copy(heartbeatInterval: value);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the maximum buffered message count changed.
         /// </summary>
-        /// <param name="bufferSize">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="bufferSize">New maximum number of messages buffered while no receptionist is connected.</param>
+        /// <returns>A copy of these settings with the supplied buffer size.</returns>
         public ClusterClientSettings WithBufferSize(int bufferSize)
         {
             return Copy(bufferSize: bufferSize);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the reconnect timeout changed.
         /// </summary>
-        /// <param name="reconnectTimeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="reconnectTimeout">New timeout after which the client stops if reconnection has not succeeded; a null value retains the current timeout.</param>
+        /// <returns>A copy of these settings with the supplied timeout when it is non-null.</returns>
         public ClusterClientSettings WithReconnectTimeout(TimeSpan? reconnectTimeout)
         {
             return Copy(reconnectTimeout: reconnectTimeout);

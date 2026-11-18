@@ -308,7 +308,7 @@ namespace Akka.Cluster
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
         /// </summary>
-        /// <param name="seedNodes">TBD</param>
+        /// <param name="seedNodes">The seed-node addresses used to join the cluster.</param>
         public void JoinSeedNodes(IEnumerable<Address> seedNodes)
         {
             ClusterCore.Tell(
@@ -331,8 +331,8 @@ namespace Akka.Cluster
         /// Once cluster has been shutdown, <see cref="JoinSeedNodesAsync"/> will always fail until an entire
         /// actor system is manually restarted.
         /// </summary>
-        /// <param name="seedNodes">TBD</param>
-        /// <param name="token">TBD</param>
+        /// <param name="seedNodes">The seed-node addresses used to join the cluster.</param>
+        /// <param name="token">A token that can cancel the asynchronous join operation.</param>
         public Task JoinSeedNodesAsync(IEnumerable<Address> seedNodes, CancellationToken token = default)
         {
             if (_isTerminated.Value)
@@ -558,7 +558,7 @@ namespace Akka.Cluster
         private readonly ClusterReadView _readView;
 
         /// <summary>
-        /// TBD
+        /// The internal read view that supplies the cluster's locally observed state.
         /// </summary>
         internal ClusterReadView ReadView { get { return _readView; } }
 
@@ -577,7 +577,7 @@ namespace Akka.Cluster
         // ========================================================
 
         /// <summary>
-        /// TBD
+        /// The scheduler used for cluster operations.
         /// </summary>
         internal IScheduler Scheduler { get; }
 
@@ -808,4 +808,3 @@ namespace Akka.Cluster
         }
     }
 }
-

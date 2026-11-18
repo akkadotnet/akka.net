@@ -72,12 +72,11 @@ namespace Akka.Util
         /// 
         /// Internally, it just wraps <paramref name="collection"/>'s internal iterator with circular iteration behavior.
         /// </summary>
-        /// <param name="collection">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="collection">The sequence to iterate repeatedly.</param>
+        /// <returns>An enumerator that calls <see cref="IEnumerator.Reset"/> after reaching the end; repeating requires an enumerator that supports reset.</returns>
         public static ContinuousEnumerator<T> GetContinuousEnumerator<T>(this IEnumerable<T> collection)
         {
             return new ContinuousEnumerator<T>(collection.GetEnumerator());
         }
     }
 }
-

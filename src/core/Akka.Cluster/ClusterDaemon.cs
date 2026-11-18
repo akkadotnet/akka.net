@@ -34,29 +34,29 @@ namespace Akka.Cluster
     internal static class ClusterUserAction
     {
         /// <summary>
-        /// TBD
+        /// Base message for cluster commands addressed to a node.
         /// </summary>
         internal abstract class BaseClusterUserAction
         {
             /// <summary>
-            /// TBD
+            /// Creates a command addressed to a cluster node.
             /// </summary>
-            /// <param name="address">TBD</param>
+            /// <param name="address">The address of the node targeted by the command.</param>
             protected BaseClusterUserAction(Address address)
             {
                 Address = address;
             }
 
             /// <summary>
-            /// TBD
+            /// The address targeted by this command.
             /// </summary>
             public Address Address { get; }
 
             /// <summary>
-            /// TBD
+            /// Compares this command with another command by target address.
             /// </summary>
-            /// <param name="other">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="other">The command to compare.</param>
+            /// <returns><c>true</c> when both commands target equal addresses.</returns>
             protected bool Equals(BaseClusterUserAction other)
             {
                 return Equals(Address, other.Address);
@@ -85,9 +85,9 @@ namespace Akka.Cluster
         internal sealed class JoinTo : BaseClusterUserAction
         {
             /// <summary>
-            /// TBD
+            /// Creates a command asking the specified node to join the cluster.
             /// </summary>
-            /// <param name="address">TBD</param>
+            /// <param name="address">The address of the node to join.</param>
             public JoinTo(Address address)
                 : base(address)
             {
@@ -123,7 +123,7 @@ namespace Akka.Cluster
     internal static class InternalClusterAction
     {
         /// <summary>
-        /// TBD
+        /// Internal message carrying a request for a node to join, including its roles and application version.
         /// </summary>
         internal sealed class Join : IClusterMessage
         {
@@ -131,10 +131,10 @@ namespace Akka.Cluster
             private readonly ImmutableHashSet<string> _roles;
 
             /// <summary>
-            /// TBD
+            /// Creates a join request for the specified node and member metadata.
             /// </summary>
             /// <param name="node">the node that wants to join the cluster</param>
-            /// <param name="roles">TBD</param>
+            /// <param name="roles">The roles requested for the joining member.</param>
             /// <param name="appVersion">Application version</param>
             public Join(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
             {
@@ -144,11 +144,11 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The unique identity of the joining node.
             /// </summary>
             public UniqueAddress Node { get { return _node; } }
             /// <summary>
-            /// TBD
+            /// The roles requested by the joining node.
             /// </summary>
             public ImmutableHashSet<string> Roles { get { return _roles; } }
 
@@ -193,10 +193,10 @@ namespace Akka.Cluster
             private readonly Gossip _gossip;
 
             /// <summary>
-            /// TBD
+            /// Reply containing the responding node's identity and its current gossip state.
             /// </summary>
             /// <param name="from">the sender node in the cluster, i.e. the node that received the Join command</param>
-            /// <param name="gossip">TBD</param>
+            /// <param name="gossip">The current gossip state sent to the joining node.</param>
             public Welcome(UniqueAddress from, Gossip gossip)
             {
                 _from = from;
@@ -204,12 +204,12 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The unique address of the node sending this welcome response.
             /// </summary>
             public UniqueAddress From { get { return _from; } }
 
             /// <summary>
-            /// TBD
+            /// The gossip state supplied with this welcome response.
             /// </summary>
             public Gossip Gossip { get { return _gossip; } }
 
@@ -301,17 +301,16 @@ namespace Akka.Cluster
             private readonly Address _address;
 
             /// <summary>
-            /// TBD
+            /// Acknowledges an initial seed-node join probe and identifies the responding seed node.
             /// </summary>
-            /// <param name="address">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="address">The address of the seed node that acknowledged the probe.</param>
             public InitJoinAck(Address address)
             {
                 _address = address;
             }
 
             /// <summary>
-            /// TBD
+            /// The address of the seed node that acknowledged the probe.
             /// </summary>
             public Address Address
             {
@@ -344,7 +343,7 @@ namespace Akka.Cluster
             private readonly Address _address;
 
             /// <summary>
-            /// TBD
+            /// Rejects an initial seed-node join probe because the receiver is not initialized.
             /// </summary>
             /// <param name="address">The address we attempted to join</param>
             public InitJoinNack(Address address)
@@ -353,7 +352,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The address of the seed node that rejected the probe.
             /// </summary>
             public Address Address
             {
@@ -443,7 +442,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal tick that triggers an additional gossip attempt when the local gossip view may need faster dissemination.
         /// </summary>
         internal class GossipSpeedupTick : ITick
         {
@@ -452,7 +451,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal tick that triggers unreachable-member reaping.
         /// </summary>
         internal class ReapUnreachableTick : ITick
         {
@@ -461,7 +460,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal tick marker for cluster metrics work.
         /// </summary>
         internal class MetricsTick : ITick
         {
@@ -470,7 +469,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal tick that triggers periodic leader actions.
         /// </summary>
         internal class LeaderActionsTick : ITick
         {
@@ -479,7 +478,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Internal tick that triggers publication of internal cluster statistics.
         /// </summary>
         internal class PublishStatsTick : ITick
         {
@@ -488,14 +487,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Message asking the cluster daemon to send gossip to a member at the supplied address.
         /// </summary>
         internal sealed class SendGossipTo
         {
             /// <summary>
-            /// TBD
+            /// Creates a request to send gossip to the specified address.
             /// </summary>
-            /// <param name="address">TBD</param>
+            /// <param name="address">The address of the target cluster member.</param>
             public SendGossipTo(Address address)
             {
                 Address = address;
@@ -548,16 +547,16 @@ namespace Akka.Cluster
         public sealed class AddOnMemberUpListener : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// Creates a listener that runs when the local member becomes up.
             /// </summary>
-            /// <param name="callback">TBD</param>
+            /// <param name="callback">The callback to invoke when the local member is up.</param>
             public AddOnMemberUpListener(Action callback)
             {
                 Callback = callback;
             }
 
             /// <summary>
-            /// TBD
+            /// The callback to invoke when the local member is up.
             /// </summary>
             public Action Callback { get; }
         }
@@ -569,16 +568,16 @@ namespace Akka.Cluster
         public sealed class AddOnMemberRemovedListener : INoSerializationVerificationNeeded
         {
             /// <summary>
-            /// TBD
+            /// Creates a listener that runs when the local member is removed.
             /// </summary>
-            /// <param name="callback">TBD</param>
+            /// <param name="callback">The callback to invoke when the local member is removed.</param>
             public AddOnMemberRemovedListener(Action callback)
             {
                 Callback = callback;
             }
 
             /// <summary>
-            /// TBD
+            /// The callback to invoke when the local member is removed.
             /// </summary>
             public Action Callback { get; }
         }
@@ -637,7 +636,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Removes an actor's subscription to a cluster event type.
         /// </summary>
         public sealed class Unsubscribe : ISubscriptionMessage, IDeadLetterSuppression
         {
@@ -645,10 +644,10 @@ namespace Akka.Cluster
             private readonly Type _to;
 
             /// <summary>
-            /// TBD
+            /// Creates an unsubscribe message for one subscriber and event type.
             /// </summary>
-            /// <param name="subscriber">TBD</param>
-            /// <param name="to">TBD</param>
+            /// <param name="subscriber">The actor whose subscription is removed.</param>
+            /// <param name="to">The event type from which the actor is unsubscribed.</param>
             public Unsubscribe(IActorRef subscriber, Type to)
             {
                 _to = to;
@@ -656,7 +655,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The actor whose subscription is removed.
             /// </summary>
             public IActorRef Subscriber
             {
@@ -664,7 +663,7 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// The event type from which the actor is unsubscribed.
             /// </summary>
             public Type To
             {
@@ -673,14 +672,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Requests delivery of the current cluster state to a receiver.
         /// </summary>
         public sealed class SendCurrentClusterState : ISubscriptionMessage
         {
             private readonly IActorRef _receiver;
 
             /// <summary>
-            /// TBD
+            /// The actor that receives the current cluster state.
             /// </summary>
             public IActorRef Receiver
             {
@@ -688,9 +687,9 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            /// TBD
+            /// Creates a request to send the current state to <paramref name="receiver"/>.
             /// </summary>
-            /// <param name="receiver"><see cref="Akka.Cluster.ClusterEvent.CurrentClusterState"/> will be sent to the `receiver`</param>
+            /// <param name="receiver">The actor to receive a <see cref="Akka.Cluster.ClusterEvent.CurrentClusterState"/> message.</param>
             public SendCurrentClusterState(IActorRef receiver)
             {
                 _receiver = receiver;
@@ -740,16 +739,16 @@ namespace Akka.Cluster
             private readonly ClusterEvent.IClusterDomainEvent _event;
 
             /// <summary>
-            /// TBD
+            /// Creates a message that publishes the specified cluster domain event.
             /// </summary>
-            /// <param name="event">TBD</param>
+            /// <param name="event">The cluster domain event to publish.</param>
             internal PublishEvent(ClusterEvent.IClusterDomainEvent @event)
             {
                 _event = @event;
             }
 
             /// <summary>
-            /// TBD
+            /// The cluster domain event carried by this message.
             /// </summary>
             public ClusterEvent.IClusterDomainEvent Event
             {
@@ -944,9 +943,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Stops the cluster daemon when a child fails, after logging the failure.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A one-for-one strategy that stops this daemon after a child failure.</returns>
         protected override SupervisorStrategy SupervisorStrategy()
         {
             return new OneForOneStrategy(e =>
@@ -960,7 +959,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Shuts down the cluster extension when the daemon stops.
         /// </summary>
         protected override void PostStop()
         {
@@ -1661,9 +1660,9 @@ namespace Akka.Cluster
         /// <summary>
         /// Reply from Join request
         /// </summary>
-        /// <param name="joinWith">TBD</param>
-        /// <param name="from">TBD</param>
-        /// <param name="gossip">TBD</param>
+        /// <param name="joinWith">The address of the seed node selected for the join.</param>
+        /// <param name="from">The unique address of the node sending the welcome response.</param>
+        /// <param name="gossip">The gossip state received from that node.</param>
         /// <exception cref="InvalidOperationException">Welcome can only be done from an empty state</exception>
         public void Welcome(Address joinWith, UniqueAddress from, Gossip gossip)
         {
@@ -1775,9 +1774,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Records the quarantined node as terminated in local reachability when it is a known member.
         /// </summary>
-        /// <param name="node">TBD</param>
+        /// <param name="node">The unique address of the quarantined node.</param>
         public void Quarantined(UniqueAddress node)
         {
             var localGossip = LatestGossip;
@@ -1794,9 +1793,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Processes a gossip status from a known reachable member and responds according to the vector-clock comparison.
         /// </summary>
-        /// <param name="status">TBD</param>
+        /// <param name="status">The remote member's gossip version and identity.</param>
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
@@ -2542,10 +2541,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Selects one node at random from the supplied list.
         /// </summary>
-        /// <param name="nodes">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="nodes">The candidate nodes.</param>
+        /// <returns>A randomly selected node, or <c>null</c> if the list is empty.</returns>
         public UniqueAddress SelectRandomNode(ImmutableList<UniqueAddress> nodes)
         {
             if (nodes.IsEmpty) return null;
@@ -2568,7 +2567,7 @@ namespace Akka.Cluster
         /// <summary>
         /// needed for tests
         /// </summary>
-        /// <param name="address">TBD</param>
+        /// <param name="address">The address of the member to receive gossip.</param>
         public void SendGossipTo(Address address)
         {
             foreach (var m in LatestGossip.Members)
@@ -2589,10 +2588,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Sends the latest gossip to a valid member using the supplied destination reference.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="destination">TBD</param>
+        /// <param name="node">The unique address of the target member.</param>
+        /// <param name="destination">The actor reference to which the gossip envelope is sent.</param>
         public void GossipTo(UniqueAddress node, IActorRef destination)
         {
             if (_membershipState.ValidNodeForGossip(node))
@@ -2600,9 +2599,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Sends the local gossip version to a valid member using its cluster-core path.
         /// </summary>
-        /// <param name="node">TBD</param>
+        /// <param name="node">The unique address of the target member.</param>
         public void GossipStatusTo(UniqueAddress node)
         {
             if (_membershipState.ValidNodeForGossip(node))
@@ -2610,10 +2609,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Sends the local gossip version to a valid member using the supplied destination reference.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="destination">TBD</param>
+        /// <param name="node">The unique address of the target member.</param>
+        /// <param name="destination">The actor reference to which the gossip status is sent.</param>
         public void GossipStatusTo(UniqueAddress node, IActorRef destination)
         {
             if (_membershipState.ValidNodeForGossip(node))
@@ -2717,7 +2716,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Publishes the current gossip counters and vector-clock summary on the cluster event bus.
         /// </summary>
         public void PublishInternalStats()
         {
@@ -2764,10 +2763,10 @@ namespace Akka.Cluster
         private int _attempts = 0;
 
         /// <summary>
-        /// TBD
+        /// Creates a seed-node join process that probes the configured seed addresses.
         /// </summary>
-        /// <param name="cluster">TBD</param>
-        /// <param name="seeds">TBD</param>
+        /// <param name="cluster">The cluster instance whose local address and join timeout are used.</param>
+        /// <param name="seeds">The seed-node addresses to probe.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the list of specified <paramref name="seeds"/> is empty
         /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
@@ -2783,7 +2782,7 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Starts the first round of seed-node probes.
         /// </summary>
         protected override void PreStart()
         {
@@ -2791,9 +2790,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Handles probe start messages, seed acknowledgements, rejections, and receive timeouts.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The seed-join protocol message or receive-timeout notification.</param>
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -2872,7 +2871,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Launches a new instance of the "first seed node" joining process.
         /// </summary>
-        /// <param name="cluster">TBD</param>
+        /// <param name="cluster">The cluster instance whose address, scheduler, and seed-node timeout are used.</param>
         /// <param name="seeds">The set of seed nodes to join.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the number of specified <paramref name="seeds"/> is less than or equal to 1
@@ -2953,34 +2952,34 @@ namespace Akka.Cluster
     internal sealed class GossipStats
     {
         /// <summary>
-        /// TBD
+        /// Total number of gossip messages received and classified by the cluster core daemon.
         /// </summary>
         public readonly long ReceivedGossipCount;
         /// <summary>
-        /// TBD
+        /// Number of received gossip messages that caused a merge.
         /// </summary>
         public readonly long MergeCount;
         /// <summary>
-        /// TBD
+        /// Number of received gossip messages with the same version as local gossip.
         /// </summary>
         public readonly long SameCount;
         /// <summary>
-        /// TBD
+        /// Number of received gossip messages with a newer version than local gossip.
         /// </summary>
         public readonly long NewerCount;
         /// <summary>
-        /// TBD
+        /// Number of received gossip messages with an older version than local gossip.
         /// </summary>
         public readonly long OlderCount;
 
         /// <summary>
-        /// TBD
+        /// Creates gossip counters with the specified initial values.
         /// </summary>
-        /// <param name="receivedGossipCount">TBD</param>
-        /// <param name="mergeCount">TBD</param>
-        /// <param name="sameCount">TBD</param>
-        /// <param name="newerCount">TBD</param>
-        /// <param name="olderCount">TBD</param>
+        /// <param name="receivedGossipCount">The total number of received gossip messages.</param>
+        /// <param name="mergeCount">The number of messages that caused a merge.</param>
+        /// <param name="sameCount">The number of messages with the same version.</param>
+        /// <param name="newerCount">The number of messages with a newer version.</param>
+        /// <param name="olderCount">The number of messages with an older version.</param>
         public GossipStats(long receivedGossipCount = 0L,
             long mergeCount = 0L,
             long sameCount = 0L,
@@ -2994,50 +2993,50 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the merge and total-received counters incremented.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copy with both counters increased by one.</returns>
         public GossipStats IncrementMergeCount()
         {
             return Copy(mergeCount: MergeCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the same-version and total-received counters incremented.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copy with both counters increased by one.</returns>
         public GossipStats IncrementSameCount()
         {
             return Copy(sameCount: SameCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the newer-version and total-received counters incremented.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copy with both counters increased by one.</returns>
         public GossipStats IncrementNewerCount()
         {
             return Copy(newerCount: NewerCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         /// <summary>
-        /// TBD
+        /// Returns a copy with the older-version and total-received counters incremented.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A copy with both counters increased by one.</returns>
         public GossipStats IncrementOlderCount()
         {
             return Copy(olderCount: OlderCount + 1, receivedGossipCount: ReceivedGossipCount + 1);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a copy, replacing the counters supplied by non-null arguments.
         /// </summary>
-        /// <param name="receivedGossipCount">TBD</param>
-        /// <param name="mergeCount">TBD</param>
-        /// <param name="sameCount">TBD</param>
-        /// <param name="newerCount">TBD</param>
-        /// <param name="olderCount">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="receivedGossipCount">The replacement total-received count, or <c>null</c> to retain the current count.</param>
+        /// <param name="mergeCount">The replacement merge count, or <c>null</c> to retain the current count.</param>
+        /// <param name="sameCount">The replacement same-version count, or <c>null</c> to retain the current count.</param>
+        /// <param name="newerCount">The replacement newer-version count, or <c>null</c> to retain the current count.</param>
+        /// <param name="olderCount">The replacement older-version count, or <c>null</c> to retain the current count.</param>
+        /// <returns>A copy with specified values replaced and omitted values retained.</returns>
         public GossipStats Copy(long? receivedGossipCount = null,
             long? mergeCount = null,
             long? sameCount = null,
@@ -3114,11 +3113,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Calls a callback once the local member reaches the requested Up or Removed status.
         /// </summary>
-        /// <param name="cluster">TBD</param>
-        /// <param name="callback">TBD</param>
-        /// <param name="targetStatus">TBD</param>
+        /// <param name="cluster">The cluster whose local member status is observed.</param>
+        /// <param name="callback">The action invoked when the target status is observed.</param>
+        /// <param name="targetStatus">The member status that triggers the callback.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="targetStatus"/> is invalid.
         /// Acceptable values are: <see cref="MemberStatus.Up"/> | <see cref="MemberStatus.Removed"/>.
@@ -3189,15 +3188,15 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// TBD
+    /// Snapshot of vector-clock size and the number of cluster members that have seen the latest gossip version.
     /// </summary>
     internal sealed class VectorClockStats
     {
         /// <summary>
-        /// TBD
+        /// Creates a vector-clock statistics snapshot.
         /// </summary>
-        /// <param name="versionSize">TBD</param>
-        /// <param name="seenLatest">TBD</param>
+        /// <param name="versionSize">The number of node entries in the vector clock.</param>
+        /// <param name="seenLatest">The number of current members that have seen the latest gossip version.</param>
         public VectorClockStats(int versionSize = 0, int seenLatest = 0)
         {
             VersionSize = versionSize;
@@ -3205,11 +3204,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The number of node entries in the vector clock.
         /// </summary>
         public int VersionSize { get; }
         /// <summary>
-        /// TBD
+        /// The number of current members that have seen the latest gossip version.
         /// </summary>
         public int SeenLatest { get; }
 

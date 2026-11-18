@@ -17,9 +17,9 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Tracks output subscriptions, demand, and terminal states for a fan-out actor.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements sent to the outputs.</typeparam>
     public class OutputBunch<T>
     {
         #region internal classes
@@ -53,11 +53,11 @@ namespace Akka.Streams.Implementation
         private int _preferredId;
 
         /// <summary>
-        /// TBD
+        /// Creates one output manager for each configured output.
         /// </summary>
-        /// <param name="outputCount">TBD</param>
-        /// <param name="impl">TBD</param>
-        /// <param name="pump">TBD</param>
+        /// <param name="outputCount">The number of outputs.</param>
+        /// <param name="impl">The actor that receives output subscription messages.</param>
+        /// <param name="pump">The transfer pump resumed when output signals arrive.</param>
         public OutputBunch(int outputCount, IActorRef impl, IPump pump)
         {
             _outputCount = outputCount;
@@ -131,54 +131,50 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// Will only transfer an element when all marked outputs
-        /// have demand, and will complete as soon as any of the marked
-        /// outputs have canceled.
+        /// Is ready when the marked-pending count equals the marked-output count, and is complete when at least one marked output is canceled or no outputs are marked.
         /// </summary>
         public readonly TransferState AllOfMarkedOutputs;
 
         /// <summary>
-        /// Will transfer an element when any of the  marked outputs
-        /// have demand, and will complete when all of the marked
-        /// outputs have canceled.
+        /// Is ready when the marked-pending count is positive, and is complete when the marked-canceled count equals the marked-output count.
         /// </summary>
         public readonly TransferState AnyOfMarkedOutputs;
 
         /// <summary>
-        /// TBD
+        /// Gets the receive handler for downstream demand, cancellation, and subscription signals.
         /// </summary>
         public readonly SubReceive SubReceive;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the indexed output's pending flag is set.
         /// </summary>
-        /// <param name="output">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="output">The output index to inspect.</param>
+        /// <returns><see langword="true"/> when the pending flag is set.</returns>
         public bool IsPending(int output) => _pending[output];
 
         /// <summary>
-        /// TBD
+        /// Gets whether the indexed output has completed normally.
         /// </summary>
-        /// <param name="output">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="output">The output index to inspect.</param>
+        /// <returns><see langword="true"/> if the output completed.</returns>
         public bool IsCompleted(int output) => _completed[output];
 
         /// <summary>
-        /// TBD
+        /// Gets whether the indexed output was canceled by its subscriber.
         /// </summary>
-        /// <param name="output">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="output">The output index to inspect.</param>
+        /// <returns><see langword="true"/> if the output was canceled.</returns>
         public bool IsCancelled(int output) => _cancelled[output];
 
         /// <summary>
-        /// TBD
+        /// Gets whether the indexed output was marked errored by <see cref="Error(int, Exception)"/>.
         /// </summary>
-        /// <param name="output">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="output">The output index to inspect.</param>
+        /// <returns><see langword="true"/> if the output was marked errored.</returns>
         public bool IsErrored(int output) => _errored[output];
 
         /// <summary>
-        /// TBD
+        /// If the bunch has not already ended, calls <see cref="Complete(int)"/> for every configured output index.
         /// </summary>
         public void Complete()
         {
@@ -192,9 +188,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// For an output that is not completed, failed, or canceled, calls its manager's <c>Complete</c> method, then marks and unmarks the output if that call returns.
         /// </summary>
-        /// <param name="output">TBD</param>
+        /// <param name="output">The output index to complete.</param>
         public void Complete(int output)
         {
             if (!_completed[output] && !_errored[output] && !_cancelled[output])
@@ -206,9 +202,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// If the bunch has not already ended, calls <see cref="Error(int, Exception)"/> for every configured output index.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The failure passed to <see cref="Error(int, Exception)"/> for each configured output index.</param>
         public void Cancel(Exception e)
         {
             if (!_bunchCancelled)
@@ -220,10 +216,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// For an output that is not completed, canceled, or errored, calls its manager's <c>Error</c> method, then marks and unmarks the output if that call returns.
         /// </summary>
-        /// <param name="output">TBD</param>
-        /// <param name="e">TBD</param>
+        /// <param name="output">The output index to fail.</param>
+        /// <param name="e">The failure passed to the output manager.</param>
         public void Error(int output, Exception e)
         {
             if (!_errored[output] && !_cancelled[output] && !_completed[output])
@@ -235,9 +231,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Includes an output in marked-output demand calculations.
         /// </summary>
-        /// <param name="output">TBD</param>
+        /// <param name="output">The output index to include.</param>
         public void MarkOutput(int output)
         {
             if (!_marked[output])
@@ -253,9 +249,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Excludes an output from marked-output demand calculations.
         /// </summary>
-        /// <param name="output">TBD</param>
+        /// <param name="output">The output index to exclude.</param>
         public void UnmarkOutput(int output)
         {
             if (_marked[output])
@@ -271,7 +267,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Includes every output in marked-output demand calculations.
         /// </summary>
         public void MarkAllOutputs()
         {
@@ -280,7 +276,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Excludes every output from marked-output demand calculations.
         /// </summary>
         public void UnmarkAllOutputs()
         {
@@ -289,16 +285,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Sets whether a canceled output is removed from the marked-output set.
         /// </summary>
-        /// <param name="enabled">TBD</param>
+        /// <param name="enabled"><see langword="true"/> to unmark canceled outputs when they cancel.</param>
         public void UnmarkCancelledOutputs(bool enabled) => _unmarkCancelled = enabled;
 
         /// <summary>
-        /// TBD
+        /// Checks the preferred output for marked demand; if it is ineligible, advances once and throws when the new index differs from the preferred index. With one output, an ineligible index wraps to itself and the search repeats.
         /// </summary>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="ArgumentException">The preferred output is ineligible and advancing the index changes it, regardless of whether the new index is eligible.</exception>
+        /// <returns>The preferred index when that output is marked and has demand.</returns>
         public int IdToEnqueue()
         {
             var id = _preferredId;
@@ -317,10 +313,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Enqueues an element to one output and clears its pending-demand state when demand is exhausted.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <param name="element">TBD</param>
+        /// <param name="id">The output index that receives the element.</param>
+        /// <param name="element">The element to enqueue.</param>
         public void Enqueue(int id, T element)
         {
             var output = _outputs[id];
@@ -336,9 +332,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Enqueues an element to every marked output.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to enqueue.</param>
         public void EnqueueMarked(T element)
         {
             for (var id = 0; id < _outputCount; id++)
@@ -347,9 +343,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls <see cref="IdToEnqueue"/>, advances the preferred index past the selected output, and returns that index if selection succeeds.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The selected output index.</returns>
         public int IdToEnqueueAndYield()
         {
             var id = IdToEnqueue();
@@ -362,16 +358,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls <see cref="IdToEnqueueAndYield"/> and enqueues the element to its selected output if selection succeeds.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to enqueue.</param>
         public void EnqueueAndYield(T element) => Enqueue(IdToEnqueueAndYield(), element);
 
         /// <summary>
-        /// TBD
+        /// Calls <see cref="IdToEnqueue"/> and, if selection succeeds, sets the next preferred index and enqueues the element to the selected output.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="preferred">TBD</param>
+        /// <param name="element">The element to enqueue.</param>
+        /// <param name="preferred">The output index to prefer on the next selection.</param>
         public void EnqueueAndPrefer(T element, int preferred)
         {
             var id = IdToEnqueue();
@@ -380,27 +376,27 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// No-op method invoked when a downstream output cancels.
         /// </summary>
-        /// <param name="output">TBD</param>
+        /// <param name="output">The output index that canceled.</param>
         public void OnCancel(int output)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a transfer state whose ready predicate reads the output's pending flag and whose complete predicate is true when the output is canceled, completed, or errored.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The output index to observe.</param>
+        /// <returns>A state ready when the pending flag is set and complete when the canceled, completed, or errored flag is set.</returns>
         public TransferState DemandAvailableFor(int id) =>
             new LambdaTransferState(isReady: () => _pending[id],
                 isCompleted: () => _cancelled[id] || _completed[id] || _errored[id]);
 
         /// <summary>
-        /// TBD
+        /// Creates a transfer state that is ready when the output's pending or canceled flag is set and whose complete predicate is always false.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The output index to observe.</param>
+        /// <returns>A state ready when the pending or canceled flag is set and whose complete predicate is always false.</returns>
         public TransferState DemandOrCancelAvailableFor(int id)
             => new LambdaTransferState(isReady: () => _pending[id] || _cancelled[id], isCompleted: () => false);
     }
@@ -412,25 +408,25 @@ namespace Akka.Streams.Implementation
     public static class FanOut
     {
         /// <summary>
-        /// TBD
+        /// Carries a downstream request for demand on one output.
         /// </summary>
         [Serializable]
         public readonly struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the output requesting elements.
             /// </summary>
             public readonly int Id;
             /// <summary>
-            /// TBD
+            /// Gets the requested element count.
             /// </summary>
             public readonly long Demand;
 
             /// <summary>
-            /// TBD
+            /// Creates an indexed output-demand message.
             /// </summary>
-            /// <param name="id">TBD</param>
-            /// <param name="demand">TBD</param>
+            /// <param name="id">The output index requesting elements.</param>
+            /// <param name="demand">The requested element count.</param>
             public SubstreamRequestMore(int id, long demand)
             {
                 Id = id;
@@ -439,20 +435,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Signals cancellation of one downstream output.
         /// </summary>
         [Serializable]
         public readonly struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the canceled output.
             /// </summary>
             public readonly int Id;
 
             /// <summary>
-            /// TBD
+            /// Creates a cancellation message for one output.
             /// </summary>
-            /// <param name="id">TBD</param>
+            /// <param name="id">The output index that canceled.</param>
             public SubstreamCancel(int id)
             {
                 Id = id;
@@ -460,20 +456,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Signals that a downstream output subscription is pending.
         /// </summary>
         [Serializable]
         public readonly struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the output whose subscription is pending.
             /// </summary>
             public readonly int Id;
 
             /// <summary>
-            /// TBD
+            /// Creates a pending-subscription message for one output.
             /// </summary>
-            /// <param name="id">TBD</param>
+            /// <param name="id">The output index with a pending subscription.</param>
             public SubstreamSubscribePending(int id)
             {
                 Id = id;
@@ -481,7 +477,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Reactive Streams subscription that forwards requests and cancellation to the parent actor.
         /// </summary>
         public class SubstreamSubscription : ISubscription
         {
@@ -489,10 +485,10 @@ namespace Akka.Streams.Implementation
             private readonly int _id;
 
             /// <summary>
-            /// TBD
+            /// Creates a subscription bound to the parent actor and output index.
             /// </summary>
-            /// <param name="parent">TBD</param>
-            /// <param name="id">TBD</param>
+            /// <param name="parent">The actor that handles output signals.</param>
+            /// <param name="id">The output index associated with this subscription.</param>
             public SubstreamSubscription(IActorRef parent, int id)
             {
                 _parent = parent;
@@ -500,13 +496,13 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// Forwards a demand request to the parent actor.
             /// </summary>
-            /// <param name="elements">TBD</param>
+            /// <param name="elements">The requested number of elements.</param>
             public void Request(long elements) => _parent.Tell(new SubstreamRequestMore(_id, elements));
 
             /// <summary>
-            /// TBD
+            /// Forwards cancellation to the parent actor.
             /// </summary>
             public void Cancel() => _parent.Tell(new SubstreamCancel(_id));
 
@@ -515,21 +511,21 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Carries the actor publishers exposed by a fan-out stage.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The type of elements published by each output.</typeparam>
         [Serializable]
         public readonly struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the publishers exposed by the stage.
             /// </summary>
             public readonly ImmutableList<ActorPublisher<T>> Publishers;
 
             /// <summary>
-            /// TBD
+            /// Creates a message containing the exposed publishers.
             /// </summary>
-            /// <param name="publishers">TBD</param>
+            /// <param name="publishers">The publishers exposed by the stage.</param>
             public ExposedPublishers(ImmutableList<ActorPublisher<T>> publishers)
             {
                 Publishers = publishers;
@@ -540,7 +536,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements accepted from upstream.</typeparam>
     [InternalApi]
     public abstract class FanOut<T> : ActorBase, IPump
     {
@@ -563,19 +559,19 @@ namespace Akka.Streams.Implementation
 
         private readonly ActorMaterializerSettings _settings;
         /// <summary>
-        /// TBD
+        /// Gets the output manager that tracks downstream demand and terminal signals.
         /// </summary>
         protected readonly OutputBunch<T> OutputBunch;
         /// <summary>
-        /// TBD
+        /// Gets the buffer for the stage's single upstream input.
         /// </summary>
         protected readonly BatchingInputBuffer PrimaryInputs;
 
         /// <summary>
-        /// TBD
+        /// Creates a fan-out actor with one buffered upstream input and the requested number of outputs.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="outputCount">TBD</param>
+        /// <param name="settings">Materializer settings used to configure the input buffer.</param>
+        /// <param name="outputCount">The number of downstream outputs.</param>
         protected FanOut(ActorMaterializerSettings settings, int outputCount)
         {
             _log = Context.GetLogger();
@@ -588,13 +584,13 @@ namespace Akka.Streams.Implementation
         #region Actor implementation
 
         /// <summary>
-        /// TBD
+        /// Gets the actor logger, creating it on first access.
         /// </summary>
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         private ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
+        /// Cancels the upstream input and fails any output that has not already terminated when the actor stops.
         /// </summary>
         protected override void PostStop()
         {
@@ -603,9 +599,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Rejects restart because the fan-out actor's state cannot be reconstructed.
         /// </summary>
-        /// <param name="reason">TBD</param>
+        /// <param name="reason">The exception that caused the restart attempt.</param>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown automatically since the actor cannot be restarted.
         /// </exception>
@@ -616,9 +612,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls input cancellation and the output bunch's <c>Cancel</c> method, then pumps the current phase.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The failure passed to <c>OutputBunch.Cancel</c>.</param>
        protected void Fail(Exception e)
         {
             if (_settings.IsDebugLogging)
@@ -630,10 +626,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Routes input-buffer and output-subscription messages to their handlers.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to route.</param>
+        /// <returns><see langword="true"/> if either handler consumes the message.</returns>
         protected override bool Receive(object message)
         {
             return PrimaryInputs.SubReceive.CurrentReceive(message) ||
@@ -645,58 +641,58 @@ namespace Akka.Streams.Implementation
         #region Pump implementation
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the current transfer state of the fan-out pump.
         /// </summary>
         public TransferState TransferState { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the action executed by the fan-out pump.
         /// </summary>
         public Action CurrentAction { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the fan-out pump has completed.
         /// </summary>
         public bool IsPumpFinished => this.IsPumpFinished();
 
         /// <summary>
-        /// TBD
+        /// Configures the initial pump phase to wait for the specified positive number of upstream subscriptions.
         /// </summary>
-        /// <param name="waitForUpstream">TBD</param>
-        /// <param name="andThen">TBD</param>
+        /// <param name="waitForUpstream">The number of subscriptions required before running the phase.</param>
+        /// <param name="andThen">The phase to run after subscriptions arrive.</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
         /// <summary>
-        /// TBD
+        /// Pauses the current phase until the specified number of upstream subscriptions arrive.
         /// </summary>
-        /// <param name="waitForUpstream">TBD</param>
+        /// <param name="waitForUpstream">The number of subscriptions to wait for.</param>
         public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
         /// <summary>
-        /// TBD
+        /// Notifies the pump that an upstream subscription arrived.
         /// </summary>
         public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
         /// <summary>
-        /// TBD
+        /// Installs the next transfer phase.
         /// </summary>
-        /// <param name="phase">TBD</param>
+        /// <param name="phase">The phase to install.</param>
         public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
         /// <summary>
-        /// TBD
+        /// Runs the current transfer action while its state is executable.
         /// </summary>
         public void Pump() => Pumps.Pump(this);
 
         /// <summary>
-        /// TBD
+        /// Routes a pump-action exception to the fan-out failure handler.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The exception thrown by the current action.</param>
         public void PumpFailed(Exception e) => Fail(e);
 
         /// <summary>
-        /// TBD
+        /// Calls input cancellation and <c>OutputBunch.Complete()</c>, then stops the actor.
         /// </summary>
         public void PumpFinished()
         {
@@ -714,11 +710,11 @@ namespace Akka.Streams.Implementation
     internal static class Unzip
     {
         /// <summary>
-        /// TBD
+        /// Creates local actor properties for an unzip actor with two outputs.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="settings">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type of the tuple inputs.</typeparam>
+        /// <param name="settings">Materializer settings for the actor.</param>
+        /// <returns>Properties for creating an <see cref="Unzip{T}"/> actor.</returns>
         public static Props Props<T>(ActorMaterializerSettings settings)
             => Actor.Props.Create<Unzip<T>>(settings, 2).WithDeploy(Deploy.Local);
     }
@@ -728,18 +724,14 @@ namespace Akka.Streams.Implementation
     /// TODO Find out where this class will be used and check if the type parameter fit
     /// since we need to cast messages into a tuple and therefore maybe need additional type parameters
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of each item in the two-element tuple accepted from upstream.</typeparam>
     internal sealed class Unzip<T> : FanOut<T>
     {
         /// <summary>
-        /// TBD
+        /// Creates an unzip actor that splits two-element tuples across two outputs. Its transfer action throws <see cref="ArgumentException"/> if an input is not a <see cref="ValueTuple{T1,T2}"/>.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="outputCount">TBD</param>
-        /// <exception cref="ArgumentException">TBD
-        /// This exception is thrown when the elements in <see cref="Akka.Streams.Implementation.FanOut{T}.PrimaryInputs"/>
-        /// are of an unknown type.
-        /// </exception>>
+        /// <param name="settings">Materializer settings used to configure the input buffer.</param>
+        /// <param name="outputCount">The number of outputs; this actor requires two.</param>
         /// If this gets changed you must change <see cref="Unzip{T}"/> as well!
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {

@@ -54,15 +54,19 @@
         "materializer",
         "Microservices",
         "MNTR",
+        "PKCS",
         "mutex",
+        "netstandard",
         "Newtonsoft",
         "Ninject",
+        "OCSP",
         "overridable",
         "parallelizable",
         "partitioner",
         "parseable",
         "Passivation",
         "Petabridge",
+        "PKCS",
         "pluggable",
         "prepended",
         "prepending",
@@ -127,7 +131,9 @@
 		"DeadLetter",
 		"Blocksharp",
 		"Akkatecture",
-		"SharpPulsar"
+		"SharpPulsar",
+		"remoted",
+		"blocklist"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links

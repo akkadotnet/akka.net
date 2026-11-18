@@ -17,7 +17,7 @@ namespace Akka.Streams.Implementation
     using State = Byte;
 
     /// <summary>
-    /// TBD
+    /// Coordinates buffered inputs from multiple upstreams and tracks marked-input readiness for a transfer pump.
     /// </summary>
     public abstract class InputBunch
     {
@@ -40,15 +40,15 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets a state ready when the tracked marked-pending count equals the marked count, and completed when the tracked marked-depleted count is greater than zero.
         /// </summary>
         public readonly TransferState AllOfMarkedInputs;
         /// <summary>
-        /// TBD
+        /// Gets a state ready when the tracked marked-pending count is greater than zero, and completed when the tracked marked-depleted count equals the marked count and the marked-pending count is zero.
         /// </summary>
         public readonly TransferState AnyOfMarkedInputs;
         /// <summary>
-        /// TBD
+        /// Gets the receive handler for indexed upstream signals.
         /// </summary>
         public readonly SubReceive SubReceive;
 
@@ -67,11 +67,11 @@ namespace Akka.Streams.Implementation
         private int _lastDequeuedId;
 
         /// <summary>
-        /// TBD
+        /// Creates an input bunch with one batching buffer per upstream.
         /// </summary>
-        /// <param name="inputCount">TBD</param>
-        /// <param name="bufferSize">TBD</param>
-        /// <param name="pump">TBD</param>
+        /// <param name="inputCount">The number of upstream inputs.</param>
+        /// <param name="bufferSize">The capacity of each input buffer.</param>
+        /// <param name="pump">The transfer pump resumed when inputs change.</param>
         protected InputBunch(int inputCount, int bufferSize, IPump pump)
         {
             _inputCount = inputCount;
@@ -139,20 +139,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the ID of the input most recently dequeued.
         /// </summary>
         protected int LastDequeuedId => _lastDequeuedId;
 
         /// <summary>
-        /// TBD
+        /// Gets whether the completed-message counter equals the configured input count.
         /// </summary>
         public bool IsAllCompleted => _inputCount == _completedCounter;
 
         /// <summary>
-        /// TBD
+        /// Creates a state ready when the tracked marked-pending count is positive and completed when this input's depleted or canceled bit is clear, or its pending bit is set while its completed bit is clear.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The input whose state bits are checked by the completion predicate.</param>
+        /// <returns>A state using the marked-pending counter for readiness and this input's bit checks for completion.</returns>
         public TransferState InputsAvailableFor(int id)
         {
             return new LambdaTransferState(
@@ -161,10 +161,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a transfer state that is ready when this input's pending or depleted bit is clear and never completes.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The input whose pending and depleted bits are checked.</param>
+        /// <returns>A state that becomes ready when either bit is clear.</returns>
         public TransferState InputsOrCompleteAvailableFor(int id)
         {
             return new LambdaTransferState(
@@ -173,7 +173,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Sets the all-input cancellation guard and calls <see cref="Cancel(int)"/> once for each input index.
         /// </summary>
         public void Cancel()
         {
@@ -186,9 +186,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// If the canceled-state bit is set, calls the buffer's Cancel method, sets the bit, and calls <see cref="UnmarkInput(int)"/>; when the bit is clear, it does nothing.
         /// </summary>
-        /// <param name="input">TBD</param>
+        /// <param name="input">The input index to cancel.</param>
         public void Cancel(int input)
         {
             if (!IsCancelled(input))
@@ -200,27 +200,27 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Handles a failure from the indexed input.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="id">The input index that failed.</param>
+        /// <param name="cause">The upstream failure.</param>
         public abstract void OnError(int id, Exception cause);
 
         /// <summary>
-        /// TBD
+        /// Called by the completion handler's <c>!IsPending(input)</c> branch, or when a dequeue leaves the input buffer depleted.
         /// </summary>
-        /// <param name="input">TBD</param>
+        /// <param name="input">The input index passed by the completion or dequeue handler.</param>
         public virtual void OnDepleted(int input) { }
 
         /// <summary>
-        /// TBD
+        /// Called by the completion handler when no input element has been received and the completed-message counter equals the configured input count.
         /// </summary>
         public virtual void OnCompleteWhenNoInput() { }
 
         /// <summary>
-        /// TBD
+        /// When the marked-state bit is set, increments tracking counters for clear depleted and pending bits, sets the marked bit again, and increments the marked count.
         /// </summary>
-        /// <param name="input">TBD</param>
+        /// <param name="input">The input index whose marked bit and counters are updated.</param>
         public void MarkInput(int input)
         {
             if (!IsMarked(input))
@@ -236,9 +236,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// When the marked-state bit is clear, decrements tracking counters for clear depleted and pending bits, clears the marked bit, and decrements the marked count.
         /// </summary>
-        /// <param name="input">TBD</param>
+        /// <param name="input">The input index whose marked bit and counters are updated.</param>
         public void UnmarkInput(int input)
         {
             if (IsMarked(input))
@@ -254,7 +254,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls <see cref="MarkInput(int)"/> for every input index.
         /// </summary>
         public void MarkAllInputs()
         {
@@ -263,7 +263,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls <see cref="UnmarkInput(int)"/> for every input index.
         /// </summary>
         public void UnmarkAllInputs()
         {
@@ -272,12 +272,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Searches from the preferred index for an input whose marked and pending bits are both clear.
         /// </summary>
-        /// <exception cref="IllegalStateException">
-        /// This exception is thrown when dequeuing with no input.
-        /// TBD</exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="IllegalStateException">No input has both bits clear.</exception>
+        /// <returns>The first input index found by the bit checks.</returns>
         public int IdToDequeue()
         {
             var id = _preferredId;
@@ -294,13 +292,13 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to dequeue from an input, proceeding only when its depleted bit is set and its pending bit is clear, then updates tracked state.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <exception cref="ArgumentException">TBD
-        /// This exception is thrown when either dequeuing from an empty <paramref name="id"/> or there are no pending inputs.
+        /// <param name="id">The input index from which to remove an element.</param>
+        /// <exception cref="ArgumentException">
+        /// The depleted bit is clear, or the pending bit is set.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>The element returned by the input buffer.</returns>
         public object Dequeue(int id)
         {
             if (IsDepleted(id))
@@ -331,16 +329,16 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Finds an input with marked and pending bits clear, advances the preferred index past it, and attempts to dequeue from it.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The element returned by the selected input buffer.</returns>
         public object DequeueAndYield() => DequeueAndYield(IdToDequeue());
 
         /// <summary>
-        /// TBD
+        /// Sets the preferred index after the specified input, then attempts to dequeue from it.
         /// </summary>
-        /// <param name="id">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="id">The input index passed to the dequeue checks.</param>
+        /// <returns>The element returned by that input buffer.</returns>
         public object DequeueAndYield(int id)
         {
             _preferredId = (id + 1) % _inputCount;
@@ -348,10 +346,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Sets the preferred index, searches for clear marked and pending bits, then attempts to dequeue from the selected input.
         /// </summary>
-        /// <param name="preferred">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="preferred">The index from which the bit-check search starts.</param>
+        /// <returns>The element returned by the selected input buffer.</returns>
         public object DequeuePreferring(int preferred)
         {
             _preferredId = preferred;
@@ -372,19 +370,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Reports whether the canceled-state bit is clear for the indexed input.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The input index to inspect.</param>
+        /// <returns><see langword="true"/> when the canceled-state bit is clear.</returns>
         public bool IsCancelled(int index) => HasState(index, FanIn.Cancelled);
 
         private void Cancelled(int index, bool on) => SetState(index, FanIn.Cancelled, on);
 
         /// <summary>
-        /// TBD
+        /// Reports whether the completed-state bit is clear for the indexed input.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The input index to inspect.</param>
+        /// <returns><see langword="true"/> when the completed-state bit is clear.</returns>
         public bool IsCompleted(int index) => HasState(index, FanIn.Completed);
 
         private void RegisterCompleted(int index)
@@ -394,19 +392,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Reports whether the depleted-state bit is clear for the indexed input.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The input index to inspect.</param>
+        /// <returns><see langword="true"/> when the depleted-state bit is clear.</returns>
         public bool IsDepleted(int index) => HasState(index, FanIn.Depleted);
 
         private void Depleted(int index, bool on) => SetState(index, FanIn.Depleted, on);
 
         /// <summary>
-        /// TBD
+        /// Reports whether the pending-state bit is clear for the indexed input.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="index">The input index to inspect.</param>
+        /// <returns><see langword="true"/> when the pending-state bit is clear.</returns>
         public bool IsPending(int index) => HasState(index, FanIn.Pending);
 
         private void Pending(int index, bool on) => SetState(index, FanIn.Pending, on);
@@ -417,30 +415,30 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Defines actor messages and state flags used to identify indexed fan-in signals.
     /// </summary>
     public static class FanIn
     {
         /// <summary>
-        /// TBD
+        /// Identifies a failure from one input.
         /// </summary>
         [Serializable]
         public readonly struct OnError : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the input that failed.
             /// </summary>
             public readonly int Id;
             /// <summary>
-            /// TBD
+            /// Gets the failure reported by the input.
             /// </summary>
             public readonly Exception Cause;
 
             /// <summary>
-            /// TBD
+            /// Creates an indexed input-failure message.
             /// </summary>
-            /// <param name="id">TBD</param>
-            /// <param name="cause">TBD</param>
+            /// <param name="id">The index of the input that failed.</param>
+            /// <param name="cause">The failure reported by that input.</param>
             public OnError(int id, Exception cause)
             {
                 Id = id;
@@ -449,20 +447,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Identifies successful completion of one input.
         /// </summary>
         [Serializable]
         public readonly struct OnComplete : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the completed input.
             /// </summary>
             public readonly int Id;
 
             /// <summary>
-            /// TBD
+            /// Creates an indexed input-completion message.
             /// </summary>
-            /// <param name="id">TBD</param>
+            /// <param name="id">The index of the completed input.</param>
             public OnComplete(int id)
             {
                 Id = id;
@@ -470,25 +468,25 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Carries an element received from one indexed input.
         /// </summary>
         [Serializable]
         public readonly struct OnNext : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the input that produced the element.
             /// </summary>
             public readonly int Id;
             /// <summary>
-            /// TBD
+            /// Gets the element received from the input.
             /// </summary>
             public readonly object Element;
 
             /// <summary>
-            /// TBD
+            /// Creates an indexed input-element message.
             /// </summary>
-            /// <param name="id">TBD</param>
-            /// <param name="element">TBD</param>
+            /// <param name="id">The index of the input that produced the element.</param>
+            /// <param name="element">The element received from that input.</param>
             public OnNext(int id, object element)
             {
                 Id = id;
@@ -497,26 +495,25 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Carries an upstream subscription for one indexed input.
         /// </summary>
         [Serializable]
         public readonly struct OnSubscribe : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Gets the index of the input being subscribed.
             /// </summary>
             public readonly int Id;
             /// <summary>
-            /// TBD
+            /// Gets the upstream subscription.
             /// </summary>
             public readonly ISubscription Subscription;
 
             /// <summary>
-            /// TBD
+            /// Creates an indexed upstream-subscription message.
             /// </summary>
-            /// <param name="id">TBD</param>
-            /// <param name="subscription">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="id">The index of the input receiving this subscription.</param>
+            /// <param name="subscription">The upstream subscription.</param>
             public OnSubscribe(int id, ISubscription subscription)
             {
                 Id = id;
@@ -525,37 +522,37 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Bit flag used to represent the marked state of an input.
         /// </summary>
         public const State Marked = 1;
         /// <summary>
-        /// TBD
+        /// Bit flag used to represent the pending state of an input.
         /// </summary>
         public const State Pending = 2;
         /// <summary>
-        /// TBD
+        /// Bit flag used to represent the depleted state of an input.
         /// </summary>
         public const State Depleted = 4;
         /// <summary>
-        /// TBD
+        /// Bit flag used to represent the completed state of an input.
         /// </summary>
         public const State Completed = 8;
         /// <summary>
-        /// TBD
+        /// Bit flag used to represent the canceled state of an input.
         /// </summary>
         public const State Cancelled = 16;
     }
 
     /// <summary>
-    /// TBD
+    /// Base actor for indexed upstream inputs and a downstream output; a transfer phase determines how elements are emitted.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of elements accepted from and emitted to the stream.</typeparam>
     public abstract class FanIn<T> : ActorBase, IPump
     {
         #region Internal classes
 
         /// <summary>
-        /// TBD
+        /// Subscriber that forwards Reactive Streams signals to the indexed input's actor.
         /// </summary>
         public readonly struct SubInput : ISubscriber<T>
         {
@@ -563,10 +560,10 @@ namespace Akka.Streams.Implementation
             private readonly int _id;
 
             /// <summary>
-            /// TBD
+            /// Creates an input subscriber bound to an actor and input index.
             /// </summary>
-            /// <param name="impl">TBD</param>
-            /// <param name="id">TBD</param>
+            /// <param name="impl">The actor receiving indexed input messages.</param>
+            /// <param name="id">The input index associated with this subscriber.</param>
             public SubInput(IActorRef impl, int id)
             {
                 _impl = impl;
@@ -574,9 +571,9 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// Forwards the upstream subscription as an indexed actor message.
             /// </summary>
-            /// <param name="subscription">TBD</param>
+            /// <param name="subscription">The upstream subscription.</param>
             public void OnSubscribe(ISubscription subscription)
             {
                 ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
@@ -584,9 +581,9 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// Forwards the upstream failure as an indexed actor message.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The upstream failure.</param>
             public void OnError(Exception cause)
             {
                 ReactiveStreamsCompliance.RequireNonNullException(cause);
@@ -594,14 +591,14 @@ namespace Akka.Streams.Implementation
             }
 
             /// <summary>
-            /// TBD
+            /// Forwards upstream completion as an indexed actor message.
             /// </summary>
             public void OnComplete() => _impl.Tell(new FanIn.OnComplete(_id));
 
             /// <summary>
-            /// TBD
+            /// Validates and forwards an upstream element as an indexed actor message.
             /// </summary>
-            /// <param name="element">TBD</param>
+            /// <param name="element">The element received from upstream.</param>
             public void OnNext(T element)
             {
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
@@ -626,27 +623,27 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the materializer settings used by this actor.
         /// </summary>
         protected readonly ActorMaterializerSettings Settings;
         /// <summary>
-        /// TBD
+        /// Gets the number of upstream inputs handled by this actor.
         /// </summary>
         protected readonly int InputCount;
         /// <summary>
-        /// TBD
+        /// Gets the downstream output manager.
         /// </summary>
         protected readonly SimpleOutputs PrimaryOutputs;
         /// <summary>
-        /// TBD
+        /// Gets the bunch that buffers and tracks the indexed upstream inputs.
         /// </summary>
         protected readonly InputBunch InputBunch;
 
         /// <summary>
-        /// TBD
+        /// Creates a fan-in actor with one buffered input per upstream.
         /// </summary>
-        /// <param name="settings">TBD</param>
-        /// <param name="inputCount">TBD</param>
+        /// <param name="settings">Materializer settings used to configure input buffers.</param>
+        /// <param name="inputCount">The number of upstream inputs.</param>
         /// <exception cref="IllegalStateException">
         /// This exception is thrown when the pump has not been initialized with a phase.
         /// </exception>
@@ -664,15 +661,15 @@ namespace Akka.Streams.Implementation
         #region Actor impl
 
         /// <summary>
-        /// TBD
+        /// Gets the actor logger, creating it on first access.
         /// </summary>
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
         private ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
+        /// Sets the pump phase to completed, passes the failure to the downstream output manager, and runs the pump.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure passed to <c>PrimaryOutputs.Error</c>.</param>
         protected void Fail(Exception cause)
         {
             if (Settings.IsDebugLogging)
@@ -684,7 +681,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Calls <c>InputBunch.Cancel()</c>, passes abrupt termination to the downstream output manager, and calls the base implementation.
         /// </summary>
         protected override void PostStop()
         {
@@ -694,11 +691,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Rejects restart because the fan-in actor's state cannot be reconstructed.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalStateException">TBD
-        /// This exception is thrown automatically since the actor cannot be restarted.
+        /// <param name="reason">The exception that caused the restart attempt.</param>
+        /// <exception cref="IllegalStateException">Restart is unsupported because the actor state cannot be reconstructed.
         /// </exception>
         protected override void PostRestart(Exception reason)
         {
@@ -707,10 +703,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Routes indexed input messages and downstream publisher messages to their handlers.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to route.</param>
+        /// <returns><see langword="true"/> when the input or output handler handles the message.</returns>
         protected override bool Receive(object message)
             => InputBunch.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
 
@@ -719,58 +715,58 @@ namespace Akka.Streams.Implementation
         #region Pump implementation
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the current transfer state of the fan-in pump.
         /// </summary>
         public TransferState TransferState { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the action executed by the fan-in pump.
         /// </summary>
         public Action CurrentAction { get; set; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether the fan-in pump is complete.
         /// </summary>
         public bool IsPumpFinished => TransferState.IsCompleted;
 
         /// <summary>
-        /// TBD
+        /// Configures the initial pump phase to wait for the specified positive number of upstream subscriptions.
         /// </summary>
-        /// <param name="waitForUpstream">TBD</param>
-        /// <param name="andThen">TBD</param>
+        /// <param name="waitForUpstream">The number of subscriptions required before running the phase.</param>
+        /// <param name="andThen">The phase to run after subscriptions arrive.</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
         /// <summary>
-        /// TBD
+        /// Pauses the current phase until the specified number of upstream subscriptions arrive.
         /// </summary>
-        /// <param name="waitForUpstream">TBD</param>
+        /// <param name="waitForUpstream">The number of subscriptions to wait for.</param>
         public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
         /// <summary>
-        /// TBD
+        /// Notifies the pump that an upstream subscription arrived.
         /// </summary>
         public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
         /// <summary>
-        /// TBD
+        /// Installs the next transfer phase.
         /// </summary>
-        /// <param name="phase">TBD</param>
+        /// <param name="phase">The phase to install.</param>
         public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
         /// <summary>
-        /// TBD
+        /// Runs the current transfer action while its state is executable.
         /// </summary>
         public void Pump() => Pumps.Pump(this);
 
         /// <summary>
-        /// TBD
+        /// Routes a pump-action exception to the fan-in failure handler.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The exception thrown by the current action.</param>
         public void PumpFailed(Exception e) => Fail(e);
 
         /// <summary>
-        /// TBD
+        /// Calls <c>InputBunch.Cancel()</c>, completes the downstream output manager, and stops the actor.
         /// </summary>
         public void PumpFinished()
         {

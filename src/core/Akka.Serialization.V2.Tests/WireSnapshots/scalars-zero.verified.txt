@@ -1,0 +1,8 @@
+﻿case: scalars-zero
+message-type: SmallScalarsMessage
+manifest: small-scalars-v1
+serializer-id: 122003
+byte-count: 23
+
+0000  89 01 00 02 ca 00 00 00  00 03 00 04 00 05 00 06  |................|
+0010  00 07 00 08 00 09 00                              |.......|

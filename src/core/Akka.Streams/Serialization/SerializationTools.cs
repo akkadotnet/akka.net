@@ -40,7 +40,7 @@ namespace Akka.Streams.Serialization
         /// table of stream-ref element types to point at, so that message reads oddly for this failure.
         /// </summary>
         internal static string StreamRefTypeNotSupported(string eventTypeName) =>
-            $"Cannot deserialize a stream ref with element type [{eventTypeName}]: stream refs need Akka.DynamicTypeLoading enabled at publish time (see #8667).";
+            $"Cannot deserialize a stream ref with element type [{eventTypeName}]: stream refs need Akka.DynamicTypeLoading enabled at publish time (see #8673).";
 
         public static Type TypeFromProto(EventType eventType) => TypeFromString(eventType.TypeName);
 

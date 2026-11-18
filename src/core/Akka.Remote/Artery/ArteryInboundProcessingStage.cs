@@ -463,7 +463,7 @@ namespace Akka.Remote.Artery
                 }
                 else if (IsClosed(_stage.In) && !_writeInFlight)
                 {
-                    CompleteStage();
+                    CompleteInputStage();
                 }
                 // !_writeInFlight guards this exactly like DeliverOrPull's matching guard: while
                 // parked on lane backpressure, do NOT request more input from the connection, even
@@ -480,10 +480,22 @@ namespace Akka.Remote.Artery
             public void OnUpstreamFinish()
             {
                 if (_pending.Count == 0 && !_writeInFlight)
-                    CompleteStage();
+                    CompleteInputStage();
 
                 // else: swallow the termination and let OnPull (non-lane path) / OnLaneWriteAvailable
                 // (lane path) drain the remainder, completing once both are empty/clear.
+            }
+
+            private void CompleteInputStage()
+            {
+                // An unused connection can close cleanly. Once framing starts, natural EOF
+                // must coincide with a preamble/frame boundary, including after lane backpressure.
+                if ((!_preambleParsed && _preambleFilled != 0) || _frameParser is { HasBufferedBytes: true })
+                {
+                    FailStage(new ArteryFramingException("Artery input ended within a preamble or frame."));
+                    return;
+                }
+                CompleteStage();
             }
 
             public void OnUpstreamFailure(Exception e) => FailStage(e);
@@ -1028,7 +1040,7 @@ namespace Akka.Remote.Artery
                 DeliverOrPull();
 
                 if (_pending.Count == 0 && !_writeInFlight && IsClosed(_stage.In))
-                    CompleteStage();
+                    CompleteInputStage();
             }
 
             #endregion

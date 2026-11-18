@@ -15,7 +15,7 @@ using Akka.Serialization;
 namespace Akka.Cluster.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Cluster.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.Cluster's serializers, bindings and ids. They register as defaults when the module is deployed; Cluster.conf carries no rows for them.
     /// </summary>
     internal sealed class ClusterSerializers : ModuleSerializers
     {

@@ -14,7 +14,7 @@ using Akka.Serialization;
 namespace Akka.Cluster.Tools.Singleton.Serialization
 {
     /// <summary>
-    /// TBD
+    /// Serializes the cluster singleton hand-over protocol messages using compact string manifests and empty payloads.
     /// </summary>
     public class ClusterSingletonMessageSerializer : SerializerWithStringManifest
     {

@@ -146,10 +146,10 @@ namespace Akka.Cluster.Sharding
         private readonly int _maxSimultaneousRebalance;
 
         /// <summary>
-        /// TBD
+        /// Creates the legacy least-shard allocation strategy with the supplied rebalance threshold and concurrency limit.
         /// </summary>
-        /// <param name="rebalanceThreshold">TBD</param>
-        /// <param name="maxSimultaneousRebalance">TBD</param>
+        /// <param name="rebalanceThreshold">The eligible shard-count difference that must be exceeded before this strategy selects shards for rebalancing.</param>
+        /// <param name="maxSimultaneousRebalance">The maximum number of shards this strategy permits to be in rebalance at once.</param>
         public LeastShardAllocationStrategy(int rebalanceThreshold, int maxSimultaneousRebalance)
         {
             _rebalanceThreshold = rebalanceThreshold;
@@ -157,11 +157,11 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// TBD
+        /// Selects shards for another rebalance round when the eligible shard-count difference exceeds the configured threshold.
         /// </summary>
-        /// <param name="currentShardAllocations">TBD</param>
-        /// <param name="rebalanceInProgress">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="currentShardAllocations">The shard regions and the shard ids currently allocated to each region.</param>
+        /// <param name="rebalanceInProgress">Shard ids already being moved; these are excluded from selection and count toward the concurrency limit.</param>
+        /// <returns>A task containing the shard ids selected for this round, or an empty set when no rebalance is selected.</returns>
         public override Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
         {
             if (rebalanceInProgress.Count < _maxSimultaneousRebalance)

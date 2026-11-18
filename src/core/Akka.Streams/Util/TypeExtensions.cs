@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Reactive.Streams;
@@ -13,16 +14,17 @@ using Reactive.Streams;
 namespace Akka.Streams.Util
 {
     /// <summary>
-    /// TBD
+    /// Reflection helpers for retrieving Reactive Streams element types.
     /// </summary>
     public static class TypeExtensions
     {
         /// <summary>
-        /// TBD
+        /// Gets the element type from an implemented <see cref="ISubscriber{T}"/> interface.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
-        public static Type GetSubscribedType(this Type type)
+        /// <param name="type">Type that implements one closed <see cref="ISubscriber{T}"/> interface.</param>
+        /// <returns>The type argument supplied to <see cref="ISubscriber{T}"/>.</returns>
+        [Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type's interfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static Type GetSubscribedType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type type)
         {
             return
                 type
@@ -33,11 +35,12 @@ namespace Akka.Streams.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the element type from an implemented <see cref="IPublisher{T}"/> interface.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <returns>TBD</returns>
-        public static Type GetPublishedType(this Type type)
+        /// <param name="type">Type that implements one closed <see cref="IPublisher{T}"/> interface.</param>
+        /// <returns>The type argument supplied to <see cref="IPublisher{T}"/>.</returns>
+        [Obsolete("Unused by Akka.Streams and reflection-based (the trimmer must keep the type's interfaces); will be removed in 1.7. Obsolete since v1.6.0")]
+        public static Type GetPublishedType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] this Type type)
         {
             return
                 type

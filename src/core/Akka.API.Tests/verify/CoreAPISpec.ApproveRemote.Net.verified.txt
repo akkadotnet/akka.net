@@ -16,6 +16,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.Performance")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("RemotePingPong")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
@@ -449,12 +450,14 @@ namespace Akka.Remote.Serialization
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
+    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerV2
     {
         public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override int Identifier { get; }
-        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     public class ProtobufSerializer : Akka.Serialization.Serializer
@@ -892,5 +895,6 @@ namespace Akka.Remote.Transport.DotNetty
         public bool RequireMutualAuthentication { get; }
         public bool SuppressValidation { get; }
         public bool ValidateCertificateHostname { get; }
+        public static Akka.Remote.Transport.DotNetty.DotNettySslSetup FromSource(Akka.IO.TlsCertificateSource source, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, Akka.Remote.Transport.DotNetty.CertificateValidationCallback? customValidator) { }
     }
 }

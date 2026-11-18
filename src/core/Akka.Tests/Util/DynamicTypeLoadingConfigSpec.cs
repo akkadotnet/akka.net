@@ -47,10 +47,9 @@ namespace Akka.Tests.Util
     /// <c>akka.actor.guardian-supervisor-strategy</c> configurator.
     /// </summary>
     /// <remarks>
-    /// This spec builds its own <see cref="ActorSystem"/> instead of deriving from <c>AkkaSpec</c>: Akka.TestKit
-    /// configures <c>akka.test.test-actor.dispatcher</c> with
-    /// <c>type = "Akka.TestKit.CallingThreadDispatcherConfigurator, Akka.TestKit"</c>, a type name that only
-    /// resolves through reflection, so no TestKit-derived spec can run with the switch off.
+    /// This spec builds its own <see cref="ActorSystem"/> instead of deriving from <c>AkkaSpec</c>, so it
+    /// exercises core resolution alone. Akka.TestKit registers its own logger and dispatcher in code to run
+    /// with the switch off; Akka.TestKit.Tests covers that.
     /// </remarks>
     [Collection(DynamicTypeLoadingCollection.Name)]
     public class DynamicTypeLoadingConfigSpec

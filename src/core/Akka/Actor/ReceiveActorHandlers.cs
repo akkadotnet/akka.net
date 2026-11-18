@@ -13,8 +13,6 @@ namespace Akka.Actor;
 #nullable enable
 internal sealed class ReceiveActorHandlers
 {
-    private bool _hadObjectHandlerWithNoPredicate;
-
     public ReceiveActorHandlers()
     {
         TypedHandlers = new List<ITypeHandler>();
@@ -25,16 +23,13 @@ internal sealed class ReceiveActorHandlers
 
     private Action<object>? HandleAny { get; set; }
 
+    // Message text matches v1.5.71's MatchBuilder.EnsureCanAdd() exactly. An always-handling object
+    // catch-all is routed into HandleAny by ReceiveActor/PersistentActor, so this one check covers it too.
     private void CanAddMoreHandlers()
     {
-        if (_hadObjectHandlerWithNoPredicate)
-        {
-            throw new InvalidOperationException("A handler for object with no predicate has already been added. No more handlers can be added as they would be ignored.");
-        }
-
         if (HandleAny != null)
         {
-            throw new InvalidOperationException("A handler that catches all messages has been added. No more handlers can be added as they would be ignored.");
+            throw new InvalidOperationException("A handler that catches all messages has been added. No handler can be added after that.");
         }
     }
     
@@ -58,26 +53,33 @@ internal sealed class ReceiveActorHandlers
         return new WeaklyTypedPredicateHandler(t, shouldHandlePredicate, handler);
     }
     
+    /// <param name="shouldHandlePredicate">An optional predicate. When <c>null</c>, the message is unconditionally passed to <paramref name="handler"/>.</param>
+    /// <param name="handler">The handler to invoke. Its <c>bool</c> result indicates whether it handled the message.</param>
+    /// <remarks>
+    /// A typed/generic handler never blocks later registrations, even for <see cref="object"/> with no
+    /// predicate - an always-handling catch-all for <see cref="object"/> must go through
+    /// <see cref="AddReceiveAnyHandler"/> instead, which <see cref="CanAddMoreHandlers"/> does guard.
+    /// </remarks>
     public void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandlePredicate, Func<T, bool> handler)
     {
         CanAddMoreHandlers();
-        
+
         TypedHandlers.Add(CreateTypeHandler(shouldHandlePredicate, handler));
     }
-    
 
+    /// <param name="messageType">The message type the handler is registered for.</param>
+    /// <param name="shouldHandlePredicate">An optional predicate. When <c>null</c>, the message is unconditionally passed to <paramref name="handler"/>.</param>
+    /// <param name="handler">The handler to invoke. Its <c>bool</c> result indicates whether it handled the message.</param>
+    /// <remarks>
+    /// A typed/generic handler never blocks later registrations, even for <see cref="object"/> with no
+    /// predicate - an always-handling catch-all for <see cref="object"/> must go through
+    /// <see cref="AddReceiveAnyHandler"/> instead, which <see cref="CanAddMoreHandlers"/> does guard.
+    /// </remarks>
     public void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandlePredicate, Func<object, bool> handler)
     {
         CanAddMoreHandlers();
-        
-        TypedHandlers.Add(CreateTypeHandler(messageType, shouldHandlePredicate, handler));
 
-        // If the message type is object, then we need to track that we have added a handler with no predicate.
-        if (messageType == typeof(object) && 
-            shouldHandlePredicate == null)
-        {
-            _hadObjectHandlerWithNoPredicate = true;
-        }
+        TypedHandlers.Add(CreateTypeHandler(messageType, shouldHandlePredicate, handler));
     }
 
     public void AddReceiveAnyHandler(Action<object> handler)

@@ -16,17 +16,17 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Creates a processor facade and sends its publisher endpoint to the implementing actor.
     /// </summary>
     internal static class ActorProcessor
     {
         /// <summary>
-        /// TBD
+        /// Creates a typed actor processor and exposes its publisher to the actor before returning.
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <param name="impl">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TIn">The element type accepted from upstream.</typeparam>
+        /// <typeparam name="TOut">The element type emitted to downstream.</typeparam>
+        /// <param name="impl">The actor implementing the processor protocol.</param>
+        /// <returns>A processor that forwards Reactive Streams signals to <paramref name="impl"/>.</returns>
         public static ActorProcessor<TIn, TOut> Create<TIn, TOut>(IActorRef impl)
         {
             var p = new ActorProcessor<TIn, TOut>(impl);
@@ -37,30 +37,30 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Adapts Reactive Streams processor callbacks to messages sent to an actor.
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
+    /// <typeparam name="TIn">The element type accepted from upstream.</typeparam>
+    /// <typeparam name="TOut">The element type emitted to downstream.</typeparam>
     internal sealed class ActorProcessor<TIn, TOut> : ActorPublisher<TOut>, IProcessor<TIn, TOut>
     {
         /// <summary>
-        /// TBD
+        /// Creates a processor adapter for the implementing actor.
         /// </summary>
-        /// <param name="impl">TBD</param>
+        /// <param name="impl">The actor that handles processor and publisher messages.</param>
         public ActorProcessor(IActorRef impl) : base(impl)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards an upstream element to the implementing actor.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element received from upstream.</param>
         public void OnNext(TIn element) => OnNext((object)element);
 
         /// <summary>
-        /// TBD
+        /// Forwards the upstream subscription to the implementing actor.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The upstream subscription.</param>
         public void OnSubscribe(ISubscription subscription)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
@@ -68,9 +68,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Validates and forwards an untyped upstream element to the implementing actor.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element received from upstream.</param>
         public void OnNext(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
@@ -78,9 +78,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Validates and forwards upstream failure to the implementing actor.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The upstream failure.</param>
         public void OnError(Exception cause)
         {
             ReactiveStreamsCompliance.RequireNonNullException(cause);
@@ -88,22 +88,22 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Forwards upstream completion to the implementing actor.
         /// </summary>
         public void OnComplete() => Impl.Tell(Actors.OnComplete.Instance);
     }
 
     /// <summary>
-    /// TBD
+    /// Buffers upstream elements and replenishes demand in batches for an actor processor.
     /// </summary>
     public abstract class BatchingInputBuffer : IInputs
     {
         /// <summary>
-        /// TBD
+        /// Gets the ring-buffer capacity, which must be a positive power of two.
         /// </summary>
         public readonly int Count;
         /// <summary>
-        /// TBD
+        /// Gets the transfer pump resumed when input state changes.
         /// </summary>
         public readonly IPump Pump;
 
@@ -116,10 +116,10 @@ namespace Akka.Streams.Implementation
         private int _batchRemaining;
 
         /// <summary>
-        /// TBD
+        /// Creates an input buffer that prefetches input and requests more after consuming a batch.
         /// </summary>
-        /// <param name="count">TBD</param>
-        /// <param name="pump">TBD</param>
+        /// <param name="count">The buffer capacity; it must be a positive power of two.</param>
+        /// <param name="pump">The pump resumed after input changes.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="count"/> is either less than or equal to zero or is not a power of two.
         /// </exception>
@@ -144,20 +144,20 @@ namespace Akka.Streams.Implementation
         private int RequestBatchSize => Math.Max(1, _inputBuffer.Length / 2);
 
         /// <summary>
-        /// TBD
+        /// Returns the buffer capacity, queued element count, and upstream state for diagnostics.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>A diagnostic representation of the input buffer state.</returns>
         public override string ToString() => $"BatchingInputBuffer(Count={Count}, elems={_inputBufferElements}, completed={_isUpstreamCompleted}, remaining={_batchRemaining})";
 
         /// <summary>
-        /// TBD
+        /// Gets the receive handler for upstream signals.
         /// </summary>
         public virtual SubReceive SubReceive { get; }
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the next buffered input element, requesting another batch after the current batch is consumed.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The next queued input element.</returns>
         public virtual object DequeueInputElement()
         {
             var elem = _inputBuffer[_nextInputElementCursor];
@@ -177,10 +177,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Adds an upstream element to the buffer and resumes the pump.
         /// </summary>
-        /// <param name="element">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <param name="element">The element received from upstream.</param>
+        /// <exception cref="IllegalStateException">The input buffer is already full.</exception>
         protected virtual void EnqueueInputElement(object element)
         {
             if (IsOpen)
@@ -194,7 +194,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels an open upstream input and clears its buffered elements; after a prior completion or failure, it leaves the buffer intact.
         /// </summary>
         public virtual void Cancel()
         {
@@ -214,34 +214,34 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the transfer state that waits for input and completes when upstream is closed and the buffer is drained.
         /// </summary>
         public TransferState NeedsInput { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the transfer state that is ready for input or completion.
         /// </summary>
         public TransferState NeedsInputOrComplete { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets whether upstream has reached a terminal state through completion, cancellation, or failure.
         /// </summary>
         public bool IsClosed => _isUpstreamCompleted;
         /// <summary>
-        /// TBD
+        /// Gets whether upstream input remains open.
         /// </summary>
         public bool IsOpen => !IsClosed;
         /// <summary>
-        /// TBD
+        /// Gets whether upstream is terminal and all buffered input has been consumed.
         /// </summary>
         public bool AreInputsDepleted => _isUpstreamCompleted && _inputBufferElements == 0;
         /// <summary>
-        /// TBD
+        /// Gets whether at least one buffered input element is available.
         /// </summary>
         public bool AreInputsAvailable => _inputBufferElements > 0;
 
         /// <summary>
-        /// TBD
+        /// Marks upstream complete, switches to the completed receive handler, and resumes the pump.
         /// </summary>
         protected virtual void OnComplete()
         {
@@ -251,9 +251,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Registers an upstream subscription, prefetches up to the buffer capacity, and resumes the pump.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The upstream subscription to register.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="subscription"/> is undefined.
         /// </exception>
@@ -275,9 +275,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Marks upstream terminal and forwards the failure to the processor implementation.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The upstream failure.</param>
         protected virtual void OnError(Exception e)
         {
             _isUpstreamCompleted = true;
@@ -286,10 +286,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Handles upstream protocol messages before its subscription is established.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> for a recognized upstream signal; otherwise <see langword="false"/>.</returns>
         protected virtual bool WaitingForUpstream(object message)
         {
             if (message is OnComplete)
@@ -304,10 +304,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Handles upstream elements and terminal signals after subscription.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to handle.</param>
+        /// <returns><see langword="true"/> for a recognized upstream signal; otherwise <see langword="false"/>.</returns>
         protected virtual bool UpstreamRunning(object message)
         {
             if (message is OnNext next)
@@ -324,11 +324,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Rejects a late subscription after upstream has terminated.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to inspect.</param>
+        /// <exception cref="IllegalStateException">An upstream subscription arrives after completion or failure.</exception>
+        /// <returns><see langword="false"/> for messages not handled by this terminal state.</returns>
         protected virtual bool Completed(object message)
         {
             if (message is OnSubscribe)
@@ -337,48 +337,48 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Clears buffered elements after upstream failure.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The upstream failure.</param>
         protected virtual void InputOnError(Exception e) => Clear();
     }
 
     /// <summary>
-    /// TBD
+    /// Handles a single downstream subscriber, demand, and terminal signals for an actor processor.
     /// </summary>
     public class SimpleOutputs : IOutputs
     {
         /// <summary>
-        /// TBD
+        /// Gets the actor that receives output requests and cancellation.
         /// </summary>
         public readonly IActorRef Actor;
         /// <summary>
-        /// TBD
+        /// Gets the transfer pump resumed when downstream state changes.
         /// </summary>
         public readonly IPump Pump;
 
         /// <summary>
-        /// TBD
+        /// Gets the exposed actor publisher used to accept downstream subscriptions.
         /// </summary>
         protected IActorPublisher ExposedPublisher;
         /// <summary>
-        /// TBD
+        /// Gets the downstream subscriber after registration.
         /// </summary>
         protected IUntypedSubscriber Subscriber;
         /// <summary>
-        /// TBD
+        /// Gets the amount of outstanding downstream demand.
         /// </summary>
         protected long DownstreamDemand;
         /// <summary>
-        /// TBD
+        /// Gets whether downstream has reached a terminal state through completion, cancellation, or failure.
         /// </summary>
         protected bool IsDownstreamCompleted;
 
         /// <summary>
-        /// TBD
+        /// Creates output management and waits for the publisher exposure message.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="pump">TBD</param>
+        /// <param name="actor">The actor that receives subscription requests.</param>
+        /// <param name="pump">The transfer pump resumed after demand changes.</param>
         public SimpleOutputs(IActorRef actor, IPump pump)
         {
             Actor = actor;
@@ -390,35 +390,35 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether a downstream subscriber has been registered.
         /// </summary>
         public bool IsSubscribed => Subscriber != null;
 
         /// <summary>
-        /// TBD
+        /// Gets the receive handler for downstream signals.
         /// </summary>
         public virtual SubReceive SubReceive { get; }
         /// <summary>
-        /// TBD
+        /// Gets the transfer state that waits for positive downstream demand.
         /// </summary>
         public TransferState NeedsDemand { get; }
         /// <summary>
-        /// TBD
+        /// Gets the transfer state that is ready when demand arrives or downstream closes.
         /// </summary>
         public TransferState NeedsDemandOrCancel { get; }
         /// <summary>
-        /// TBD
+        /// Gets the remaining downstream demand.
         /// </summary>
         public long DemandCount => DownstreamDemand;
         /// <summary>
-        /// TBD
+        /// Gets whether downstream demand is available.
         /// </summary>
         public bool IsDemandAvailable => DownstreamDemand > 0;
 
         /// <summary>
-        /// TBD
+        /// Validates and sends an output element to the subscriber, decrementing outstanding demand.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element to deliver to downstream.</param>
         public void EnqueueOutputElement(object element)
         {
             ReactiveStreamsCompliance.RequireNonNullElement(element);
@@ -427,7 +427,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Completes the publisher and signals completion to its registered subscriber.
         /// </summary>
         public virtual void Complete()
         {
@@ -442,7 +442,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Marks the output canceled without sending a terminal signal to its registered subscriber; shutting down the exposed publisher completes pending subscribers.
         /// </summary>
         public virtual void Cancel()
         {
@@ -455,9 +455,9 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Fails the publisher and signals the cause to its registered subscriber when allowed by compliance rules.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The failure to signal.</param>
         public virtual void Error(Exception e)
         {
             if (!IsDownstreamCompleted)
@@ -471,18 +471,18 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets whether downstream is terminal and a subscriber is present.
         /// </summary>
         public bool IsClosed => IsDownstreamCompleted && !ReferenceEquals(Subscriber, null);
         /// <summary>
-        /// TBD
+        /// Gets whether the output side has not reached its closed state.
         /// </summary>
         public bool IsOpen => !IsClosed;
 
         /// <summary>
-        /// TBD
+        /// Creates an actor-backed subscription for the registered subscriber.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The subscription used to deliver request and cancellation messages.</returns>
         protected ISubscription CreateSubscription() => ActorSubscription.Create(Actor, Subscriber);
 
         private void SubscribePending(IEnumerable<IUntypedSubscriber> subscribers)
@@ -500,11 +500,11 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Waits for the publisher wrapper, then registers pending subscribers with this output manager.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to process.</param>
+        /// <exception cref="IllegalStateException">The first received message is not an exposed publisher.</exception>
+        /// <returns><see langword="true"/> after handling the exposure message.</returns>
         protected bool WaitingExposedPublisher(object message)
         {
             if (message is ExposedPublisher publisher)
@@ -518,10 +518,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Handles publisher wake-ups, demand requests, and subscriber cancellation.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to process.</param>
+        /// <returns><see langword="true"/> when the message is handled; otherwise <see langword="false"/>.</returns>
         protected bool DownstreamRunning(object message)
         {
             if (message is SubscribePending)
@@ -551,7 +551,7 @@ namespace Akka.Streams.Implementation
     }
 
     /// <summary>
-    /// TBD
+    /// Base actor implementation for an actor-backed Reactive Streams processor.
     /// </summary>
     internal abstract class ActorProcessorImpl : ActorBase, IPump
     {
@@ -586,25 +586,25 @@ namespace Akka.Streams.Implementation
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Gets the settings used to configure input buffering and processor logging.
         /// </summary>
         public readonly ActorMaterializerSettings Settings;
 
         /// <summary>
-        /// TBD
+        /// Gets the primary input buffer and upstream-signal handler.
         /// </summary>
         protected virtual IInputs PrimaryInputs { get; }
         /// <summary>
-        /// TBD
+        /// Gets the primary output manager and downstream-signal handler.
         /// </summary>
         protected virtual IOutputs PrimaryOutputs { get; }
 
         private ILoggingAdapter _log;
 
         /// <summary>
-        /// TBD
+        /// Creates the processor actor's default input buffer, output manager, and initial pump state.
         /// </summary>
-        /// <param name="settings">TBD</param>
+        /// <param name="settings">Materializer settings used for buffering and logging.</param>
         protected ActorProcessorImpl(ActorMaterializerSettings settings)
         {
             Settings = settings;
@@ -617,20 +617,20 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the actor logger, creating it on first access.
         /// </summary>
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
 
         /// <summary>
-        /// TBD
+        /// Gets or sets the current pump transfer state.
         /// </summary>
         public TransferState TransferState { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets or sets the current pump action.
         /// </summary>
         public Action CurrentAction { get; set; }
         /// <summary>
-        /// TBD
+        /// Gets whether the current transfer state is completed.
         /// </summary>
         public bool IsPumpFinished => this.IsPumpFinished();
 
@@ -639,56 +639,56 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Subclass may override <see cref="ActiveReceive"/>
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The received actor message.</param>
+        /// <returns><see langword="true"/> for every message passed to the exposure adapter. When publisher exposure replays buffered messages, messages rejected by the active handler are sent to the configured unhandled behavior.</returns>
         protected sealed override bool Receive(object message) => _receive.Apply(message);
 
         /// <summary>
-        /// TBD
+        /// Dispatches actor messages to the active input or output receive handler.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The actor message to route.</param>
+        /// <returns><see langword="true"/> if either side handled the message.</returns>
         protected virtual bool ActiveReceive(object message)
             => PrimaryInputs.SubReceive.CurrentReceive(message) || PrimaryOutputs.SubReceive.CurrentReceive(message);
 
         /// <summary>
-        /// TBD
+        /// Configures the pump's initial phase to wait for the specified positive number of upstream subscriptions.
         /// </summary>
-        /// <param name="waitForUpstream">TBD</param>
-        /// <param name="andThen">TBD</param>
+        /// <param name="waitForUpstream">The number of subscriptions required before running the phase.</param>
+        /// <param name="andThen">The phase to run after subscriptions arrive.</param>
         public void InitialPhase(int waitForUpstream, TransferPhase andThen)
             => Pumps.InitialPhase(this, waitForUpstream, andThen);
 
         /// <summary>
-        /// TBD
+        /// Pauses the current pump phase until upstream subscriptions arrive.
         /// </summary>
-        /// <param name="waitForUpstream">TBD</param>
+        /// <param name="waitForUpstream">The number of subscriptions to wait for.</param>
         public void WaitForUpstream(int waitForUpstream) => Pumps.WaitForUpstream(this, waitForUpstream);
 
         /// <summary>
-        /// TBD
+        /// Notifies the pump that an upstream subscription arrived.
         /// </summary>
         public void GotUpstreamSubscription() => Pumps.GotUpstreamSubscription(this);
 
         /// <summary>
-        /// TBD
+        /// Installs the next pump phase.
         /// </summary>
-        /// <param name="phase">TBD</param>
+        /// <param name="phase">The phase to install.</param>
         public void NextPhase(TransferPhase phase) => Pumps.NextPhase(this, phase);
 
         /// <summary>
-        /// TBD
+        /// Runs the current pump action while its state is executable.
         /// </summary>
         public void Pump() => Pumps.Pump(this);
 
         /// <summary>
-        /// TBD
+        /// Routes pump action failures to the actor's failure handler.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The exception thrown by the current pump action.</param>
         public void PumpFailed(Exception e) => Fail(e);
 
         /// <summary>
-        /// TBD
+        /// Cancels upstream and completes downstream when the pump reaches its terminal state.
         /// </summary>
         public virtual void PumpFinished()
         {
@@ -698,15 +698,15 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Fails the processor using the actor's failure path.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The upstream failure.</param>
         protected virtual void OnError(Exception e) => Fail(e);
 
         /// <summary>
-        /// TBD
+        /// Cancels input and signals the failure to output subscribers, then stops the actor.
         /// </summary>
-        /// <param name="e">TBD</param>
+        /// <param name="e">The failure to signal.</param>
         protected virtual void Fail(Exception e)
         {
             if (Settings.IsDebugLogging)
@@ -718,7 +718,7 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels input and reports abrupt actor termination to the output manager.
         /// </summary>
         protected override void PostStop()
         {
@@ -727,10 +727,10 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Rejects actor restart because processor state cannot be reconstructed.
         /// </summary>
-        /// <param name="reason">TBD</param>
-        /// <exception cref="IllegalStateException">TBD</exception>
+        /// <param name="reason">The exception that caused the restart attempt.</param>
+        /// <exception cref="IllegalStateException">Restart is unsupported for this processor actor.</exception>
         protected override void PostRestart(Exception reason)
         {
             base.PostRestart(reason);

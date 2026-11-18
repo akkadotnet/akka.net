@@ -149,7 +149,7 @@ namespace Akka.Tests.Util.Internal
         /// <param name="self">The input sequence</param>
         /// <param name="evenSelector">The selector to use for items 0, 2, 4 etc.</param>
         /// <param name="oddSelector">The selector to use for items 1, 3, 5 etc.</param>
-        /// <returns>TBD</returns>
+        /// <returns>The concatenated results of applying the even selector to even-indexed values and the odd selector to odd-indexed values.</returns>
         private static IEnumerable<TOut> AlternateSelectMany<TIn, TOut>(IEnumerable<TIn> self,
             Func<TIn, IEnumerable<TOut>> evenSelector, Func<TIn, IEnumerable<TOut>> oddSelector)
         {

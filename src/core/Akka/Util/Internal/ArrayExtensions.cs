@@ -61,9 +61,10 @@ namespace Akka.Util.Internal
         /// Folds a collection into a Dictionary where the original value (of type T) acts as the key
         /// and the index of the item in the array acts as the value.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="collection">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <param name="collection">The values to map to their zero-based positions.</param>
+        /// <returns>A dictionary mapping each value to its index in the source sequence.</returns>
+        /// <exception cref="ArgumentException">The source contains the same value more than once.</exception>
         public static Dictionary<T, int> ZipWithIndex<T>(this IEnumerable<T> collection)
         {
             var i = 0;
@@ -79,11 +80,11 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Grabs a subset of an IEnumerable based on a starting index and position
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The element type.</typeparam>
         /// <param name="items">The array of items to slice</param>
         /// <param name="startIndex">The starting position to begin the slice</param>
         /// <param name="count">The number of items to take</param>
-        /// <returns>A slice of size <paramref name="count"/> beginning from position <sparamref name="startIndex"/> in <paramref name="items"/>.</returns>
+        /// <returns>Up to <paramref name="count"/> elements after skipping <paramref name="startIndex"/> elements.</returns>
         internal static IEnumerable<T> Slice<T>(this IEnumerable<T> items, int startIndex, int count)
         {
             return items.Skip(startIndex).Take(count);
@@ -94,13 +95,13 @@ namespace Akka.Util.Internal
         /// 
         /// <note>
         /// If <paramref name="startingItem"/> is not found in the array, From will return an empty set.
-        /// If <paramref name="startingItem"/> is found at the end of the array, From will return the entire original array.
+        /// If <paramref name="startingItem"/> is the final item, From returns that final item.
         /// </note>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="items">TBD</param>
-        /// <param name="startingItem">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <param name="items">The source sequence.</param>
+        /// <param name="startingItem">The item at which the returned sequence begins.</param>
+        /// <returns>The sequence from the first matching item through the end.</returns>
         internal static IEnumerable<T> From<T>(this IEnumerable<T> items, T startingItem)
         {
             return items.SkipWhile(x => !x.Equals(startingItem));
@@ -113,10 +114,10 @@ namespace Akka.Util.Internal
         /// If <paramref name="startingItem"/> is the first item in the array, an empty array will be returned.
         /// </note>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="items">TBD</param>
-        /// <param name="startingItem">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <param name="items">The source sequence.</param>
+        /// <param name="startingItem">The item at which enumeration stops.</param>
+        /// <returns>All items before the first item equal to <paramref name="startingItem"/>.</returns>
         internal static IEnumerable<T> Until<T>(this IEnumerable<T> items, T startingItem)
         {
             var enumerator = items.GetEnumerator();
@@ -130,15 +131,14 @@ namespace Akka.Util.Internal
         }
 
         /// <summary>
-        /// TBD
+        /// Returns all elements after the first element of a sequence.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="items">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The element type.</typeparam>
+        /// <param name="items">The source sequence.</param>
+        /// <returns>The source sequence without its first element, or an empty sequence when it has no elements.</returns>
         internal static IEnumerable<T> Tail<T>(this IEnumerable<T> items)
         {
             return items.Skip(1);
         }
     }
 }
-

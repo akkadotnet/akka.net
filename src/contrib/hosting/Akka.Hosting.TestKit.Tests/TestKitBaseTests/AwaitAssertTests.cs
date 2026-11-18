@@ -21,19 +21,23 @@ public class AwaitAssertTests : TestKit
     {
     }
 
-    [Fact]
-    public void AwaitAssert_must_not_throw_any_exception_when_assertion_is_valid()
+    [Fact(DisplayName = "AwaitAssertAsync must not throw when the assertion is valid")]
+    public async Task AwaitAssert_must_not_throw_any_exception_when_assertion_is_valid()
     {
-        AwaitAssert(() => Assert.Equal("foo", "foo"));
+        await AwaitAssertAsync(() => Assert.Equal("foo", "foo"));
     }
 
-    [Fact]
-    public void AwaitAssert_must_throw_exception_when_assertion_is_invalid()
+    [Fact(DisplayName = "AwaitAssertAsync must throw when the assertion never becomes valid")]
+    public async Task AwaitAssert_must_throw_exception_when_assertion_is_invalid()
     {
-        Within(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), () =>
+        // AwaitAssertAsync polls for 500ms (dilated to 1s by timefactor=2) before it rethrows,
+        // so it can't return sooner than the 300ms lower bound. The upper bound only guards
+        // against a hang; it is generous because a cold or starved CI host can stretch a
+        // nominal ~1s run well past 2s.
+        await WithinAsync(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(10), async () =>
         {
-            Assert.Throws<EqualException>(() =>
-                AwaitAssert(() => Assert.Equal("foo", "bar"), TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(300)));
+            await Assert.ThrowsAsync<EqualException>(async () =>
+                await AwaitAssertAsync(() => Assert.Equal("foo", "bar"), TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(300)));
         });
     }
 }

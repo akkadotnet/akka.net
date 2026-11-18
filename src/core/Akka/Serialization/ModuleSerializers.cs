@@ -18,15 +18,31 @@ using Akka.Actor;
 namespace Akka.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer rows a first-party module's reference.conf names, so <see cref="Serialization"/>
-    /// can resolve those rows without <see cref="Type.GetType(string)"/>. <see cref="Create"/> has the same shape as
-    /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, HOCON still
-    /// decides which of these entries are actually registered, and a <see cref="SerializationSetup"/> still wins
-    /// over both.
+    /// INTERNAL API. The serializers, bindings and ids of a first-party module, so <see cref="Serialization"/> can
+    /// register them without <see cref="Type.GetType(string)"/> and without any HOCON row. <see cref="Create"/> has the same shape as
+    /// <see cref="SerializationSetup.CreateSerializers"/>; unlike a <see cref="SerializationSetup"/>, every entry here
+    /// is registered as a default as soon as the module loads - HOCON can still override an alias or a binding, and
+    /// a <see cref="SerializationSetup"/> wins over both.
     /// </summary>
     internal abstract class ModuleSerializers
     {
         public abstract ImmutableHashSet<SerializerDetails> Create(ExtendedActorSystem system);
+
+        /// <summary>
+        /// Additional exact serializer types whose configured names resolve to an existing table alias.
+        /// A native replacement can preserve a public legacy class without changing its inheritance or
+        /// requiring dynamic type loading for copied configuration. This does not match subclasses.
+        /// </summary>
+        public virtual ImmutableDictionary<Type, string> SerializerTypeAliases => ImmutableDictionary<Type, string>.Empty;
+
+        /// <summary>
+        /// The legacy row each of this module's V2 rows supersedes, as V2 alias to legacy alias - for example
+        /// <c>["reliable-delivery-v2"] = "reliable-delivery"</c>. Both rows must come from <see cref="Create"/>, and the
+        /// V2 row ships read-only (empty <see cref="SerializerDetails.UseFor"/>). When the Serialization V2 switch
+        /// (<c>akka.actor.serialization-v2</c>) is on, the V2 row takes over the
+        /// legacy row's default bindings; when it is off, nothing moves. Both ids stay registered either way.
+        /// </summary>
+        public virtual ImmutableDictionary<string, string> Supersedes => ImmutableDictionary<string, string>.Empty;
     }
 
     /// <summary>
@@ -37,8 +53,20 @@ namespace Akka.Serialization
         private readonly Dictionary<string, (SerializerDetails Details, string? Assembly, bool IsAkka)> _serializers = new(StringComparer.Ordinal);
         private readonly Dictionary<string, (Type Type, string? Assembly, bool IsAkka)> _boundTypes = new(StringComparer.Ordinal);
 
-        private LoadedModule(ImmutableHashSet<SerializerDetails> details)
+        // V2 row -> the legacy row it supersedes, and the reverse, both by alias
+        private readonly Dictionary<string, SerializerDetails> _supersededBy = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, SerializerDetails> _supersedes = new(StringComparer.Ordinal);
+
+        /// <summary>Every row <see cref="ModuleSerializers.Create"/> returned, for registering the module's defaults.</summary>
+        internal ImmutableHashSet<SerializerDetails> Details { get; }
+
+        /// <summary>Each V2 row with the legacy row it supersedes, as <see cref="ModuleSerializers.Supersedes"/> declared them.</summary>
+        internal List<(SerializerDetails V2, SerializerDetails Legacy)> Takeovers { get; } = new();
+
+        private LoadedModule(ImmutableHashSet<SerializerDetails> details, ImmutableDictionary<string, string> supersedes,
+            ImmutableDictionary<Type, string> serializerTypeAliases, string moduleName)
         {
+            Details = details;
             foreach (var entry in details)
             {
                 var serializerType = entry.Serializer.GetType();
@@ -46,6 +74,75 @@ namespace Akka.Serialization
                 foreach (var type in entry.UseFor)
                     _boundTypes[KeyOf(type)] = (type, type.Assembly.GetName().Name, IsAkka(type));
             }
+
+            foreach (var typeAlias in serializerTypeAliases)
+            {
+                if (!typeof(Serializer).IsAssignableFrom(typeAlias.Key))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares a serializer type alias for [{typeAlias.Key}], which is not a Serializer.");
+
+                SerializerDetails? target = null;
+                foreach (var entry in details)
+                {
+                    if (!string.Equals(entry.Alias, typeAlias.Value, StringComparison.Ordinal))
+                        continue;
+                    if (target is not null)
+                        throw new InvalidOperationException(
+                            $"Module [{moduleName}] maps serializer type [{typeAlias.Key}] to ambiguous alias [{typeAlias.Value}].");
+                    target = entry;
+                }
+                if (target is null)
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] maps serializer type [{typeAlias.Key}] to missing alias [{typeAlias.Value}].");
+
+                var key = KeyOf(typeAlias.Key);
+                var assembly = typeAlias.Key.Assembly.GetName().Name;
+                if (_serializers.TryGetValue(key, out var existing) &&
+                    (!ReferenceEquals(existing.Details, target) || !string.Equals(existing.Assembly, assembly, StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] maps serializer type [{typeAlias.Key}] more than once with conflicting targets or assemblies.");
+                _serializers[key] = (target, assembly, IsAkka(typeAlias.Key));
+            }
+
+            if (supersedes.IsEmpty)
+                return;
+
+            var byAlias = new Dictionary<string, SerializerDetails>(StringComparer.Ordinal);
+            foreach (var entry in details)
+                byAlias[entry.Alias] = entry;
+
+            // a broken declaration is a first-party bug: fail every system that loads the module, so no test run misses it
+            foreach (var kv in supersedes)
+            {
+                if (!byAlias.TryGetValue(kv.Key, out var v2) || !byAlias.TryGetValue(kv.Value, out var legacy))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares that [{kv.Key}] supersedes [{kv.Value}], but its table has no row for one of them.");
+                // no chains, no self-reference, and one V2 row per legacy row
+                if (supersedes.ContainsKey(kv.Value) || _supersededBy.ContainsKey(kv.Value))
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares that [{kv.Key}] supersedes [{kv.Value}], but [{kv.Value}] is a V2 row itself or is already superseded.");
+                if (!v2.UseFor.IsEmpty)
+                    throw new InvalidOperationException(
+                        $"Module [{moduleName}] declares that [{kv.Key}] supersedes [{kv.Value}], but [{kv.Key}] binds types of its own; a V2 row ships read-only.");
+
+                _supersedes[kv.Key] = legacy;
+                _supersededBy[kv.Value] = v2;
+                Takeovers.Add((v2, legacy));
+            }
+        }
+
+        /// <summary>
+        /// The types <paramref name="row"/> binds as a module default. With <paramref name="serializationV2"/> off, that is
+        /// its own <see cref="SerializerDetails.UseFor"/>. With it on, a superseded legacy row binds nothing, and the V2
+        /// row that supersedes it binds the legacy row's types.
+        /// </summary>
+        internal ImmutableHashSet<Type> DefaultBindings(SerializerDetails row, bool serializationV2)
+        {
+            if (!serializationV2)
+                return row.UseFor;
+            if (_supersededBy.ContainsKey(row.Alias))
+                return ImmutableHashSet<Type>.Empty;
+            return _supersedes.TryGetValue(row.Alias, out var legacy) ? row.UseFor.Union(legacy.UseFor) : row.UseFor;
         }
 
         /// <summary>
@@ -58,7 +155,8 @@ namespace Akka.Serialization
             try
             {
                 skewError = null;
-                return new LoadedModule(module.Create(system));
+                return new LoadedModule(module.Create(system), module.Supersedes, module.SerializerTypeAliases,
+                    module.GetType().FullName ?? module.GetType().Name);
             }
             catch (Exception e) when (ModuleSerializerTable.IsVersionSkew(e))
             {
@@ -114,9 +212,13 @@ namespace Akka.Serialization
 
         private readonly Dictionary<string, Func<ModuleSerializers?>> _modules;
         private readonly ConcurrentDictionary<string, ModuleSerializers?> _loaded = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Exception> _loadErrors = new(StringComparer.OrdinalIgnoreCase);
 
         internal ModuleSerializerTable(IDictionary<string, Func<ModuleSerializers?>> modules)
             => _modules = new Dictionary<string, Func<ModuleSerializers?>>(modules, StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The assembly names of every module this table knows about, loaded or not.</summary>
+        internal IEnumerable<string> AssemblyNames => _modules.Keys;
 
         /// <summary>The module shipped as <paramref name="assembly"/>; null when it is not a known module or fails to load.</summary>
         internal ModuleSerializers? ForAssembly(string assembly)
@@ -125,10 +227,16 @@ namespace Akka.Serialization
                 return null;
 
             // a race can load a module twice; the copies are equivalent and only one is kept
-            return _loaded.GetOrAdd(assembly, _ => TryLoad(load));
+            return _loaded.GetOrAdd(assembly, _ => TryLoad(assembly, load));
         }
 
-        private static ModuleSerializers? TryLoad(Func<ModuleSerializers?> load)
+        /// <summary>
+        /// The version-skew error that stopped <paramref name="assembly"/>'s table from loading, or null when it loaded
+        /// or simply is not deployed - an absent module is not an error, a broken one is.
+        /// </summary>
+        internal Exception? LoadError(string assembly) => _loadErrors.TryGetValue(assembly, out var error) ? error : null;
+
+        private ModuleSerializers? TryLoad(string assembly, Func<ModuleSerializers?> load)
         {
             try
             {
@@ -136,7 +244,9 @@ namespace Akka.Serialization
             }
             catch (Exception e) when (IsVersionSkew(e))
             {
-                // the module's table is missing from this build: the module counts as absent
+                // the module's table is missing from this build: the module counts as absent, and the caller
+                // can ask LoadError why
+                _loadErrors[assembly] = e;
                 return null;
             }
         }

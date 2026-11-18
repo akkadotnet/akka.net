@@ -1,0 +1,84 @@
+name: Publish NuGet
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to build and publish (e.g. 1.5.73)'
+        required: true
+
+permissions:
+  contents: write # create the GitHub release
+  id-token: write # NuGet trusted publishing (OIDC)
+
+jobs:
+  publish:
+    name: Pack, push to NuGet, and create GitHub release
+    runs-on: windows-latest
+    environment: publish # must match the nuget.org trusted publishing policy
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+
+    steps:
+    - name: Checkout tag
+      uses: actions/checkout@v6.0.2
+      with:
+        ref: refs/tags/${{ env.TAG }}
+
+    - name: Install .NET SDK
+      uses: actions/setup-dotnet@v5.0.0
+      with:
+        global-json-file: global.json
+
+    - name: Update release notes
+      shell: pwsh
+      run: ./build.ps1
+
+    # Pack without version suffix for release
+    - name: Create packages
+      shell: pwsh
+      run: dotnet pack -c Release -o ./bin/nuget
+
+    - name: NuGet login (OIDC)
+      uses: NuGet/login@v1
+      id: nuget-login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+
+    - name: Push packages to NuGet
+      shell: pwsh
+      run: |
+        Get-ChildItem ./bin/nuget -Filter *.nupkg | ForEach-Object {
+          dotnet nuget push $_.FullName -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
+
+    - name: Extract latest release notes
+      shell: pwsh
+      run: |
+        $content = Get-Content RELEASE_NOTES.md -Raw
+        if ($content -match '(?s)(####.+?)(?=\n####|\z)') {
+          $Matches[1].Trim() | Set-Content RELEASE_NOTES_LATEST.md
+        } else {
+          $content | Set-Content RELEASE_NOTES_LATEST.md
+        }
+
+    - name: Create GitHub release
+      shell: pwsh
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release view $env:TAG *> $null
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "Release $env:TAG already exists; skipping."
+          exit 0
+        }
+        # a tag with a suffix (1.6.0-beta4, 1.6.0-rc1) is a pre-release, so it never becomes "Latest"
+        $flags = @()
+        if ($env:TAG.Contains('-')) { $flags += '--prerelease' }
+        $assets = (Get-ChildItem ./bin/nuget -Filter *.nupkg).FullName
+        gh release create $env:TAG --verify-tag --title "Akka.NET v$env:TAG" --notes-file RELEASE_NOTES_LATEST.md @flags @assets
+        exit $LASTEXITCODE

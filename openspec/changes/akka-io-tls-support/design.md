@@ -1,77 +1,72 @@
 ## Context
 
-`modernize-akka-io-tcp` introduces `IStreamProvider`, an abstraction that returns a connected `Stream` from connection parameters. `TcpStreamProvider` returns a plain `NetworkStream`. The TCP connection actor reads/writes the `Stream` via `System.IO.Pipelines.Pipe` and never interacts with the socket directly. This design makes TLS a provider swap: `TlsStreamProvider` wraps the `NetworkStream` in `SslStream` and completes the TLS handshake inside `ConnectAsync`, returning an authenticated `Stream`.
+Akka.IO already bridges sockets and streams through `TcpTransportConnection`, which owns the stream and the I/O pumps. TLS therefore belongs in that transport: `InitializeAsync` authenticates an `SslStream` before reporting readiness, then `Start` activates the existing pumps when the handler registers. The handshake must not block the listener's accept loop or the actor mailbox.
 
-The current DotNetty transport supports TLS via `DotNetty.Handlers.Tls.TlsHandler` which itself wraps `SslStream`. The HOCON configuration covers: file-based certificates (`ssl.certificate.path` + `password`), Windows certificate store lookup (`ssl.certificate.thumbprint` + `store-name` + `store-location`), mutual authentication, hostname validation, and validation suppression for development. All of these must continue to work unchanged.
-
-Reference implementation: TurboMQTT `TlsStreamProvider.cs` (~60 lines) and `FakeMqttTlsTcpServer.cs` (server-side TLS handshake pattern).
+This work is staged. Akka.IO owns reusable certificate and validation settings; Akka.Streams and Artery add their own entry points in later changes. DotNetty remains an independent transport and is not reconfigured through the new API.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- TLS for outgoing connections via `TlsStreamProvider : IStreamProvider`
-- TLS for incoming connections via server-side handshake in `TcpIncomingConnection`
-- All existing DotNetty TLS HOCON configuration works without modification
-- Programmatic TLS configuration equivalent to `DotNettySslSetup`
-- Handshake timeout support (configurable, prevents malicious clients from hanging connections)
-- Certificate validation: chain validation, hostname validation, suppression for dev
-- Mutual TLS (client certificate required)
+- Opt-in TLS for each Akka.IO outgoing connection or listener.
+- Make client-only, client-mutual, listener-only, and listener-mutual settings explicit through role-specific factories.
+- Separate the trust decision from optional checks that can only narrow acceptance.
+- Asynchronous, bounded client and server handshakes before `Tcp.Connected`.
+- Preserve cancellation and socket/stream ownership when a connection actor stops before registration.
+- Keep per-connection validation options independent and preserve plaintext behavior when TLS is not configured.
+- Send TLS `close_notify` before TCP FIN during `Tcp.ConfirmedClose`, while keeping the read side open.
 
 **Non-Goals:**
-- TLS as an Akka.Streams BidiFlow stage (YAGNI — TLS is a socket-level concern)
-- TLS for UDP (separate protocol — DTLS, out of scope)
-- Custom TLS protocol implementations (we use .NET's `SslStream` exclusively)
-- Certificate auto-renewal or ACME integration
-- TLS session resumption optimization (rely on .NET runtime defaults)
+- `IStreamProvider` or replacement of the existing socket/pipe transport.
+- Akka.Streams and Artery integration in this stage.
+- DotNetty configuration migration or API changes.
+- QUIC, certificate file/store loading, certificate hot reload, or automatic plaintext fallback.
 
 ## Decisions
 
-### 1. Client-side TLS via TlsStreamProvider
+### 1. TLS is selected per TCP command
 
-**Decision:** Create `TlsStreamProvider : IStreamProvider` that wraps `TcpStreamProvider`, creates `SslStream`, and completes `AuthenticateAsClientAsync` inside `ConnectAsync`.
+**Decision:** Add init-only `TlsClientSettings? Tls` and `TlsServerSettings? Tls` properties to `Tcp.Connect` and `Tcp.Bind`. Keep existing constructors unchanged.
 
-**Rationale:** Direct copy of proven TurboMQTT pattern. The TCP connection actor receives an authenticated `Stream` and never knows TLS is involved. Zero changes to the connection actor code path.
+**Rationale:** A system can host TLS and plaintext connections concurrently, and existing callers remain source and binary compatible.
 
-**Alternative considered:** TLS BidiFlow stage in Akka.Streams. Rejected — requires complex push/pull bridging, fake Stream pairs, handshake state machine. Hundreds of lines vs ~60 lines. TLS is an encrypted pipe, not a data transformation.
+### 2. Settings express the TLS role and are immutable
 
-### 2. Server-side TLS handshake in TcpIncomingConnection
+**Decision:** Construct outgoing `TlsClientSettings` with `ServerOnly(serverValidation)` or `Mutual(clientCertificate, serverValidation)`. Construct listener `TlsServerSettings` with `ServerOnly(serverCertificate)` or `Mutual(serverCertificate, clientValidation)`. Use immutable `WithHandshakeTimeout`, `WithProtocols`, and client-only `WithTargetHost` methods for overrides. Do not expose mutable validation, hostname, mutual-authentication, or nullable custom-validator flags.
 
-**Decision:** After `TcpListener` accepts a socket and creates `TcpIncomingConnection`, the incoming connection actor wraps the `NetworkStream` in `SslStream` and calls `AuthenticateAsServerAsync` before entering the `Connected` state. If handshake fails or times out, the actor stops itself.
+**Rationale:** The constructor inputs make each direction's local certificate and peer policy explicit. A listener has no outbound target-host setting, and server-only client settings do not require a client certificate.
 
-**Rationale:** Keeps the listener's accept loop non-blocking. A slow or malicious TLS handshake doesn't prevent other connections from being accepted. Each connection handles its own handshake independently. If it fails, the per-connection actor dies — the listener is unaffected.
+### 3. Peer trust has one base decision and optional narrowing checks
 
-**Alternative considered:** Handshake in `TcpListener` before creating child actor. Rejected — blocks the accept loop during handshake, creates DoS vector.
+**Decision:** `TlsPeerPolicy.SystemTrust()` uses OS chain trust and ignores only name-mismatch errors; `PinnedCertificates(...)` treats a matching leaf thumbprint as trust; `CustomTrust(callback)` supplies the complete trust decision. `And(...)` checks run only after the base trust accepts and can only reject additional peers. Preserve all seven common validation helpers. Reject missing required peer certificates before callbacks; propagate callback exceptions as handshake failures.
 
-### 3. Configuration reuses existing HOCON keys
+**Rationale:** Trust anchors, leaf pins, and application checks have different meanings. Making the base trust choice explicit avoids accidentally treating a subject or issuer match as a trust anchor.
 
-**Decision:** Parse `akka.remote.dot-netty.tcp.ssl.*` keys into a new `TlsSettings` class that produces `SslClientAuthenticationOptions` and `SslServerAuthenticationOptions`.
+### 4. Target host is an optional outgoing override
 
-**Rationale:** Zero user configuration changes. The HOCON key names stay the same even though the underlying transport moves away from DotNetty-specific TLS machinery. Users migrating to Akka.NET 1.6 don't need to rewrite their TLS config.
+**Decision:** By default, derive the outgoing TLS target/SNI name from the remote connection endpoint. `WithTargetHost` overrides that name when the endpoint address differs from the intended DNS identity. `ValidateHostname()` checks the runtime name-mismatch result; the overload with an expected host checks that explicit DNS or IP name. Listener policies never infer a client identity from its socket address.
 
-Config mapping:
-- `ssl.certificate.path` + `ssl.certificate.password` → `new X509Certificate2(path, password)`
-- `ssl.certificate.use-thumbprint-over-file` + `ssl.certificate.thumbprint` + `ssl.certificate.store-name` + `ssl.certificate.store-location` → `X509Store` lookup
-- `ssl.require-mutual-authentication` → `SslServerAuthenticationOptions.ClientCertificateRequired`
-- `ssl.suppress-validation` → `RemoteCertificateValidationCallback` that returns `true`
-- `ssl.validate-certificate-hostname` → Custom callback checking SAN/CN
-- `enable-ssl` → selects `TlsStreamProvider` vs `TcpStreamProvider`
+**Rationale:** Ordinary DNS connections already provide the target name. Keeping the override on client settings supports IP/alias endpoints without adding unused state to listeners.
 
-### 4. Programmatic TLS setup via setup class
+### 5. Authenticate before reporting Connected
 
-**Decision:** Provide a `TlsSetup` class (equivalent to current `DotNettySslSetup`) that can be passed via `ActorSystemSetup` for programmatic certificate configuration.
+**Decision:** Outgoing and per-accepted-connection actors initialize a transport and process its generic readiness result through their mailboxes. The TCP transport runs TLS authentication away from the actor thread. Only successful readiness calls the existing `CompleteConnect` path. A client failure completes the original command with `Tcp.CommandFailed`; an inbound failure is logged and stops only that child actor.
 
-**Rationale:** Some users construct certificates in code (e.g., from Azure Key Vault, AWS Secrets Manager). They need a non-HOCON path. The current `DotNettySslSetup` provides this — the replacement must too.
+**Rationale:** This prevents unauthenticated bytes from reaching registered handlers, keeps actor responsiveness, and leaves the accept loop available while a peer stalls.
 
-### 5. Handshake timeout
+### 6. Keep transport ownership until Register
 
-**Decision:** Server-side TLS handshake has a configurable timeout (default: 10 seconds). If `AuthenticateAsServerAsync` doesn't complete within the timeout, the connection actor disposes the `SslStream` and stops itself.
+**Decision:** `ITransportConnection` exposes `InitializeAsync(CancellationToken)` and `Start()`. `TcpTransportConnection` owns its stream, handshake cancellation, and socket throughout initialization and while awaiting `Tcp.Register`. `PostStop` aborts the transport, which cancels authentication and disposes pre-registration resources. The actor sees only the generic initialization result; registration starts the transport's deferred pumps. Direct users of the beta `TcpTransportConnection` API must now call `InitializeAsync` and then `Start`.
 
-**Rationale:** Without a timeout, a malicious client can connect and never send the ClientHello, consuming a connection actor indefinitely. The TurboMQTT implementation uses `CancellationTokenSource` with timeout linked to the auth call.
+**Rationale:** A task result can arrive after actor shutdown, and `Connected` does not yet create transport pumps. Ownership must cover both gaps without a late result leaking a live socket.
+
+### 7. Preserve TCP half-close over TLS
+
+**Decision:** After queued output has flushed, call `SslStream.ShutdownAsync` to send TLS `close_notify`, then send the TCP FIN. Keep the stream read side available until the existing close state machine completes. Full close performs TLS shutdown before canceling reads and disposing the stream.
+
+**Rationale:** `Tcp.ConfirmedClose` must continue receiving data after the local write side closes. Current .NET runtime diagnostics showed a peer can observe TLS EOF and still send a response for TLS 1.2 and 1.3; Akka.IO integration tests verify this behavior.
 
 ## Risks / Trade-offs
 
-**[TLS handshake blocks connection actor startup]** → The handshake runs in the actor's pre-start / initialization phase using `RunTask` (async). The actor is not processing messages during handshake, which is correct — no data should flow before authentication completes.
-
-**[Certificate hot-reload not supported]** → Certificates are loaded once at transport startup. To rotate certificates, restart the transport. This matches DotNetty's current behavior. Hot-reload could be added later via `IStreamProvider` factory that reloads certs.
-
-**[Self-signed certificate testing]** → Provide test utilities for generating self-signed certs (like TurboMQTT's `CreateSelfSignedCertificate` pattern) so TLS tests don't require external certificate infrastructure.
+- A TLS handshake may complete concurrently with actor shutdown. The transport serializes stream publication against abort and disposes any stream created after abort; a late generic mailbox result cannot report `Tcp.Connected` after stop.
+- TLS close behavior depends on `SslStream` runtime semantics. Exercise both TLS 1.2 and TLS 1.3 with real peers and preserve the existing confirmed-close and plaintext regression tests.
+- The client hostname check is opt-in for compatibility. Documentation recommends composing `ValidateHostname()` when server-name checking is required; `WithTargetHost` is needed only when the endpoint address does not provide the intended DNS identity.

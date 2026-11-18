@@ -61,7 +61,7 @@ public sealed class PlacementDiagnosticsSpec
 
             [AkkaSerializer<IOrders>("orders", 140000)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = GeneratorTestHarness.CompileToReference(sourceA, "Placement.Case0.A");
@@ -151,7 +151,7 @@ public sealed class PlacementDiagnosticsSpec
 
             [AkkaSerializer<IEmptyProtocol>("empty", 140002)]
             public sealed partial class EmptySerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var result = GeneratorTestHarness.Run(source);
@@ -192,7 +192,7 @@ public sealed class PlacementDiagnosticsSpec
 
             [AkkaSerializer<IOrders>("orders", 140003)]
             public sealed partial class OrdersSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = GeneratorTestHarness.CompileToReference(sourceA, "Placement.Case2b.A");
@@ -238,7 +238,7 @@ public sealed class PlacementDiagnosticsSpec
 
             [AkkaSerializer<IMessage>("other", 140005)]
             public sealed partial class OtherSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var assemblyA = GeneratorTestHarness.CompileToReference(sourceA, "Placement.Case3.A");
@@ -273,7 +273,7 @@ public sealed class PlacementDiagnosticsSpec
 
             [AkkaSerializer<IMessage>("known", 140006)]
             public sealed partial class KnownSerializer : AkkaSerializer
-            { public static partial SerializerRegistration CreateRegistration(); }
+            { public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system); }
             """;
 
         var result = GeneratorTestHarness.Run(source);

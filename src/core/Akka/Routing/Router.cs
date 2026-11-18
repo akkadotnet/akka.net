@@ -24,10 +24,10 @@ namespace Akka.Routing
     internal class NoRoutee : Routee
     {
         /// <summary>
-        /// TBD
+        /// Sends a message to the dead-letter reference when the sender belongs to a local actor system.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message that had no routee.</param>
+        /// <param name="sender">The message sender used to find the local dead-letter reference.</param>
         public override void Send(object message, IActorRef sender)
         {
             if (sender is LocalActorRef localActorRef)
@@ -257,9 +257,9 @@ namespace Akka.Routing
         ///
         /// For testing purposes only.
         /// </summary>
-        /// <param name="logic">TBD</param>
-        /// <param name="routee">TBD</param>
-        /// <param name="routees">TBD</param>
+        /// <param name="logic">The routing logic used to select a routee.</param>
+        /// <param name="routee">The first actor reference routee.</param>
+        /// <param name="routees">Additional actor reference routees.</param>
         [InternalApi]
         public Router(RoutingLogic logic, IActorRef routee, params IActorRef[] routees)
         {
@@ -288,10 +288,10 @@ namespace Akka.Routing
 
 
         /// <summary>
-        /// TBD
+        /// Creates a router with the supplied routing logic and routees.
         /// </summary>
-        /// <param name="logic">TBD</param>
-        /// <param name="routees">TBD</param>
+        /// <param name="logic">The routing logic used to select a routee.</param>
+        /// <param name="routees">The routees available to the router.</param>
         public Router(RoutingLogic logic, params Routee[] routees)
         {
             _routees = routees ?? Array.Empty<Routee>();
@@ -378,8 +378,8 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="routee">The actor reference to add as a routee.</param>
+        /// <returns>A new router with the actor reference routee added.</returns>
         public Router AddRoutee(IActorRef routee)
         {
             return AddRoutee(new ActorRefRoutee(routee));
@@ -388,8 +388,8 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
         /// </summary>  
-        /// <param name="routee">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="routee">The actor selection to add as a routee.</param>
+        /// <returns>A new router with the actor selection routee added.</returns>
         public Router AddRoutee(ActorSelection routee)
         {
            return AddRoutee(new ActorSelectionRoutee(routee));
@@ -427,4 +427,3 @@ namespace Akka.Routing
         }
     }
 }
-

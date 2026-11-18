@@ -23,9 +23,9 @@ namespace Akka.Persistence.Internal
         /// <summary>
         /// Removes first element from the list and returns it or returns default value if list was empty.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="self">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">Type of elements stored in the list.</typeparam>
+        /// <param name="self">List from which to remove the first element.</param>
+        /// <returns>The first element, or the default value for <typeparamref name="T"/> if the list is empty.</returns>
         public static T Pop<T>(this LinkedList<T> self)
         {
             if (self.First != null)

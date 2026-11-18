@@ -158,8 +158,12 @@ akka.actor {
         _guid = Guid.NewGuid().ToString("N")[^8..];
     }
     
+    private int _actorCounter;
+
+    // A fresh name per incarnation: the parent frees a stopped child's name after the watcher saw Terminated,
+    // so reusing one name right after ExpectTerminated races with that cleanup.
     private IActorRef CreatePersistenceActor(ActorSystem sys)
-        => sys.ActorOf(Props.Create(() => new MyPersistenceActor(PersistenceId)), "persistence-actor-1");
+        => sys.ActorOf(Props.Create(() => new MyPersistenceActor(PersistenceId)), $"persistence-actor-{++_actorCounter}");
 
     private async Task StopActorAsync(IActorRef actor)
     {

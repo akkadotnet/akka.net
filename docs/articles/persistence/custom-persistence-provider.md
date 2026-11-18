@@ -125,20 +125,13 @@ If the journal (data store) cannot support atomic writes of multiple events it s
 
 ##### Handling Failures
 
-If there are failures when storing any of the messages in the batch the returned `Task` must be completed with failure. The `Task` must only be completed with success when all messages in the batch have been confirmed to be stored successfully, i.e. they will be readable, and visible, in a subsequent replay. If there is uncertainty about if the messages were stored or not the `Task` must be completed with failure.
-
-Data store connection problems must be signaled by completing the `Task` with failure.
+Fault the task for a batch-level storage failure or when the outcome of any write is uncertain. Data store connection problems must be signaled by faulting the task, not as per-write rejections. A faulted task does not provide the per-write result list used for known rejections.
 
 ##### Handling `AtomicWrite` Result
 
-The journal can also signal that it rejects individual messages (`AtomicWrite`) by the returned `Task`.
+The returned `Task` distinguishes a batch-level failure from the outcome of each `AtomicWrite`. Complete the task successfully only when the journal knows the outcome of every input `AtomicWrite`. Return `null` when every write was stored, or a result list with exactly one entry for each input `AtomicWrite`, in input order. A `null` entry means that write was stored and will be visible in a later replay. An exception entry rejects that whole `AtomicWrite`; none of its events may appear in a later replay. A rejected write is a known per-write outcome, so it does not by itself fault the task. Other `AtomicWrite`s in the batch may have been stored: batching is for performance, and the batch as a whole is not atomic.
 
-* It is possible but not mandatory to reduce the number of allocations by returning null for the happy path, i.e. when no messages are rejected.
-* Otherwise the returned list must have as many elements as the input `messages`.
-* Each result element signals if the corresponding `AtomicWrite` is rejected or not, with an exception describing the problem.
-* Rejecting a message means it was not stored, i.e. it must not be included in a later replay.
-* Rejecting a message is typically done before attempting to store it, e.g. because of serialization error.
-* Data store connection problems must not be signaled as rejections.
+For example, if a batch contains five `AtomicWrite`s and the fifth is an unsupported multi-event write, the journal can store the first four and complete the task successfully with the result list `[null, null, null, null, new NotSupportedException(...)]`. The fifth `AtomicWrite` is rejected as a unit; the other four have successful results. Each `AtomicWrite` must still be stored atomically: all of its events or none of them.
 
 ##### Code Sample
 
@@ -149,6 +142,9 @@ The journal can also signal that it rejects individual messages (`AtomicWrite`) 
 SQLite code example:
 
 [!code-csharp[WriteMessagesAsync](../../../src/examples/Akka.Persistence.Custom/Journal/SqliteJournal.cs?name=WriteMessagesAsync "WriteMessagesAsync method implementation")]
+
+> [!NOTE]
+> This SQLite sample currently aggregates faulted insert tasks into per-write rejection entries. Treat it as a per-write result example only; a batch-level storage failure or uncertain outcome must fault the returned task.
 
 #### DeleteMessagesToAsync
 
@@ -461,6 +457,107 @@ There are two conventions that needs to be implemented when you extend `IExtensi
 `ExtensionIdProvider<T>` is a factory class that is responsible for creating new instances for your extension. This class is quite straight forward, all you need to do is to override a single method to make it work:
 
 [!code-csharp[ExtensionIdProvider](../../../src/examples/Akka.Persistence.Custom/SqlitePersistence.cs?name=ExtensionIdProvider "ExtensionIdProvider implementation")]
+
+## Making Your Persistence Plugin Native AOT Ready
+
+Akka.Persistence builds your journal and snapshot store from the `class` setting of their HOCON
+sections. That takes reflection, which a Native AOT or trimmed app cannot use. If your plugin has
+Akka.Hosting support, you opt in by changing the base class of your options classes. Your users change
+nothing: they call the same `WithJournal` and `WithSnapshot` as before. These steps come from opting in
+the SQL, Azure, Redis and MongoDB plugins.
+
+### Step 1: Name Your Plugin Types in Your Options Classes
+
+Derive your options classes from the generic bases, which name the journal actor, its default read journal
+provider and the snapshot store actor:
+
+```csharp
+public sealed class SqlJournalOptions : JournalOptions<SqlWriteJournal, SqlReadJournalProvider>
+{
+    // ...your existing members, unchanged...
+}
+
+public sealed class SqlSnapshotOptions : SnapshotOptions<SqlSnapshotStore>
+{
+    // ...your existing members, unchanged...
+}
+```
+
+That is the whole change. `WithJournal` and `WithSnapshot` register the types, and core builds them with
+the constructor rules it applies to a HOCON `class`: `(Config)` or parameterless for the actors,
+`(ExtendedActorSystem, Config)`, `(ExtendedActorSystem)` or parameterless for the read journal provider.
+Your classes stay `JournalOptions` and `SnapshotOptions`, so your users' code compiles as before. Without the
+generic base your plugin keeps working on the JIT through its HOCON `class`. A plugin with no read journal
+derives from `JournalOptions<TJournal>`. The generic argument has to be the type the plugin's `class` names:
+with the switch off, a HOCON `class` that names another type fails at start, so a variant of a plugin (a
+GridFS snapshot store, say) needs options with its own generic argument.
+
+### Step 2: Check Your Read Journal's Plugin Id
+
+The read journal is registered at `akka.persistence.query.journal.{Identifier}`. If yours lives elsewhere,
+override `ReadJournalPluginId`:
+
+```csharp
+protected override string ReadJournalPluginId => MongoDbReadJournal.Identifier;
+```
+
+With the switch off nothing finds your read journal's `DefaultConfiguration()` by reflection, so make sure
+your Hosting extension adds the read journal's default HOCON, as Akka.Persistence.Sql does with `DefaultQueryConfig`.
+
+### Step 3: Add Event Adapters Through the Typed Builder Methods
+
+If your Hosting package adds event adapters, use `AddEventAdapter<TAdapter>`, `AddReadEventAdapter<TAdapter>`
+or `AddWriteEventAdapter<TAdapter>` on the journal builder. They name the type in code, which is all core needs.
+
+### Step 4: Route Every Entry Point Through WithJournal and WithSnapshot
+
+Registration happens inside `WithJournal(options, ...)` and `WithSnapshot(options, ...)`. An entry point
+that skips them cannot opt in. The Azure plugin found this: its overload that takes a `Setup` object never
+calls `WithJournal`, so its types are never registered. Make every public entry point, including the
+ones that build the options for the user, end in one of these two calls.
+
+### Step 5: Look for Other Reflection
+
+Two things came up in the spike:
+
+* **Serializers named in HOCON.** A serializer that your plugin's default config names by type, for
+  example the Redis snapshot serializer, does not resolve with reflection off. Register it with
+  `WithCustomSerializer` in your Hosting extension, with the types it serializes.
+* **Payload types in your tests.** Test messages need a serializer too. With the switch off there is no
+  fallback serializer, so give your test payloads one.
+
+Create child actors with `Props.CreateBy` and an `IIndirectActorProducer`, and read your own types
+without `Type.GetType`.
+
+### Step 6: Test It With the Switch Off
+
+Run your Hosting tests with the `Akka.DynamicTypeLoading` feature switch off. In the test project:
+
+```xml
+<ItemGroup>
+  <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" />
+</ItemGroup>
+```
+
+A plugin that has not opted in fails when it starts, with a `ConfigurationException` like this:
+
+```text
+[akka.persistence.journal.sql.class] [Akka.Persistence.Sql.Journal.SqlWriteJournal, Akka.Persistence.Sql]
+is not built in and dynamic type loading is disabled. Use a plugin registered through Akka.Persistence.Hosting
+(WithJournal or WithSnapshot, with options derived from JournalOptions<TJournal> or SnapshotOptions<TSnapshotStore>)
+or enable the [Akka.DynamicTypeLoading] feature switch.
+```
+
+With the generic bases in place the same tests pass. A published Native AOT canary is the final check; the
+repository's `src/aot/Akka.Persistence.AOT.App` shows one.
+
+### Sealed Options Classes
+
+If your options classes are sealed, only you can opt in. That is intended: the plugin types belong to the plugin
+author, so users cannot name different ones.
+
+On the JIT the HOCON `class` still decides when there is one, and the registered type is used when there is none.
+See [Native AOT and Trimming](xref:native-aot) for the whole picture.
 
 ## Unit Testing Journal and SnapshotStore
 

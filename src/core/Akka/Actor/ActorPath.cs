@@ -652,7 +652,7 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
     /// <summary>
     /// Returns a string representation of this instance including uid.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>The path string with the address and a nonzero actor UID, when one is defined.</returns>
     public string ToStringWithUid()
     {
         return Uid != ActorCell.UndefinedUid ? $"{ToStringWithAddress()}#{Uid}" : ToStringWithAddress();
@@ -722,19 +722,19 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
     }
 
     /// <summary>
-    /// TBD
+    /// Formats this path for serialization, including the actor UID when it is defined.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>The serialized actor path string.</returns>
     public string ToSerializationFormat()
     {
         return ToStringWithAddress(true);
     }
 
     /// <summary>
-    /// TBD
+    /// Formats this path for serialization using the supplied address for local paths.
     /// </summary>
-    /// <param name="address">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="address">The address to use when this path's address has no host and port.</param>
+    /// <returns>The serialized actor path string, including a nonzero actor UID when defined.</returns>
     public string ToSerializationFormatWithAddress(Address address)
     {
         if (IgnoreActorRef.IsIgnoreRefPath(this))
@@ -782,10 +782,10 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
     }
 
     /// <summary>
-    /// TBD
+    /// Joins actor path elements with slash separators.
     /// </summary>
-    /// <param name="pathElements">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="pathElements">The path elements to join.</param>
+    /// <returns>The elements separated by <c>/</c>, without adding address information.</returns>
     public static string FormatPathElements(IEnumerable<string> pathElements)
     {
         return string.Join("/", pathElements);

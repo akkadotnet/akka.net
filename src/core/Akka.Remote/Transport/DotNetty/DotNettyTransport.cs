@@ -16,10 +16,12 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using TlsCertificateRotation = Akka.IO.TlsCertificateRotation;
 using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
@@ -133,6 +135,12 @@ namespace Akka.Remote.Transport.DotNetty
         private readonly TimeSpan _flushWait;
         private readonly ConcurrentDictionary<IChannel, Task> _draining = new();
 
+        // This transport's own error limiter for connections that have no certificate to present: one per transport.
+        private readonly TlsCertificateRotation _certificateRotation = new TlsCertificateRotation();
+
+        // Runs the certificate source's poll every TlsCertificateRotation.PollInterval, the same as the Artery transport.
+        private ICancelable? _certificateSourcePoll;
+
         internal static readonly FieldInfo? SocketField =
             typeof(AbstractSocketChannel).GetField("Socket", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -194,10 +202,11 @@ namespace Akka.Remote.Transport.DotNetty
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             // Validate SSL certificate before starting server
-            // This ensures fail-fast behavior if private key is inaccessible
+            // This ensures fail-fast behavior if private key is inaccessible. A certificate source may need its first
+            // look-up: this is the only place that waits for one, and it does not block a thread.
             if (Settings.EnableSsl)
             {
-                Settings.Ssl.ValidateCertificate();
+                await Settings.Ssl.ValidateCertificateAsync(Log).ConfigureAwait(false);
             }
 
             EndPoint listenAddress;
@@ -216,6 +225,11 @@ namespace Akka.Remote.Transport.DotNetty
                 newServerChannel.Configuration.AutoRead = false;
                 ConnectionGroup.TryAdd(newServerChannel);
                 ServerChannel = newServerChannel;
+
+                // Scheduled only once the bind worked, so Shutdown below and on the failure path cancels it
+                if (Settings.EnableSsl && Settings.Ssl.NeedsPolling)
+                    _certificateSourcePoll = System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
+                        TlsCertificateRotation.PollInterval, TlsCertificateRotation.PollInterval, PollCertificateSource);
 
                 var addr = MapSocketToAddress(
                     socketAddress: (IPEndPoint)newServerChannel.LocalAddress,
@@ -323,8 +337,12 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
+        // Runs on the scheduler: it must never throw. Poll logs, and does not rethrow, what the source throws.
+        private void PollCertificateSource() => TlsCertificateRotation.Poll(() => Settings.Ssl.PollSource(Log), Log);
+
         public override async Task<bool> Shutdown()
         {
+            _certificateSourcePoll?.Cancel();
             try
             {
                 // give graceful closes up to flush-wait to finish before the force-close below
@@ -430,7 +448,6 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                var certificate = Settings.Ssl.Certificate;
                 // Use the remote address host for TLS validation, not the client's certificate name
                 var host = remoteAddress.Host;
 
@@ -455,6 +472,20 @@ namespace Akka.Remote.Transport.DotNetty
 
                 if (Settings.Ssl.RequireMutualAuthentication)
                 {
+                    // A source is asked here, once per connection; a fixed certificate is returned as is
+                    X509Certificate2? certificate;
+                    try
+                    {
+                        certificate = Settings.Ssl.GetCertificate(Log);
+                    }
+                    catch (Exception ex)
+                    {
+                        // DotNetty closes the channel and drops this exception, so say why here. This is not a
+                        // handshake failure: the connection attempt fails and the ActorSystem stays up.
+                        _certificateRotation.ReportOutboundFailure(ex, remoteAddress, Log);
+                        throw;
+                    }
+
                     // Mutual TLS requires a certificate to be configured
                     if (certificate == null)
                         throw new InvalidOperationException("Mutual TLS authentication is enabled but no certificate is configured. Please provide a certificate via DotNettySslSetup or HOCON configuration.");
@@ -492,6 +523,19 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 IChannelHandler tlsHandler;
 
+                // A source is asked here, once per connection; a fixed certificate is returned as is
+                X509Certificate2? serverCertificate;
+                try
+                {
+                    serverCertificate = Settings.Ssl.GetCertificate(Log);
+                }
+                catch (Exception ex)
+                {
+                    // DotNetty closes the channel and drops this exception, so say why here.
+                    _certificateRotation.ReportInboundFailure(ex, channel.RemoteAddress?.ToString() ?? "unknown", Log);
+                    throw;
+                }
+
                 if (Settings.Ssl.RequireMutualAuthentication)
                 {
                     // Mutual TLS: Require client certificate authentication
@@ -527,12 +571,12 @@ namespace Akka.Remote.Transport.DotNetty
                             stream,
                             leaveInnerStreamOpen: true,
                             userCertificateValidationCallback: validationCallback),
-                        new ServerTlsSettings(Settings.Ssl.Certificate, negotiateClientCertificate: true));
+                        new ServerTlsSettings(serverCertificate, negotiateClientCertificate: true));
                 }
                 else
                 {
                     // Standard TLS: Server authentication only (backward compatible)
-                    tlsHandler = TlsHandler.Server(Settings.Ssl.Certificate);
+                    tlsHandler = TlsHandler.Server(serverCertificate);
                 }
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);

@@ -117,9 +117,9 @@ public class ShardedDaemonProcessSpecs: Akka.Hosting.TestKit.TestKit
     public async Task ShardedDaemonProcess_must_start_N_actors_with_unique_ids()
     {
         var started = new List<Started>();
-        foreach (var _ in Enumerable.Range(0, 5))
+        await foreach (var message in ReceiveNAsync(5, 15.Seconds()))
         {
-            started.Add(await ExpectMsgAsync<Started>());
+            started.Add((Started)message);
         }
         
         Assert.Equal(5, started.Count);
@@ -131,9 +131,9 @@ public class ShardedDaemonProcessSpecs: Akka.Hosting.TestKit.TestKit
     public async Task ShardedDaemonProcess_must_restart_actors_if_they_stop()
     {
         var startMessages = new List<Started>();
-        foreach (var _ in Enumerable.Range(0, 5))
+        await foreach (var message in ReceiveNAsync(5, 15.Seconds()))
         {
-            startMessages.Add(await ExpectMsgAsync<Started>());
+            startMessages.Add((Started)message);
         }
         
         Assert.Equal(5, startMessages.Count);
@@ -146,10 +146,10 @@ public class ShardedDaemonProcessSpecs: Akka.Hosting.TestKit.TestKit
         }
 
         startMessages.Clear();
-        // periodic ping every 1s makes it restart
-        foreach (var _ in Enumerable.Range(0, 5))
+        // the keep-alive pinger (500 ms in this spec) restarts the stopped entities; one overall deadline
+        await foreach (var message in ReceiveNAsync(5, 15.Seconds()))
         {
-            startMessages.Add(await ExpectMsgAsync<Started>());
+            startMessages.Add((Started)message);
         }
         
         Assert.Equal(5, startMessages.Count);

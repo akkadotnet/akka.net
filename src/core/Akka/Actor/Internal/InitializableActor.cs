@@ -14,9 +14,8 @@ namespace Akka.Actor.Internal
     public interface IInitializableActor
     {
         /// <summary>
-        /// TBD
+        /// Initializes the actor after it has been created and before it starts processing messages.
         /// </summary>
         void Init();
     }
 }
-

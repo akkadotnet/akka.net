@@ -1,0 +1,71 @@
+# V2 port test kit
+
+Test helpers for a serializer port (#8675, #8714): a legacy serializer gets a V2 twin at id + 40, with the same manifests.
+
+## Writing a port spec
+
+1. Derive from `V2PortSpec` and implement `CreateLegacy`, `CreateV2` and `Cases` (one `V2PortCase` per manifest, with
+   fixed values: no `Guid.NewGuid()`, no `DateTime.Now`). Pass `output` (and a `Config` or `ActorSystemSetup`) to the base
+   constructor. Both serializers must be registered as a deployed node has them: a module's table, with the V2 row
+   read-only (no bindings). Serializers outside a module table need a `SerializationSetup`.
+2. Put the spec in `[Collection(DynamicTypeLoadingCollection.Name)]`. One check flips a process-wide switch.
+3. For interop, `MixedBindingPair.Create(name, v2Config, legacyConfig)` starts one V2 node and one legacy node, and
+   `AssertRoundTripsBothWays(cases, v2Id, legacyId)` checks both directions. `MixedBindingPair.BindTo` builds bindings.
+   For protocols such as DistributedData that omit the actor-system name on the wire, use
+   `CreateWithSameSystemName(name, v2Config, legacyConfig)` and build the corpus for that logical name.
+   The existing `Create` factory retains its `name-v2` / `name-legacy` naming. Use port-zero configs
+   for network providers; these helpers exchange bytes in process and do not prove network transport.
+
+The base class checks the id (legacy + 40, inside 40-79), manifest parity, V2 and legacy round trips, both ids decoding,
+the binding staying legacy, the strict V2 corpus dynamic-loading-off gate, and the golden snapshots below.
+Round trips require the same root runtime type. When domain equality fails, the fallback compares every root member
+structurally while keeping nested values' comparison rules; unordered protocol maps therefore retain all keys and values
+without depending on hash-bucket enumeration order. The test kit's bounded generic dispatch supports the pinned
+FluentAssertions 5 API and runs only in JIT tests; it is not part of serializer or Native AOT product code.
+
+Manifest parity is strict by default. A legacy serializer with `IncludeManifest = false` has an empty manifest;
+its new native V2 id must declare a nonempty token. Such a case explicitly sets the optional init property
+`V2Manifest`, for example `new V2PortCase(message, "", "selection") { V2Manifest = "a" }`.
+Every reader, mixed-binding exchange and golden dump uses the corresponding writer's token. This does not
+relax native manifest validation, change the positional case constructor, or alter the legacy id's format.
+
+Generic shapes intentionally requiring dynamic type loading set the optional init property
+`RequiresDynamicTypeLoading = true`. The gate pre-encodes and reads only those shapes while enabled,
+then requires byte-array writes, buffer writes and direct reads on both warm and fresh codecs, plus registered-id reads, to
+throw `SerializationException` naming `Akka.DynamicTypeLoading` while disabled. A rejected buffer write
+must leave the caller's output empty. Other cases retain every positive round-trip check; no case is
+skipped. Prior switch semantics are restored after success or failure. This declares a tested boundary,
+not Native AOT support for that shape.
+
+## Golden snapshots
+
+The two golden tests write a hex dump of each case (`HexDumpFormatter`) and check it with [Verify](https://github.com/VerifyTests/Verify),
+as `Akka.Serialization.V2.Tests/WireSnapshots` does. Files land next to the derived spec, in `Snapshots/`:
+`<Spec>.<case>.legacy.verified.txt` and `<Spec>.<case>.v2.verified.txt`. Override `SnapshotPrefix` to change `<Spec>`.
+
+First run, or a changed format: the test fails and writes `<name>.received.txt` (gitignored) beside the `.verified.txt`.
+Read the diff, then accept by moving received over verified, the same step `WireSnapshots/README.md` uses:
+
+```bash
+for f in <spec folder>/Snapshots/*.received.txt; do mv "$f" "${f%.received.txt}.verified.txt"; done
+```
+
+1. **Capture the legacy snapshots first, before you touch the legacy serializer**, and commit them. They prove today's bytes still decode.
+   ```bash
+   dotnet test src/core/<TestProject> -c Release --filter "DisplayName=Should_MatchGoldenLegacyBytes_When_LegacySerializes"
+   ```
+2. **Capture the V2 snapshots** once the V2 serializer works. Read them before you commit: a shipped format is the wire format.
+   ```bash
+   dotnet test src/core/<TestProject> -c Release --filter "DisplayName=Should_MatchGoldenV2Bytes_When_V2Serializes"
+   ```
+3. Run both without accepting anything. They must pass.
+
+Rules: never edit a `.verified.txt` by hand to make a test pass. If a legacy snapshot changes in `git diff`, stop: the
+legacy format must never change. A shipped V2 format only grows (add fields, never change or reuse them). CI only compares;
+a missing or stale snapshot fails the test.
+
+For a message whose nested `Equals` compares only identity (or collection instances), set
+`V2PortCase.AssertEquivalent` to a complete domain assertion. It receives expected and actual
+after the shared exact runtime-type guard, and runs even when the root's `Equals` returns true.
+Compare every serialized field, including nested versions and records; an identity-only check
+would hide lost wire state. Leave it null for the shared default comparison.

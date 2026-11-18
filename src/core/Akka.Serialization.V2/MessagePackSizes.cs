@@ -45,6 +45,12 @@ public static class MessagePackSizes
     public static int SizeOfDouble(double _) => 9;
 
     /// <summary>
+    /// Returns the encoded size of a single-precision float value.
+    /// </summary>
+    /// <param name="_">The value; float encoding is always five bytes (MessagePack float32).</param>
+    public static int SizeOfSingle(float _) => 5;
+
+    /// <summary>
     /// Returns the encoded size of a 32-bit integer value.
     /// </summary>
     /// <param name="value">The value whose variable-length encoded size is being computed.</param>
@@ -55,6 +61,12 @@ public static class MessagePackSizes
     /// </summary>
     /// <param name="value">The value whose variable-length encoded size is being computed.</param>
     public static int SizeOfInt64(long value) => MessagePackWriter.GetEncodedLength(value);
+
+    /// <summary>
+    /// Returns the encoded size of an unsigned 64-bit integer value.
+    /// </summary>
+    /// <param name="value">The value whose variable-length encoded size is being computed.</param>
+    public static int SizeOfUInt64(ulong value) => MessagePackWriter.GetEncodedLength(value);
 
     /// <summary>
     /// Returns the encoded size of an enum value written using the generated int32 convention.

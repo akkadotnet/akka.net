@@ -234,27 +234,9 @@ akka.cluster.metrics {
   }
 }
 
-# Cluster metrics extension serializers and routers.
+# Router short names for the metrics routers. This mapping ships in Akka.NET core's akka.conf,
+# not in the Akka.Cluster.Metrics reference config.
 akka.actor {
-
-  # Protobuf serializer for remote cluster metrics messages.
-  serializers {
-    akka-cluster-metrics = "Akka.Cluster.Metrics.Serialization.ClusterMetricsMessageSerializer, Akka.Cluster.Metrics"
-  }
-
-  # Interface binding for remote cluster metrics messages.
-  serialization-bindings {
-    "Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope, Akka.Cluster.Metrics" = akka-cluster-metrics
-    "Akka.Cluster.Metrics.AdaptiveLoadBalancingPool, Akka.Cluster.Metrics" = akka-cluster-metrics
-    "Akka.Cluster.Metrics.MixMetricsSelector, Akka.Cluster.Metrics" = akka-cluster-metrics
-    "Akka.Cluster.Metrics.CpuMetricsSelector, Akka.Cluster.Metrics" = akka-cluster-metrics
-    "Akka.Cluster.Metrics.MemoryMetricsSelector, Akka.Cluster.Metrics" = akka-cluster-metrics
-  }
-
-  # Globally unique metrics extension serializer identifier.
-  serialization-identifiers {
-    "Akka.Cluster.Metrics.Serialization.ClusterMetricsMessageSerializer, Akka.Cluster.Metrics" = 10
-  }
 
   #  Provide routing of messages based on cluster metrics.
   router.type-mapping {
@@ -263,3 +245,5 @@ akka.actor {
   }
 }
 ```
+
+The metrics serializer (alias `akka-cluster-metrics`, id 10) and its bindings register from code when Akka.Cluster.Metrics is deployed, so no `serializers`, `serialization-bindings` or `serialization-identifiers` rows appear in the configuration. Your own HOCON can still override the alias or a binding.

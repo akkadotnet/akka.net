@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -105,6 +106,112 @@ namespace Akka.Streams.Tests
             
             mat1.Should().Be(mat2);
             mat1.Should().NotBe(mat3);
+        }
+
+        [Fact(DisplayName = "Repeated ActorSystem.Materializer() calls should share one materializer and one StreamSupervisor")]
+        public void Should_share_one_materializer_and_supervisor_When_Materializer_called_repeatedly_on_ActorSystem()
+        {
+            var first = (ActorMaterializerImpl)Sys.Materializer();
+            var supervisorsBefore = StreamSupervisorCount(Sys);
+
+            for (var i = 0; i < 100; i++)
+            {
+                var m = (ActorMaterializerImpl)Sys.Materializer();
+                m.Should().BeSameAs(first);
+                m.Supervisor.Should().Be(first.Supervisor);
+            }
+
+            StreamSupervisorCount(Sys).Should().Be(supervisorsBefore);
+        }
+
+        [Fact(DisplayName = "ActorSystem.Materializer() with custom settings should create a distinct materializer")]
+        public void Should_create_distinct_materializer_When_Materializer_called_with_custom_settings()
+        {
+            var shared = (ActorMaterializerImpl)Sys.Materializer();
+            var supervisorsBefore = StreamSupervisorCount(Sys);
+
+            var custom = (ActorMaterializerImpl)Sys.Materializer(ActorMaterializerSettings.Create(Sys));
+            try
+            {
+                custom.Should().NotBeSameAs(shared);
+                custom.Supervisor.Should().NotBe(shared.Supervisor);
+                StreamSupervisorCount(Sys).Should().Be(supervisorsBefore + 1);
+            }
+            finally
+            {
+                custom.Shutdown();
+            }
+        }
+
+        [Fact(DisplayName = "Disposing the shared ActorSystem materializer should not shut it down")]
+        public async Task Should_not_shut_down_shared_materializer_When_it_is_disposed()
+        {
+            using (var m = Sys.Materializer())
+            {
+                (await Source.Single(1).RunWith(Sink.First<int>(), m)).Should().Be(1);
+            }
+
+            // a name-prefixed view shares the shared materializer's supervisor
+            Sys.Materializer(namePrefix: "prefixed").Dispose();
+            ActorMaterializer.Create(Sys).Dispose();
+
+            var shared = Sys.Materializer();
+            shared.IsShutdown.Should().BeFalse();
+            (await Source.Single(2).RunWith(Sink.First<int>(), shared)).Should().Be(2);
+            (await Source.Single(3).RunWith(Sink.First<int>(), Sys)).Should().Be(3);
+        }
+
+        [Fact(DisplayName = "Disposing the shared ActorSystem materializer should log a debug message only once")]
+        public async Task Should_log_debug_once_When_shared_materializer_is_disposed_repeatedly()
+        {
+            // AkkaSpec runs at WARNING, so use a dedicated system with DEBUG enabled to observe the log.
+            var system = ActorSystem.Create("shared-materializer-dispose-log",
+                ConfigurationFactory.ParseString("akka.loglevel = DEBUG").WithFallback(Sys.Settings.Config));
+            try
+            {
+                await CreateEventFilter(system)
+                    .Debug(start: "Ignored Dispose() on the ActorSystem's shared default materializer")
+                    .ExpectOneAsync(() =>
+                    {
+                        system.Materializer().Dispose();
+                        system.Materializer().Dispose();
+                        system.Materializer(namePrefix: "prefixed").Dispose();
+                        return Task.CompletedTask;
+                    });
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        [Fact(DisplayName = "Disposing a materializer created with custom settings should shut it down")]
+        public void Should_shut_down_dedicated_materializer_When_it_is_disposed()
+        {
+            var custom = Sys.Materializer(ActorMaterializerSettings.Create(Sys));
+            custom.Dispose();
+
+            custom.IsShutdown.Should().BeTrue();
+            Sys.Materializer().IsShutdown.Should().BeFalse();
+        }
+
+        [Fact(DisplayName = "The shared ActorSystem materializer should shut down when the ActorSystem terminates")]
+        public async Task Should_shut_down_shared_materializer_When_ActorSystem_terminates()
+        {
+            var sys = ActorSystem.Create("shared-materializer-termination");
+            var m = (ActorMaterializerImpl)sys.Materializer();
+            m.IsShutdown.Should().BeFalse();
+
+            await ShutdownAsync(sys, verifySystemShutdown: true);
+
+            // nothing called Shutdown(), so IsShutdown can only flip via the StreamSupervisor's PostStop
+            m.IsShutdown.Should().BeTrue();
+        }
+
+        private static int StreamSupervisorCount(ActorSystem system)
+        {
+            var guardian = (ActorRefWithCell)((ExtendedActorSystem)system).Guardian;
+            return guardian.Children.Count(c => c.Path.Name.StartsWith("StreamSupervisor-"));
         }
     }
 }

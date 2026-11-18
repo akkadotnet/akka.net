@@ -17,10 +17,10 @@ namespace Akka.TestKit.TestActors;
 public class BlackHoleActor : ActorBase
 {
     /// <summary>
-    /// TBD
+    /// Marks every received message as handled without taking any action.
     /// </summary>
-    /// <param name="message">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="message">The message received by the actor.</param>
+    /// <returns>Always <c>true</c>.</returns>
     protected override bool Receive(object message)
     {
         return true;

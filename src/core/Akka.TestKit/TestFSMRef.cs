@@ -21,13 +21,13 @@ namespace Akka.TestKit
     public class TestFSMRef<TActor, TState, TData> : TestActorRefBase<TActor> where TActor : FSM<TState, TData>
     {
         /// <summary>
-        /// TBD
+        /// Creates a test reference for an FSM actor.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="activateLogging">TBD</param>
+        /// <param name="system">The actor system that owns the FSM.</param>
+        /// <param name="props">The properties used to create the FSM actor.</param>
+        /// <param name="supervisor">The supervising actor, or null to use the system guardian.</param>
+        /// <param name="name">The actor name, or null to generate a unique name.</param>
+        /// <param name="activateLogging">Whether to enable the FSM's transition logging.</param>
         public TestFSMRef(ActorSystem system, Props props, IActorRef supervisor = null, string name = null, bool activateLogging = false)
             : base(system, props, supervisor, name)
         {
@@ -46,8 +46,8 @@ namespace Akka.TestKit
         /// Change FSM state data; but do not transition to a new state name. 
         /// This method is directly equivalent to a transition initiated from within the FSM.
         /// </summary>
-        /// <param name="stateData">TBD</param>
-        /// <param name="timeout">TBD</param>
+        /// <param name="stateData">The new state data.</param>
+        /// <param name="timeout">The state timeout to apply, or null to use the FSM's normal timeout selection.</param>
         public void SetStateData(TData stateData, TimeSpan? timeout = null)
         {
             SetState(UnderlyingActor.StateName, stateData, timeout);
@@ -59,7 +59,7 @@ namespace Akka.TestKit
         /// transition initiated from within the FSM using the current state name and data
         /// but with the specified timeout.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The new state timeout.</param>
         public void SetStateTimeout(TimeSpan timeout)
         {
             SetState(UnderlyingActor.StateName, UnderlyingActor.StateData, timeout);
@@ -69,8 +69,8 @@ namespace Akka.TestKit
         /// Change FSM state; but keeps the current state data. 
         /// This method is directly equivalent to a  transition initiated from within the FSM.
         /// </summary>
-        /// <param name="stateName">TBD</param>
-        /// <param name="timeout">TBD</param>
+        /// <param name="stateName">The new state name.</param>
+        /// <param name="timeout">The state timeout to apply, or null to use the FSM's normal timeout selection.</param>
         public void SetState(TState stateName, TimeSpan? timeout = null)
         {
             SetState(stateName, UnderlyingActor.StateData, timeout);
@@ -81,10 +81,10 @@ namespace Akka.TestKit
         /// corresponding transition initiated from within the FSM, including timeout
         /// and stop handling.
         /// </summary>
-        /// <param name="stateName">TBD</param>
-        /// <param name="stateData">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="stopReason">TBD</param>
+        /// <param name="stateName">The new state name.</param>
+        /// <param name="stateData">The new state data.</param>
+        /// <param name="timeout">The state timeout to apply, or null to use the FSM's normal timeout selection.</param>
+        /// <param name="stopReason">The stop reason to apply, or null if the FSM should continue running.</param>
         public void SetState(TState stateName, TData stateData, TimeSpan? timeout = null, FSMBase.Reason stopReason = null)
         {
             var fsm = ((IInternalSupportsTestFSMRef<TState, TData>)UnderlyingActor);
@@ -94,10 +94,10 @@ namespace Akka.TestKit
         /// <summary>
         /// Proxy for <see cref="FSM{TState,TData}.SetTimer"/>
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="msg">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <param name="repeat">TBD</param>
+        /// <param name="name">The timer name used to identify and cancel this timer.</param>
+        /// <param name="msg">The message sent to the FSM when the timer expires.</param>
+        /// <param name="timeout">The delay before the timer sends its message.</param>
+        /// <param name="repeat">Whether the timer repeats at the specified interval.</param>
         public void SetTimer(string name, object msg, TimeSpan timeout, bool repeat = false)
         {
             InternalRef.Cell.UseThreadContext(() => UnderlyingActor.SetTimer(name, msg, timeout, repeat));
@@ -106,7 +106,7 @@ namespace Akka.TestKit
         /// <summary>
         /// Proxy for <see cref="FSM{TState,TData}.CancelTimer"/>
         /// </summary>
-        /// <param name="name">TBD</param>
+        /// <param name="name">The name of the timer to cancel.</param>
         public void CancelTimer(string name)
         {
             UnderlyingActor.CancelTimer(name);
@@ -115,8 +115,8 @@ namespace Akka.TestKit
         /// <summary>
         /// Proxy for <see cref="FSM{TState,TData}.IsTimerActive"/>
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name of the timer to check.</param>
+        /// <returns><c>true</c> if a timer with this name is active; otherwise, <c>false</c>.</returns>
         public bool IsTimerActive(string name)
         {
             return UnderlyingActor.IsTimerActive(name);

@@ -29,19 +29,19 @@ namespace Akka.Streams.Implementation.IO
         #region internal classes
 
         /// <summary>
-        /// TBD
+        /// Marker for flush and close requests sent from the materialized stream to the stage.
         /// </summary>
         internal interface IAdapterToStageMessage
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Requests that the stage acknowledge a flush after queued data is handled.
         /// </summary>
         internal sealed class Flush : IAdapterToStageMessage
         {
             /// <summary>
-            /// TBD
+            /// The shared flush request.
             /// </summary>
             public static readonly Flush Instance = new();
 
@@ -51,12 +51,12 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Requests that the stage complete and close the materialized stream.
         /// </summary>
         internal sealed class Close : IAdapterToStageMessage
         {
             /// <summary>
-            /// TBD
+            /// The shared close request.
             /// </summary>
             public static readonly Close Instance = new();
 
@@ -66,19 +66,19 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Marker for whether the source stage can still deliver data downstream.
         /// </summary>
         internal interface IDownstreamStatus
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates that downstream has not canceled the source.
         /// </summary>
         internal sealed class Ok : IDownstreamStatus
         {
             /// <summary>
-            /// TBD
+            /// The shared active downstream status.
             /// </summary>
             public static readonly Ok Instance = new();
 
@@ -88,12 +88,12 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates that downstream canceled the source.
         /// </summary>
         internal sealed class Canceled : IDownstreamStatus
         {
             /// <summary>
-            /// TBD
+            /// The shared canceled downstream status.
             /// </summary>
             public static readonly Canceled Instance = new();
 
@@ -103,15 +103,15 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Provides asynchronous stage callbacks used by the materialized output-stream adapter.
         /// </summary>
         internal interface IStageWithCallback
         {
             /// <summary>
-            /// TBD
+            /// Sends a flush or close request to the stage.
             /// </summary>
-            /// <param name="msg">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="msg">The adapter request to deliver.</param>
+            /// <returns>A task completed when the stage acknowledges the request.</returns>
             Task WakeUp(IAdapterToStageMessage msg);
         }
 
@@ -268,9 +268,9 @@ namespace Akka.Streams.Implementation.IO
         private readonly Outlet<ReadOnlySequence<byte>> _out = new("OutputStreamSource.out");
 
         /// <summary>
-        /// TBD
+        /// Creates a source stage that materializes an output stream whose writes become source elements.
         /// </summary>
-        /// <param name="writeTimeout">TBD</param>
+        /// <param name="writeTimeout">The maximum time the adapter waits for a flush or close acknowledgement.</param>
         public OutputStreamSourceStage(TimeSpan writeTimeout)
         {
             _writeTimeout = writeTimeout;
@@ -278,21 +278,21 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// The source shape that emits byte sequences written to the materialized stream.
         /// </summary>
         public override SourceShape<ReadOnlySequence<byte>> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the output-stream source.
         /// </summary>
         protected override Attributes InitialAttributes { get; } = DefaultAttributes.OutputStreamSource;
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic and a write-only stream backed by a bounded queue of byte sequences.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including its input buffer size and dispatcher.</param>
+        /// <exception cref="ArgumentException">Thrown when the maximum input buffer size is not positive.</exception>
+        /// <returns>The stage logic and its materialized write-only stream.</returns>
         public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
@@ -314,50 +314,48 @@ namespace Akka.Streams.Implementation.IO
     }
 
     /// <summary>
-    /// TBD
+    /// Write-only stream adapter that sends byte sequences to <see cref="OutputStreamSourceStage"/>.
     /// </summary>
     internal sealed class OutputStreamAdapter : Stream
     {
         #region not supported
 
         /// <summary>
-        /// TBD
+        /// Seeking is unsupported because this adapter is not seekable.
         /// </summary>
-        /// <param name="offset">TBD</param>
-        /// <param name="origin">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="offset">The offset from the requested origin.</param>
+        /// <param name="origin">The position used as the reference point for the offset.</param>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports writing only.</exception>
         public override long Seek(long offset, SeekOrigin origin) =>
             throw new NotSupportedException("This stream can only write");
 
         /// <summary>
-        /// TBD
+        /// Changing the stream length is unsupported because this adapter is write-only.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <param name="value">The requested length.</param>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports writing only.</exception>
         public override void SetLength(long value) => throw new NotSupportedException("This stream can only write");
 
         /// <summary>
-        /// TBD
+        /// Reading is unsupported because this adapter is write-only.
         /// </summary>
-        /// <param name="buffer">TBD</param>
-        /// <param name="offset">TBD</param>
-        /// <param name="count">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="buffer">The buffer that would receive the read bytes.</param>
+        /// <param name="offset">The buffer offset at which reading would begin.</param>
+        /// <param name="count">The maximum number of bytes that would be read.</param>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports writing only.</exception>
         public override int Read(byte[] buffer, int offset, int count) =>
             throw new NotSupportedException("This stream can only write");
 
         /// <summary>
-        /// TBD
+        /// Getting the stream length is unsupported because this adapter is not seekable.
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter does not expose a seekable length.</exception>
         public override long Length => throw new NotSupportedException("This stream can only write");
 
         /// <summary>
-        /// TBD
+        /// Getting or setting the stream position is unsupported because this adapter is not seekable.
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter does not expose a seekable position.</exception>
         public override long Position
         {
             get => throw new NotSupportedException("This stream can only write");
@@ -377,12 +375,12 @@ namespace Akka.Streams.Implementation.IO
         private bool _isPublisherAlive = true;
 
         /// <summary>
-        /// TBD
+        /// Creates an adapter that queues writes and sends flush and close requests to the source stage.
         /// </summary>
-        /// <param name="dataQueue">TBD</param>
-        /// <param name="downstreamStatus">TBD</param>
-        /// <param name="stageWithCallback">TBD</param>
-        /// <param name="writeTimeout">TBD</param>
+        /// <param name="dataQueue">The bounded queue of byte sequences to publish.</param>
+        /// <param name="downstreamStatus">The current downstream cancellation status.</param>
+        /// <param name="stageWithCallback">The callback used to notify the stage of flush and close requests.</param>
+        /// <param name="writeTimeout">The maximum time to wait for a stage acknowledgement.</param>
         public OutputStreamAdapter(BlockingCollection<ReadOnlySequence<byte>> dataQueue,
             AtomicReference<IDownstreamStatus> downstreamStatus,
             IStageWithCallback stageWithCallback, TimeSpan writeTimeout)
@@ -431,16 +429,16 @@ namespace Akka.Streams.Implementation.IO
 
 
         /// <summary>
-        /// TBD
+        /// Requests a flush and waits up to the configured timeout for the stage to acknowledge it.
         /// </summary>
         public override void Flush() => SendMessage(OutputStreamSourceStage.Flush.Instance);
 
         /// <summary>
-        /// TBD
+        /// Copies the requested byte range into a new sequence and queues it for emission by the source.
         /// </summary>
-        /// <param name="buffer">TBD</param>
-        /// <param name="offset">TBD</param>
-        /// <param name="count">TBD</param>
+        /// <param name="buffer">The buffer containing bytes to write.</param>
+        /// <param name="offset">The zero-based offset of the first byte to write.</param>
+        /// <param name="count">The number of bytes to copy and write.</param>
         public override void Write(byte[] buffer, int offset, int count)
         {
             // Stream.Write returns before downstream demand may consume this chunk, so
@@ -450,9 +448,9 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a close request to the stage and marks the adapter closed.
         /// </summary>
-        /// <param name="disposing">TBD</param>
+        /// <param name="disposing">Whether managed resources should be disposed.</param>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -461,17 +459,17 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates that this adapter does not support reading.
         /// </summary>
         public override bool CanRead => false;
 
         /// <summary>
-        /// TBD
+        /// Indicates that this adapter does not support seeking.
         /// </summary>
         public override bool CanSeek => false;
 
         /// <summary>
-        /// TBD
+        /// Indicates that this adapter supports writing.
         /// </summary>
         public override bool CanWrite => true;
     }

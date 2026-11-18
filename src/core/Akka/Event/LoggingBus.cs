@@ -113,11 +113,47 @@ namespace Akka.Event
 
             LogLevel = Logging.LogLevelFor(system.Settings.LogLevel);
 
+            var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
+
+            // Resolve every akka.loggers entry before starting anything: a name that cannot be resolved throws,
+            // and a logger already started by then would be left constructing in a system that failed to start.
+            // Creating a Props starts nothing, and keeping Props (not Type) preserves the trim annotations.
+            var hoconLoggers = new List<Props>();
+            foreach (var strLoggerType in system.Settings.Loggers)
+            {
+                var loggerType = GetBuiltInLoggerType(strLoggerType) ?? GetFirstPartyLoggerType(strLoggerType);
+                if (loggerType == null)
+                {
+                    if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
+                    {
+                        // The LoggerSetup loggers started below already cover a type the name points at, so there is
+                        // nothing left to resolve. This is how a library that ships its logger in default HOCON,
+                        // like Akka.TestKit, keeps that HOCON valid with the switch off.
+                        if (loggerSetupOpt.HasValue && IsRegisteredByLoggerSetup(loggerSetupOpt.Value, strLoggerType))
+                            continue;
+
+                        throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
+                            "akka.loggers", strLoggerType, "one of the built-in loggers, or a logger registered through LoggerSetup"));
+                    }
+
+                    loggerType = ResolveLoggerType(strLoggerType);
+                    if (loggerType == null)
+                        throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
+                }
+
+                if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
+                {
+                    shouldRemoveStandardOutLogger = false;
+                    continue;
+                }
+
+                hoconLoggers.Add(Props.Create(loggerType));
+            }
+
             var taskInfos = new Dictionary<Task, string>();
             // LoggerSetup first, so it wins when both name the same type
             var startedTypes = new HashSet<Type>();
 
-            var loggerSetupOpt = system.Settings.Setup.Get<LoggerSetup>();
             if (loggerSetupOpt.HasValue)
             {
                 foreach (var props in loggerSetupOpt.Value.Loggers)
@@ -138,30 +174,12 @@ namespace Akka.Event
                 }
             }
 
-            foreach (var strLoggerType in system.Settings.Loggers)
+            foreach (var props in hoconLoggers)
             {
-                var loggerType = GetBuiltInLoggerType(strLoggerType) ?? GetFirstPartyLoggerType(strLoggerType);
-                if (loggerType == null)
-                {
-                    if (!AkkaFeatures.IsDynamicTypeLoadingSupported)
-                        throw new ConfigurationException(AkkaFeatures.NotBuiltIn(
-                            "akka.loggers", strLoggerType, "one of the built-in loggers"));
-
-                    loggerType = ResolveLoggerType(strLoggerType);
-                    if (loggerType == null)
-                        throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
-                }
-
-                if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
-                {
-                    shouldRemoveStandardOutLogger = false;
-                    continue;
-                }
-
-                if (!startedTypes.Add(loggerType))
+                if (!startedTypes.Add(props.Type))
                     continue;
 
-                var (task, name) = AddLogger(system, Props.Create(loggerType), logName);
+                var (task, name) = AddLogger(system, props, logName);
                 taskInfos[task] = name;
             }
 
@@ -269,6 +287,29 @@ namespace Akka.Event
                     => Type.GetType("Akka.Hosting.Logging.LoggerFactoryLogger, Akka.Hosting"),
                 _ => null
             };
+        }
+
+        // True when loggerTypeName names a type that setup already carries. Type name and assembly must both match,
+        // the same rule the first-party tables use; a bare name only matches a type from Akka itself, which is all
+        // Type.GetType would have found for it.
+        private static bool IsRegisteredByLoggerSetup(LoggerSetup setup, string loggerTypeName)
+        {
+            if (!Util.TypeExtensions.TrySplitTypeName(loggerTypeName, out var name, out var assembly))
+                return false;
+
+            foreach (var props in setup.Loggers)
+            {
+                var type = props.Type;
+                if (!string.Equals(type.FullName, name, StringComparison.Ordinal))
+                    continue;
+
+                if (assembly is null
+                        ? type.Assembly == typeof(LoggingBus).Assembly
+                        : string.Equals(assembly, type.Assembly.GetName().Name, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 #nullable restore
 

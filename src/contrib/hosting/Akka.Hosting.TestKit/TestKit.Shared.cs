@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -147,8 +148,40 @@ namespace Akka.Hosting.TestKit
                 // Their WithActors/StartActors will be added after ours
                 ConfigureAkka(builder, provider);
 
+                RegisterTestEventListener(builder);
+
                 builder.AddStartup((_, _) => { _initialized.TrySetResult(Done.Instance); });
             });
+        }
+
+        // DefaultConfig names TestEventListener by type, and with Akka.DynamicTypeLoading off that name does not
+        // resolve. Register the type with LoggerSetup as well; Akka.NET accepts an akka.loggers name that
+        // LoggerSetup already started. This runs after ConfigureAkka and reads the merged HOCON, so a test that
+        // replaces akka.loggers (AddLogger<T>, or its own Config) keeps its list and gets no extra listener. A
+        // LoggerSetup the test added itself is left alone: it owns the list then.
+        private static void RegisterTestEventListener(AkkaConfigurationBuilder builder)
+        {
+            if (!NamesTestEventListener(builder.Configuration.GetOrElse(ConfigurationFactory.Empty)))
+                return;
+
+            if (builder.Setups.OfType<LoggerSetup>().Any())
+                return;
+
+            builder.AddSetup(LoggerSetup.Create(Props.Create<TestEventListener>()));
+        }
+
+        private static bool NamesTestEventListener(Config config)
+        {
+            foreach (var logger in config.GetStringList("akka.loggers", Array.Empty<string>()))
+            {
+                // "Ns.Type, Assembly" -> "Ns.Type"
+                var comma = logger.IndexOf(',');
+                var name = (comma < 0 ? logger : logger.Substring(0, comma)).Trim();
+                if (string.Equals(name, typeof(TestEventListener).FullName, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
         }
 
         internal virtual Task LoggerHook(ActorSystem system, IActorRegistry registry)

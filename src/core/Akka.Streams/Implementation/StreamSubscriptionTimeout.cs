@@ -15,7 +15,7 @@ using Reactive.Streams;
 namespace Akka.Streams.Implementation
 {
     /// <summary>
-    /// TBD
+    /// Exception raised when a stream subscription does not arrive before its configured timeout.
     /// </summary>
     public class SubscriptionTimeoutException : Exception
     {
@@ -49,19 +49,19 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// A subscriber who calls <see cref="ISubscription.Cancel"/> directly from <see cref="OnSubscribe"/> and ignores all other callbacks.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The publisher's element type.</typeparam>
     public sealed class CancelingSubscriber<T> : ISubscriber<T>
     {
         /// <summary>
-        /// TBD
+        /// Singleton subscriber that cancels as soon as it receives a subscription.
         /// </summary>
         public static readonly CancelingSubscriber<T> Instance = new();
         private CancelingSubscriber() { }
 
         /// <summary>
-        /// TBD
+        /// Cancels the subscription immediately.
         /// </summary>
-        /// <param name="subscription">TBD</param>
+        /// <param name="subscription">The subscription to cancel.</param>
         public void OnSubscribe(ISubscription subscription)
         {
             ReactiveStreamsCompliance.RequireNonNullSubscription(subscription);
@@ -69,19 +69,19 @@ namespace Akka.Streams.Implementation
         }
 
         /// <summary>
-        /// TBD
+        /// Validates that an element is non-null; this subscriber does not consume elements.
         /// </summary>
-        /// <param name="element">TBD</param>
+        /// <param name="element">The element checked for Reactive Streams null compliance.</param>
         public void OnNext(T element) => ReactiveStreamsCompliance.RequireNonNullElement(element);
 
         /// <summary>
-        /// TBD
+        /// Validates that a failure is non-null; this subscriber does not otherwise handle it.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The failure checked for Reactive Streams null compliance.</param>
         public void OnError(Exception cause) => ReactiveStreamsCompliance.RequireNonNullException(cause);
 
         /// <summary>
-        /// TBD
+        /// Ignores successful completion after cancellation.
         /// </summary>
         public void OnComplete() { }
     }
@@ -96,42 +96,42 @@ namespace Akka.Streams.Implementation
     public sealed class NoopSubscriptionTimeout : ICancelable
     {
         /// <summary>
-        /// TBD
+        /// Shared no-op timeout instance; it schedules no work and remains cancellation-requested.
         /// </summary>
         public static readonly NoopSubscriptionTimeout Instance = new();
         private NoopSubscriptionTimeout() { }
 
         /// <summary>
-        /// TBD
+        /// Does nothing because this timeout never schedules work.
         /// </summary>
         public void Cancel() { }
 
         /// <summary>
-        /// TBD
+        /// Reports cancellation as already requested.
         /// </summary>
         public bool IsCancellationRequested => true;
 
         /// <summary>
-        /// TBD
+        /// Gets a non-cancelable token.
         /// </summary>
         public CancellationToken Token => CancellationToken.None;
 
         /// <summary>
-        /// TBD
+        /// Does nothing; no timeout is scheduled.
         /// </summary>
-        /// <param name="delay">TBD</param>
+        /// <param name="delay">The ignored delay.</param>
         public void CancelAfter(TimeSpan delay) { }
 
         /// <summary>
-        /// TBD
+        /// Does nothing; no timeout is scheduled.
         /// </summary>
-        /// <param name="millisecondsDelay">TBD</param>
+        /// <param name="millisecondsDelay">The ignored delay in milliseconds.</param>
         public void CancelAfter(int millisecondsDelay) { }
 
         /// <summary>
-        /// TBD
+        /// Does nothing because this timeout never schedules work or cancellation callbacks.
         /// </summary>
-        /// <param name="throwOnFirstException">TBD</param>
+        /// <param name="throwOnFirstException">Ignored; cancellation cannot raise callback exceptions.</param>
         public void Cancel(bool throwOnFirstException) { }
     }
 
@@ -153,22 +153,22 @@ namespace Akka.Streams.Implementation
         /// Schedules a Subscription timeout.
         /// The actor will receive the message created by the provided block if the timeout triggers.
         /// </summary>
-        /// <param name="actorRef">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorRef">The actor that receives the timeout message.</param>
+        /// <param name="message">The message sent to <paramref name="actorRef"/> if the timeout expires.</param>
+        /// <returns>A cancellation handle for the scheduled timeout.</returns>
         ICancelable ScheduleSubscriptionTimeout(IActorRef actorRef, object message);
 
         /// <summary>
         /// Called by the actor when a subscription has timed out. Expects the actual <see cref="IUntypedPublisher"/> or <see cref="IProcessor{T1,T2}"/> target.
         /// </summary>
-        /// <param name="target">TBD</param>
+        /// <param name="target">The publisher or processor whose subscription timed out.</param>
         void SubscriptionTimedOut(IUntypedPublisher target);
 
         /// <summary>
         /// Callback that should ensure that the target is canceled with the given cause.
         /// </summary>
-        /// <param name="target">TBD</param>
-        /// <param name="cause">TBD</param>
+        /// <param name="target">The publisher or processor to cancel.</param>
+        /// <param name="cause">The timeout failure to signal to the target.</param>
         void HandleSubscriptionTimeout(IUntypedPublisher target, Exception cause);
     }
 }

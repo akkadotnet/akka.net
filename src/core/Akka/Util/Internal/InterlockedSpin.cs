@@ -22,9 +22,9 @@ namespace Akka.Util.Internal
         /// Note that <paramref name="updater"/> may be called many times so it should be idempotent.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="reference">TBD</param>
-        /// <param name="updater">TBD</param>
+        /// <typeparam name="T">The reference type being updated.</typeparam>
+        /// <param name="reference">The reference to update atomically.</param>
+        /// <param name="updater">A function that computes a replacement from the current reference; it may run repeatedly after contention.</param>
         /// <returns>The updated value.</returns>
         public static T Swap<T>(ref T reference, Func<T, T> updater) where T : class
         {
@@ -46,10 +46,10 @@ namespace Akka.Util.Internal
         /// Note that <paramref name="updateIfTrue"/> may be called many times so it should be idempotent.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TReturn">TBD</typeparam>
-        /// <param name="reference">TBD</param>
-        /// <param name="updateIfTrue">TBD</param>
+        /// <typeparam name="T">The reference type being conditionally updated.</typeparam>
+        /// <typeparam name="TReturn">The type returned by the update function.</typeparam>
+        /// <param name="reference">The reference to update atomically.</param>
+        /// <param name="updateIfTrue">A function that decides whether to update, supplies a replacement, and returns a result; it may run repeatedly after contention.</param>
         /// <returns>The third value from the tuple return by <paramref name="updateIfTrue"/>.</returns>
         public static TReturn ConditionallySwap<T, TReturn>(ref T reference, Func<T, (bool, T, TReturn)> updateIfTrue) where T : class
         {
@@ -73,4 +73,3 @@ namespace Akka.Util.Internal
 
     }
 }
-

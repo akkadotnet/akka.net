@@ -48,9 +48,9 @@ namespace Akka.Actor
         private LatestFirstSystemMessageList _sysMsgStash = SystemMessageList.LNil;
 
         /// <summary>
-        /// TBD
+        /// Temporarily stores a system message while the cell cannot process it.
         /// </summary>
-        /// <param name="msg">TBD</param>
+        /// <param name="msg">The system message to defer.</param>
         protected void Stash(SystemMessage msg)
         {
             Assert.Assert(msg.Unlinked);
@@ -65,13 +65,13 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an actor cell for the given actor reference and its owning system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="self">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="parent">TBD</param>
+        /// <param name="system">The actor system that owns this cell.</param>
+        /// <param name="self">The reference represented by this cell.</param>
+        /// <param name="props">The configuration used to create the actor.</param>
+        /// <param name="dispatcher">The dispatcher that runs this actor.</param>
+        /// <param name="parent">The actor that supervises this actor.</param>
         public ActorCell(ActorSystemImpl system, IInternalActorRef self, Props props, MessageDispatcher dispatcher, IInternalActorRef parent)
         {
             _self = self;
@@ -221,8 +221,8 @@ namespace Akka.Actor
         /// reasonably different from the previous UID of a possible actor with the same path,
         /// which can be achieved by using <see cref="ThreadLocalRandom"/>
         /// </summary>
-        /// <param name="sendSupervise">TBD</param>
-        /// <param name="mailboxType">TBD</param>
+        /// <param name="sendSupervise">If <c>true</c>, sends the parent a supervision message after creating the mailbox.</param>
+        /// <param name="mailboxType">The mailbox type to create for this actor.</param>
         public void Init(bool sendSupervise, MailboxType mailboxType)
         {
             /*
@@ -289,20 +289,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a selection for a path relative to this actor's reference.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The actor path expression to resolve relative to this actor.</param>
+        /// <returns>A selection rooted at this actor.</returns>
         public ActorSelection ActorSelection(string path)
         {
             return ActorRefFactoryShared.ActorSelection(path, SystemImpl, Self);
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a selection for the supplied absolute actor path.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The parsed actor path to select.</param>
+        /// <returns>A selection rooted at the guardian for the path's address.</returns>
         public ActorSelection ActorSelection(ActorPath path)
         {
             return ActorRefFactoryShared.ActorSelection(path, SystemImpl);
@@ -552,9 +552,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the active actor's self reference, or <see cref="ActorRefs.NoSender"/> when called outside an actor.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The current actor reference, or <c>null</c> when there is no current actor cell.</returns>
         public static IActorRef? GetCurrentSelfOrNoSender()
         {
             var current = Current;
@@ -630,4 +630,3 @@ namespace Akka.Actor
         }
     }
 }
-

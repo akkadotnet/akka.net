@@ -42,10 +42,10 @@ namespace Akka.Cluster.Sharding.External
     public class ExternalShardAllocationExtensionProvider : ExtensionIdProvider<ExternalShardAllocation>
     {
         /// <summary>
-        /// TBD
+        /// Creates the external shard-allocation extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The extended actor system that owns the extension.</param>
+        /// <returns>The new external shard-allocation extension.</returns>
         public override ExternalShardAllocation CreateExtension(ExtendedActorSystem system)
         {
             var extension = new ExternalShardAllocation(system);

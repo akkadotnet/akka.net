@@ -178,6 +178,12 @@ namespace Akka.IO
             /// </example>
             public TcpSettings? TcpSettings { get; set; }
 
+            /// <summary>
+            /// Optional TLS settings for this outgoing connection. When configured, the connection is reported as
+            /// <see cref="Connected"/> only after the TLS handshake succeeds.
+            /// </summary>
+            public TlsClientSettings? Tls { get; init; }
+
             public override string ToString() =>
                 $"Connect(remote: {RemoteAddress}, local: {LocalAddress}, timeout: {Timeout}, pullMode: {PullMode})";
         }
@@ -233,6 +239,11 @@ namespace Akka.IO
             /// var tcpSettingsWithDifferentBufferSizes = tcpSettings with { SendBufferSize = 8192, ReceiveBufferSize = 8192 };
             /// </example>
             public TcpSettings? TcpSettings { get; set; }
+
+            /// <summary>
+            /// Optional TLS settings for incoming connections accepted by this listener.
+            /// </summary>
+            public TlsServerSettings? Tls { get; init; }
 
             public override string ToString() =>
                 $"Bind(addr: {LocalAddress}, handler: {Handler}, backlog: {Backlog}, pullMode: {PullMode})";

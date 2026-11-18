@@ -13,10 +13,10 @@ public sealed partial class EnvelopeSerializer
 
     public override int Identifier => 190102;
 
-    public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("marked-union-golden",
-            system => new EnvelopeSerializer(system),
+        return global::Akka.Serialization.SerializerDetails.Create("marked-union-golden",
+            new EnvelopeSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
                 typeof(global::MarkedUnionGolden.AssemblyB.IEnvelopeProtocol))); 
     }
@@ -32,6 +32,24 @@ public sealed partial class EnvelopeSerializer
 
     public override int Serialize(object obj, IBufferWriter<byte> writer)
     {
+        if (writer is global::Akka.Serialization.PooledPayloadWriter pooledWriter)
+        {
+            var pooledMessagePackWriter = new global::MessagePack.MessagePackWriter(pooledWriter);
+            var initialCount = pooledWriter.WrittenCount;
+            SerializeMessagePack(obj, ref pooledMessagePackWriter);
+            pooledMessagePackWriter.Flush();
+            return checked(pooledWriter.WrittenCount - initialCount);
+        }
+
+        if (writer is global::System.Buffers.ArrayBufferWriter<byte> arrayWriter)
+        {
+            var arrayMessagePackWriter = new global::MessagePack.MessagePackWriter(arrayWriter);
+            var initialCount = arrayWriter.WrittenCount;
+            SerializeMessagePack(obj, ref arrayMessagePackWriter);
+            arrayMessagePackWriter.Flush();
+            return checked(arrayWriter.WrittenCount - initialCount);
+        }
+
         var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);
         var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);
         SerializeMessagePack(obj, ref messagePackWriter);
@@ -44,7 +62,7 @@ public sealed partial class EnvelopeSerializer
         switch (obj)
         {
             case global::MarkedUnionGolden.AssemblyB.Envelope message:
-                WriteEnvelope(ref writer, message);
+                WriteEnvelope_7bca714b00b3d3cd(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -56,7 +74,7 @@ public sealed partial class EnvelopeSerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "envelope-v1" => ReadEnvelope(ref reader),
+            "envelope-v1" => ReadEnvelope_7bca714b00b3d3cd(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -65,7 +83,7 @@ public sealed partial class EnvelopeSerializer
     {
         return obj switch
         {
-            global::MarkedUnionGolden.AssemblyB.Envelope message => SizeOfEnvelope(message),
+            global::MarkedUnionGolden.AssemblyB.Envelope message => SizeOfEnvelope_7bca714b00b3d3cd(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -98,7 +116,7 @@ public sealed partial class EnvelopeSerializer
         }
     }
 
-    private int SizeOfEnvelope(global::MarkedUnionGolden.AssemblyB.Envelope message)
+    private int SizeOfEnvelope_7bca714b00b3d3cd(global::MarkedUnionGolden.AssemblyB.Envelope message)
     {
         checked
         {
@@ -112,14 +130,14 @@ public sealed partial class EnvelopeSerializer
         }
     }
 
-    private void WriteEnvelope(ref global::MessagePack.MessagePackWriter writer, global::MarkedUnionGolden.AssemblyB.Envelope message)
+    private void WriteEnvelope_7bca714b00b3d3cd(ref global::MessagePack.MessagePackWriter writer, global::MarkedUnionGolden.AssemblyB.Envelope message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         WriteUnion_IDestination(ref writer, message.Destination);
     }
 
-    private global::MarkedUnionGolden.AssemblyB.Envelope ReadEnvelope(ref global::MessagePack.MessagePackReader reader)
+    private global::MarkedUnionGolden.AssemblyB.Envelope ReadEnvelope_7bca714b00b3d3cd(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         global::MarkedUnionGolden.AssemblyA.IDestination? destination = null;
@@ -144,7 +162,7 @@ public sealed partial class EnvelopeSerializer
         return new global::MarkedUnionGolden.AssemblyB.Envelope(Destination: destination!);
     }
 
-    private int SizeOfTechDestination(global::MarkedUnionGolden.AssemblyB.TechDestination message)
+    private int SizeOfTechDestination_20ca26b7928e3c94(global::MarkedUnionGolden.AssemblyB.TechDestination message)
     {
         checked
         {
@@ -155,14 +173,14 @@ public sealed partial class EnvelopeSerializer
         }
     }
 
-    private void WriteTechDestination(ref global::MessagePack.MessagePackWriter writer, global::MarkedUnionGolden.AssemblyB.TechDestination message)
+    private void WriteTechDestination_20ca26b7928e3c94(ref global::MessagePack.MessagePackWriter writer, global::MarkedUnionGolden.AssemblyB.TechDestination message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Cluster);
     }
 
-    private global::MarkedUnionGolden.AssemblyB.TechDestination ReadTechDestination(ref global::MessagePack.MessagePackReader reader)
+    private global::MarkedUnionGolden.AssemblyB.TechDestination ReadTechDestination_20ca26b7928e3c94(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? cluster = null;
@@ -187,7 +205,7 @@ public sealed partial class EnvelopeSerializer
         return new global::MarkedUnionGolden.AssemblyB.TechDestination(Cluster: cluster!);
     }
 
-    private int SizeOfCommsDestination(global::MarkedUnionGolden.AssemblyA.CommsDestination message)
+    private int SizeOfCommsDestination_62f69448f3711ba6(global::MarkedUnionGolden.AssemblyA.CommsDestination message)
     {
         checked
         {
@@ -198,14 +216,14 @@ public sealed partial class EnvelopeSerializer
         }
     }
 
-    private void WriteCommsDestination(ref global::MessagePack.MessagePackWriter writer, global::MarkedUnionGolden.AssemblyA.CommsDestination message)
+    private void WriteCommsDestination_62f69448f3711ba6(ref global::MessagePack.MessagePackWriter writer, global::MarkedUnionGolden.AssemblyA.CommsDestination message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
         writer.Write(message.Host);
     }
 
-    private global::MarkedUnionGolden.AssemblyA.CommsDestination ReadCommsDestination(ref global::MessagePack.MessagePackReader reader)
+    private global::MarkedUnionGolden.AssemblyA.CommsDestination ReadCommsDestination_62f69448f3711ba6(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
         string? host = null;
@@ -239,7 +257,7 @@ public sealed partial class EnvelopeSerializer
             writer.Write(1);
             writer.Write("dest-tech-v1");
             writer.Write(2);
-            WriteTechDestination(ref writer, (global::MarkedUnionGolden.AssemblyB.TechDestination)value);
+            WriteTechDestination_20ca26b7928e3c94(ref writer, (global::MarkedUnionGolden.AssemblyB.TechDestination)value);
             return;
         }
 
@@ -249,7 +267,7 @@ public sealed partial class EnvelopeSerializer
             writer.Write(1);
             writer.Write("dest-comms-v1");
             writer.Write(2);
-            WriteCommsDestination(ref writer, (global::MarkedUnionGolden.AssemblyA.CommsDestination)value);
+            WriteCommsDestination_62f69448f3711ba6(ref writer, (global::MarkedUnionGolden.AssemblyA.CommsDestination)value);
             return;
         }
 
@@ -274,10 +292,10 @@ public sealed partial class EnvelopeSerializer
                     switch (manifest)
                     {
                         case "dest-tech-v1":
-                            result = ReadTechDestination(ref reader);
+                            result = ReadTechDestination_20ca26b7928e3c94(ref reader);
                             break;
                         case "dest-comms-v1":
-                            result = ReadCommsDestination(ref reader);
+                            result = ReadCommsDestination_62f69448f3711ba6(ref reader);
                             break;
                         case null:
                             throw new global::System.Runtime.Serialization.SerializationException("Union manifest must precede the payload for union [global::MarkedUnionGolden.AssemblyA.IDestination].");
@@ -303,7 +321,7 @@ public sealed partial class EnvelopeSerializer
         var runtimeType = value.GetType();
         if (runtimeType == typeof(global::MarkedUnionGolden.AssemblyB.TechDestination))
         {
-            var payloadSize = SizeOfTechDestination((global::MarkedUnionGolden.AssemblyB.TechDestination)value);
+            var payloadSize = SizeOfTechDestination_20ca26b7928e3c94((global::MarkedUnionGolden.AssemblyB.TechDestination)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("dest-tech-v1") + SizeOfInt32(2) + payloadSize);
@@ -311,7 +329,7 @@ public sealed partial class EnvelopeSerializer
 
         if (runtimeType == typeof(global::MarkedUnionGolden.AssemblyA.CommsDestination))
         {
-            var payloadSize = SizeOfCommsDestination((global::MarkedUnionGolden.AssemblyA.CommsDestination)value);
+            var payloadSize = SizeOfCommsDestination_62f69448f3711ba6((global::MarkedUnionGolden.AssemblyA.CommsDestination)value);
             if (payloadSize < 0)
                 return global::Akka.Serialization.SerializerV2.UnknownSize;
             return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString("dest-comms-v1") + SizeOfInt32(2) + payloadSize);

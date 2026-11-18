@@ -16,6 +16,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.Performance")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("RemotePingPong")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
@@ -400,6 +401,27 @@ namespace Akka.Remote
         public override string ToString() { }
     }
 }
+namespace Akka.Remote.Artery
+{
+    public sealed class ArteryTlsSettings
+    {
+        public System.TimeSpan HandshakeTimeout { get; }
+        public System.Security.Authentication.SslProtocols Protocols { get; }
+        public Akka.Remote.Artery.ArteryTlsSettings WithHandshakeTimeout(System.TimeSpan value) { }
+        public Akka.Remote.Artery.ArteryTlsSettings WithProtocols(System.Security.Authentication.SslProtocols value) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(Akka.IO.TlsCertificateSource certificateSource, Akka.IO.TlsPeerPolicy peerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, Akka.IO.TlsPeerPolicy peerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(Akka.IO.TlsCertificateSource certificateSource, Akka.IO.TlsPeerPolicy inboundClientPolicy, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings Mutual(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, Akka.IO.TlsPeerPolicy inboundClientPolicy, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings ServerOnly(Akka.IO.TlsCertificateSource certificateSource, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+        public static Akka.Remote.Artery.ArteryTlsSettings ServerOnly(System.Security.Cryptography.X509Certificates.X509Certificate2 serverCertificate, Akka.IO.TlsPeerPolicy outboundServerPolicy) { }
+    }
+    public sealed class ArteryTlsSetup : Akka.Actor.Setup.Setup
+    {
+        public ArteryTlsSetup(Akka.Remote.Artery.ArteryTlsSettings settings) { }
+        public Akka.Remote.Artery.ArteryTlsSettings Settings { get; }
+    }
+}
 namespace Akka.Remote.Routing
 {
     public sealed class RemoteRouterConfig : Akka.Routing.Pool, System.IEquatable<Akka.Routing.RouterConfig>
@@ -449,12 +471,14 @@ namespace Akka.Remote.Serialization
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
+    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerV2
     {
         public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override int Identifier { get; }
-        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     public class ProtobufSerializer : Akka.Serialization.Serializer
@@ -899,5 +923,6 @@ namespace Akka.Remote.Transport.DotNetty
         public bool RequireMutualAuthentication { get; }
         public bool SuppressValidation { get; }
         public bool ValidateCertificateHostname { get; }
+        public static Akka.Remote.Transport.DotNetty.DotNettySslSetup FromSource(Akka.IO.TlsCertificateSource source, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, Akka.Remote.Transport.DotNetty.CertificateValidationCallback? customValidator) { }
     }
 }

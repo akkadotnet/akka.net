@@ -20,8 +20,9 @@ using Akka.Serialization;
 namespace Akka.Cluster.Tools
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Akka.Cluster.Tools' three reference.conf files
-    /// (Client, PublishSubscribe, Singleton), so they resolve without reflection.
+    /// INTERNAL API. The serializers, bindings and ids of Akka.Cluster.Tools' Client, PublishSubscribe and
+    /// Singleton. They register as defaults when the module is deployed; the three reference.conf files carry no
+    /// rows for them.
     /// </summary>
     internal sealed class ToolsSerializers : ModuleSerializers
     {

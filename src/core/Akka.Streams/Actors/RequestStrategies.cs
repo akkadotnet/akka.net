@@ -33,16 +33,16 @@ namespace Akka.Streams.Actors
     public sealed class OneByOneRequestStrategy : IRequestStrategy
     {
         /// <summary>
-        /// TBD
+        /// The singleton strategy that requests another element when none is outstanding.
         /// </summary>
         public static readonly OneByOneRequestStrategy Instance = new();
         private OneByOneRequestStrategy() { }
 
         /// <summary>
-        /// TBD
+        /// Returns one unit of demand when no elements are outstanding, and zero otherwise.
         /// </summary>
-        /// <param name="remainingRequested">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remainingRequested">The number of requested elements not yet received.</param>
+        /// <returns>One when <paramref name="remainingRequested"/> is zero; otherwise, zero.</returns>
         public int RequestDemand(int remainingRequested) => remainingRequested == 0 ? 1 : 0;
     }
 
@@ -52,16 +52,16 @@ namespace Akka.Streams.Actors
     public sealed class ZeroRequestStrategy : IRequestStrategy
     {
         /// <summary>
-        /// TBD
+        /// The singleton strategy that never requests automatically.
         /// </summary>
         public static readonly ZeroRequestStrategy Instance = new();
         private ZeroRequestStrategy() { }
 
         /// <summary>
-        /// TBD
+        /// Returns no additional demand; requests must be made explicitly through <see cref="ActorSubscriber.Request"/>.
         /// </summary>
-        /// <param name="remainingRequested">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remainingRequested">The number of requested elements not yet received; this strategy does not use it.</param>
+        /// <returns>Always zero.</returns>
         public int RequestDemand(int remainingRequested) => 0;
     }
 
@@ -72,18 +72,18 @@ namespace Akka.Streams.Actors
     public sealed class WatermarkRequestStrategy : IRequestStrategy
     {
         /// <summary>
-        /// TBD
+        /// The upper bound for outstanding requested elements used by this strategy.
         /// </summary>
         public readonly int HighWatermark;
         /// <summary>
-        /// TBD
+        /// The lower threshold below which this strategy replenishes demand.
         /// </summary>
         public readonly int LowWatermark;
 
         /// <summary>
-        /// TBD
+        /// Creates a strategy with the supplied upper watermark and a lower watermark of at least one, approximately half the upper value.
         /// </summary>
-        /// <param name="highWatermark">TBD</param>
+        /// <param name="highWatermark">The target upper bound for outstanding requests.</param>
         public WatermarkRequestStrategy(int highWatermark)
         {
             HighWatermark = highWatermark;
@@ -91,10 +91,10 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a strategy with explicit upper and lower watermarks.
         /// </summary>
-        /// <param name="highWatermark">TBD</param>
-        /// <param name="lowWatermark">TBD</param>
+        /// <param name="highWatermark">The target upper bound for outstanding requests.</param>
+        /// <param name="lowWatermark">The threshold below which the strategy requests enough to reach <paramref name="highWatermark"/>.</param>
         public WatermarkRequestStrategy(int highWatermark, int lowWatermark)
         {
             HighWatermark = highWatermark;
@@ -102,10 +102,10 @@ namespace Akka.Streams.Actors
         }
 
         /// <summary>
-        /// TBD
+        /// Requests enough elements to reach the upper watermark whenever the outstanding count is below the lower watermark.
         /// </summary>
-        /// <param name="remainingRequested">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remainingRequested">The number of requested elements not yet received.</param>
+        /// <returns>The demand needed to reach <see cref="HighWatermark"/> when below <see cref="LowWatermark"/>; otherwise, zero.</returns>
         public int RequestDemand(int remainingRequested)
         {
             return remainingRequested < LowWatermark ? HighWatermark - remainingRequested : 0;
@@ -121,14 +121,14 @@ namespace Akka.Streams.Actors
     public abstract class MaxInFlightRequestStrategy : IRequestStrategy
     {
         /// <summary>
-        /// TBD
+        /// The maximum number of elements that may be requested but not yet processed, including the in-flight count.
         /// </summary>
         public readonly int Max;
 
         /// <summary>
-        /// TBD
+        /// Initializes the strategy with the maximum in-flight element count.
         /// </summary>
-        /// <param name="max">TBD</param>
+        /// <param name="max">The maximum count used to calculate request demand.</param>
         protected MaxInFlightRequestStrategy(int max)
         {
             Max = max;
@@ -147,10 +147,10 @@ namespace Akka.Streams.Actors
         public virtual int BatchSize => 5;
 
         /// <summary>
-        /// TBD
+        /// Requests more elements when there is capacity for at least one request batch.
         /// </summary>
-        /// <param name="remainingRequested">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="remainingRequested">The number of requested elements not yet received.</param>
+        /// <returns>The remaining capacity when it meets the batch threshold; otherwise, zero.</returns>
         public int RequestDemand(int remainingRequested)
         {
             var batch = Math.Min(BatchSize, Max);

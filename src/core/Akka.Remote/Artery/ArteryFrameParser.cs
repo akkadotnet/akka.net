@@ -109,6 +109,8 @@ namespace Akka.Remote.Artery
         /// <summary>The maximum allowed frame body length configured for this parser.</summary>
         public int MaxFrameLength => _maxFrameLength;
 
+        internal bool HasBufferedBytes => _bufferedLength != 0;
+
         /// <summary>
         /// Appends a chunk of bytes read from the connection. The chunk is retained by
         /// reference (not copied) until it has been fully consumed by

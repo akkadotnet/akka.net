@@ -23,22 +23,22 @@ namespace Akka.Actor
         /// <summary>
         /// Determines if current plugin can be applied to provided actor based on it's type.
         /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorType">The actor type for which the plugin is being considered.</param>
+        /// <returns><c>true</c> if this plugin should be included for that actor type.</returns>
         bool CanBeAppliedTo(Type actorType);
 
         /// <summary>
         /// Plugin behavior applied to underlying <paramref name="actor"/> instance when the new one is being created.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The newly created actor instance.</param>
+        /// <param name="context">The actor's context.</param>
         void AfterIncarnated(ActorBase actor, IActorContext context);
 
         /// <summary>
         /// Plugin behavior applied to underlying <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The actor instance that is about to be discarded or recreated.</param>
+        /// <param name="context">The actor's context while it is still available.</param>
         void BeforeIncarnated(ActorBase actor, IActorContext context);
     }
 
@@ -50,8 +50,8 @@ namespace Akka.Actor
         /// <summary>
         /// By default derivatives of this plugin will be applied to all actors.
         /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorType">The actor type for which the plugin is being considered.</param>
+        /// <returns>Always <c>true</c>; the plugin applies to every actor type by default.</returns>
         public virtual bool CanBeAppliedTo(Type actorType)
         {
             return true;
@@ -60,15 +60,15 @@ namespace Akka.Actor
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance when the new one is being created.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The newly created actor instance.</param>
+        /// <param name="context">The actor's context.</param>
         public virtual void AfterIncarnated(ActorBase actor, IActorContext context) { }
 
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The actor instance that is about to be discarded or recreated.</param>
+        /// <param name="context">The actor's context while it is still available.</param>
         public virtual void BeforeIncarnated(ActorBase actor, IActorContext context) { }
     }
 
@@ -80,8 +80,8 @@ namespace Akka.Actor
         /// <summary>
         /// By default derivatives of this plugin will be applied to all actors inheriting from <typeparamref name="TActor">actor generic type</typeparamref>.
         /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorType">The actor type for which the plugin is being considered.</param>
+        /// <returns><c>true</c> when the type derives from <typeparamref name="TActor"/>; otherwise, <c>false</c>.</returns>
         public virtual bool CanBeAppliedTo(Type actorType)
         {
             return typeof(TActor).IsAssignableFrom(actorType);
@@ -100,15 +100,15 @@ namespace Akka.Actor
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance when the new one is being created.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The newly created actor instance.</param>
+        /// <param name="context">The actor's context.</param>
         public virtual void AfterIncarnated(TActor actor, IActorContext context) { }
 
         /// <summary>
         /// Plugin behavior applied to <paramref name="actor"/> instance before the actor is being recycled.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The actor instance that is about to be discarded or recreated.</param>
+        /// <param name="context">The actor's context while it is still available.</param>
         public virtual void BeforeIncarnated(TActor actor, IActorContext context) { }
     }
 
@@ -132,9 +132,9 @@ namespace Akka.Actor
         public int TotalPluginCount { get { return _plugins.Count; } }
 
         /// <summary>
-        /// TBD
+        /// Creates a resolver with a lazy logger used for pipeline plugin failures.
         /// </summary>
-        /// <param name="logBuilder">TBD</param>
+        /// <param name="logBuilder">Creates the logger when a pipeline needs to report a plugin failure.</param>
         public ActorProducerPipelineResolver(Func<ILoggingAdapter> logBuilder)
         {
             _log = new Lazy<ILoggingAdapter>(logBuilder);
@@ -143,7 +143,7 @@ namespace Akka.Actor
         /// <summary>
         /// Register target <paramref name="plugin"/> at the end of producer pipeline.
         /// </summary>
-        /// <param name="plugin">TBD</param>
+        /// <param name="plugin">The plugin to append if no plugin of the same type is registered.</param>
         /// <returns>True if plugin was registered (it has not been found in pipeline already). False otherwise. </returns>
         public bool Register(IActorProducerPlugin plugin)
         {
@@ -159,8 +159,8 @@ namespace Akka.Actor
         /// <summary>
         /// Register target <paramref name="plugin"/> inside producer pipeline at specified <paramref name="index"/>.
         /// </summary>
-        /// <param name="index">TBD</param>
-        /// <param name="plugin">TBD</param>
+        /// <param name="index">The position at which to insert the plugin.</param>
+        /// <param name="plugin">The plugin to insert if no plugin of the same type is registered.</param>
         /// <returns>True if plugin was registered (it has not been found in pipeline already). False otherwise. </returns>
         public bool Insert(int index, IActorProducerPlugin plugin)
         {
@@ -176,8 +176,8 @@ namespace Akka.Actor
         /// <summary>
         /// Unregisters plugin from producer pipeline, returning false if plugin was not found.
         /// </summary>
-        /// <param name="plugin">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="plugin">The plugin instance to remove.</param>
+        /// <returns><c>true</c> if the plugin instance was removed; otherwise, <c>false</c>.</returns>
         public bool Unregister(IActorProducerPlugin plugin)
         {
             return _plugins.Remove(plugin);
@@ -186,18 +186,18 @@ namespace Akka.Actor
         /// <summary>
         /// Returns true if current actor producer pipeline already has registered provided plugin type.
         /// </summary>
-        /// <param name="plugin">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="plugin">The plugin whose type is checked.</param>
+        /// <returns><c>true</c> if a plugin of the same runtime type is registered.</returns>
         public bool IsRegistered(IActorProducerPlugin plugin)
         {
             return _plugins.Any(p => p.GetType() == plugin.GetType());
         }
 
         /// <summary>
-        /// TBD
+        /// Gets or creates the plugin pipeline for the specified actor type.
         /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorType">The actor type whose applicable plugins are selected.</param>
+        /// <returns>The cached pipeline for that actor type.</returns>
         internal ActorProducerPipeline ResolvePipeline(Type actorType)
         {
             return _pipelines.GetOrAdd(actorType, CreatePipeline);
@@ -228,7 +228,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// Applies the selected actor producer plugins around actor incarnation and exposes them for inspection.
     /// </summary>    
     public class ActorProducerPipeline : IEnumerable<IActorProducerPlugin>
     {
@@ -236,10 +236,10 @@ namespace Akka.Actor
         private readonly List<IActorProducerPlugin> _plugins;
 
         /// <summary>
-        /// TBD
+        /// Creates a pipeline using the applicable plugins selected by the resolver.
         /// </summary>
-        /// <param name="log">TBD</param>
-        /// <param name="plugins">TBD</param>
+        /// <param name="log">A lazy logger used to report plugin exceptions.</param>
+        /// <param name="plugins">The plugins to run, in pipeline order.</param>
         public ActorProducerPipeline(Lazy<ILoggingAdapter> log, IEnumerable<IActorProducerPlugin> plugins)
         {
             _log = log;
@@ -247,7 +247,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The number of plugins in this pipeline.
         /// </summary>
         public int Count { get { return _plugins.Count; } }
 
@@ -255,8 +255,8 @@ namespace Akka.Actor
         /// Resolves and applies all plugins valid to specified underlying <paramref name="actor"/> 
         /// registered in current producer pipeline to newly created actor.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The newly created actor instance.</param>
+        /// <param name="context">The actor's context.</param>
         public void AfterActorIncarnated(ActorBase actor, IActorContext context)
         {
             foreach (var plugin in _plugins)
@@ -277,8 +277,8 @@ namespace Akka.Actor
         /// Resolves and applies all plugins valid to specified underlying <paramref name="actor"/> 
         /// registered in current producer pipeline before old actor would be recycled.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The actor instance that is about to be discarded or recreated.</param>
+        /// <param name="context">The actor's context while it is still available.</param>
         public void BeforeActorIncarnated(ActorBase actor, IActorContext context)
         {
             foreach (var plugin in _plugins)
@@ -306,9 +306,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Enumerates the plugins in the order they are applied.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An enumerator over the pipeline's plugins.</returns>
         public IEnumerator<IActorProducerPlugin> GetEnumerator()
         {
             return _plugins.GetEnumerator();
@@ -320,4 +320,3 @@ namespace Akka.Actor
         }
     }
 }
-

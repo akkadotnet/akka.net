@@ -14,7 +14,7 @@ using Akka.Streams.Implementation.StreamRef;
 namespace Akka.Streams.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Akka.Streams' reference.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.Streams' serializers, bindings and ids. They register as defaults when the module is deployed; its reference.conf carries no rows for them.
     /// </summary>
     internal sealed class StreamsSerializers : ModuleSerializers
     {

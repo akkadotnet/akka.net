@@ -11,7 +11,7 @@ using System.Runtime.Serialization;
 namespace Akka.Streams
 {
     /// <summary>
-    /// TBD
+    /// Base exception for errors reported by stream TCP operations.
     /// </summary>
     public class StreamTcpException : Exception
     {
@@ -71,7 +71,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Exception reported when a TCP bind operation fails.
     /// </summary>
     public class BindFailedException : StreamTcpException
     {
@@ -95,7 +95,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// TBD
+    /// Exception reported when a stream TCP connection fails.
     /// </summary>
     public class ConnectionException : StreamTcpException
     {

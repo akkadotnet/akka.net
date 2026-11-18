@@ -36,10 +36,10 @@ namespace Akka.Streams
         /// implementations based on <see cref="GraphStage{TShape}"/>) and not forbidden
         /// via <see cref="Attributes.AsyncBoundary"/>
         /// </summary>
-        /// <typeparam name="TShape">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="graph">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="TShape">The shape of the graph to fuse.</typeparam>
+        /// <typeparam name="TMat">The type of the graph's materialized value.</typeparam>
+        /// <param name="graph">The graph whose eligible operations should be fused.</param>
+        /// <returns>A graph with the same shape and materialized value whose eligible operations have been fused.</returns>
         public static FusedGraph<TShape, TMat> Aggressive<TShape, TMat>(IGraph<TShape, TMat> graph) where TShape : Shape
             => Implementation.Fusing.Fusing.Aggressive(graph);
 
@@ -54,16 +54,16 @@ namespace Akka.Streams
         /// A fused graph of the right shape, containing a <see cref="FusedModule"/> which holds more information 
         /// on the operation structure of the contained stream topology for convenient graph traversal.
         /// </summary>
-        /// <typeparam name="TShape">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TShape">The shape of the fused graph.</typeparam>
+        /// <typeparam name="TMat">The type of the graph's materialized value.</typeparam>
         public sealed class FusedGraph<TShape, TMat> : IGraph<TShape, TMat> where TShape : Shape
         {
             /// <summary>
-            /// TBD
+            /// Creates a fused graph with the supplied module and shape.
             /// </summary>
-            /// <param name="module">TBD</param>
-            /// <param name="shape">TBD</param>
-            /// <exception cref="ArgumentException">TBD</exception>
+            /// <param name="module">The fused module containing the graph topology.</param>
+            /// <param name="shape">The graph shape.</param>
+            /// <exception cref="ArgumentNullException">The module or shape is <see langword="null"/>.</exception>
             public FusedGraph(FusedModule module, TShape shape)
             {
                 Module = module ?? throw new ArgumentNullException(nameof(module));
@@ -71,40 +71,40 @@ namespace Akka.Streams
             }
 
             /// <summary>
-            /// TBD
+            /// The graph's shape.
             /// </summary>
             public TShape Shape { get; }
 
             /// <summary>
-            /// TBD
+            /// The module containing this graph's fused topology.
             /// </summary>
             public IModule Module { get; }
 
             /// <summary>
-            /// TBD
+            /// Returns a graph with the same shape and materialized value and the supplied attributes applied to its module.
             /// </summary>
-            /// <param name="attributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="attributes">The attributes to apply to the graph module.</param>
+            /// <returns>A graph with the supplied attributes applied.</returns>
             public IGraph<TShape, TMat> WithAttributes(Attributes attributes) => new FusedGraph<TShape, TMat>(Module.WithAttributes(attributes) as FusedModule, Shape);
 
             /// <summary>
-            /// TBD
+            /// Returns a graph with the same shape and materialized value and the supplied attributes added to its current module attributes.
             /// </summary>
-            /// <param name="attributes">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="attributes">The attributes to add.</param>
+            /// <returns>A graph with the combined attributes applied.</returns>
             public IGraph<TShape, TMat> AddAttributes(Attributes attributes) => WithAttributes(Module.Attributes.And(attributes));
 
             /// <summary>
-            /// TBD
+            /// Returns a graph with the supplied name added to its attributes.
             /// </summary>
-            /// <param name="name">TBD</param>
-            /// <returns>TBD</returns>
+            /// <param name="name">The name attribute to add.</param>
+            /// <returns>A graph with the name attribute applied.</returns>
             public IGraph<TShape, TMat> Named(string name) => AddAttributes(Attributes.CreateName(name));
 
             /// <summary>
-            /// TBD
+            /// Returns a graph with an asynchronous boundary added to its attributes.
             /// </summary>
-            /// <returns>TBD</returns>
+            /// <returns>A graph with an asynchronous boundary attribute applied.</returns>
             public IGraph<TShape, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
         }
     }

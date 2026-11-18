@@ -285,5 +285,5 @@ public sealed record GapOptionalHandshakeMessage(
 [AkkaSerializerFormatter<Address, AddressFormatter>]
 public sealed partial class GapFixSerializer : AkkaSerializer
 {
-    public static partial SerializerRegistration CreateRegistration();
+    public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
 }

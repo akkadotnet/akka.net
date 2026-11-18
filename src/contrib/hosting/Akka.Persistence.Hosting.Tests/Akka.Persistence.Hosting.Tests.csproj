@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- the HOCON the Hosting builders emitted before they registered plugins in code, see HoconSnapshotSpecs.cs -->
+    <EmbeddedResource Include="HoconSnapshotSpecs.verified.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />

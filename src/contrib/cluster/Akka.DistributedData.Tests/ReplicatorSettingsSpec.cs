@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.DistributedData.Serialization;
 using Akka.Dispatch;
 using Akka.TestKit;
 using FluentAssertions;
@@ -51,24 +52,14 @@ namespace Akka.DistributedData.Tests
             Sys.Settings.Config.GetString("akka.cluster.distributed-data.durable.use-dispatcher")
                 .ShouldBe("akka.cluster.distributed-data.durable.pinned-store");
             
-            Sys.Settings.Config.GetString("akka.actor.serializers.akka-data-replication")
-                .ShouldBe("Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData");
-            
-            Sys.Settings.Config.GetString("akka.actor.serializers.akka-replicated-data")
-                .ShouldBe("Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData");
-            
-            Sys.Settings.Config.GetString("akka.actor.serialization-bindings.\"Akka.DistributedData.IReplicatorMessage, Akka.DistributedData\"")
-                .ShouldBe("akka-data-replication");
-            
-            Sys.Settings.Config.GetString("akka.actor.serialization-bindings.\"Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData\"")
-                .ShouldBe("akka-replicated-data");
-            
-            
-            Sys.Settings.Config.GetInt("akka.actor.serialization-identifiers.\"Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData\"")
-                .ShouldBe(11);
-            
-            Sys.Settings.Config.GetInt("akka.actor.serialization-identifiers.\"Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData\"")
-                .ShouldBe(12);
+            // the serializers register from code, not from reference.conf rows, so ask Serialization for them
+            var serialization = ((ExtendedActorSystem)Sys).Serialization;
+
+            serialization.GetSerializerById(11).Should().BeOfType<ReplicatedDataSerializer>();
+            serialization.GetSerializerById(12).Should().BeOfType<ReplicatorMessageSerializer>();
+
+            serialization.FindSerializerForType(typeof(IReplicatorMessage)).Should().BeOfType<ReplicatorMessageSerializer>();
+            serialization.FindSerializerForType(typeof(IReplicatedDataSerialization)).Should().BeOfType<ReplicatedDataSerializer>();
         }
     }
 }

@@ -1,0 +1,307 @@
+//-----------------------------------------------------------------------
+// <copyright file="ReadJournalDetailsSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#nullable enable
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Actor.Setup;
+using Akka.Configuration;
+using Akka.Persistence.Journal;
+using FluentAssertions;
+using Xunit;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
+
+namespace Akka.Persistence.Query.Tests
+{
+    /// <summary>
+    /// AppContext switches are process-wide, so a spec that flips <c>Akka.DynamicTypeLoading</c> never runs beside another.
+    /// </summary>
+    [CollectionDefinition(Name, DisableParallelization = true)]
+    public sealed class DynamicTypeLoadingCollection
+    {
+        public const string Name = "Akka.DynamicTypeLoading";
+    }
+
+    /// <summary>
+    /// Checks how <see cref="PersistenceQuery"/> finds a read journal provider with <c>Akka.DynamicTypeLoading</c>
+    /// on and off: a registration for the plugin id, then the guard, then reflection.
+    /// </summary>
+    [Collection(DynamicTypeLoadingCollection.Name)]
+    public class ReadJournalDetailsSpec : TestKit.Xunit.TestKit
+    {
+        private const string SwitchName = "Akka.DynamicTypeLoading";
+        private const string TestAssembly = "Akka.Persistence.Query.Tests";
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
+
+        public ReadJournalDetailsSpec(ITestOutputHelper output) : base(ConfigurationFactory.Default(), output: output)
+        {
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should create a registered read journal without a class When dynamic type loading is off")]
+        public async Task Should_create_registered_read_journal_without_a_class_When_switch_is_off()
+        {
+            var calls = 0;
+            var factoryConfig = new TaskCompletionSource<Config>();
+            var setup = Registered((_, config) =>
+                {
+                    Interlocked.Increment(ref calls);
+                    factoryConfig.TrySetResult(config);
+                    return new RegisteredProvider();
+                },
+                ConfigurationFactory.ParseString("color = default\nsize = default"));
+
+            await RunAsync(false, $"{ProviderId}.color = from-hocon", setup, async system =>
+            {
+                var readJournal = PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId);
+
+                readJournal.Should().BeOfType<DummyReadJournal>();
+                calls.Should().Be(1);
+                var config = await factoryConfig.Task.WaitAsync(Timeout);
+                config.GetString("color").Should().Be("from-hocon", "HOCON beats the default config");
+                config.GetString("size").Should().Be("default", "the default config fills what HOCON leaves out");
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should fill the gap When the read journal is registered and HOCON names no class and the switch is on")]
+        public async Task Should_fill_the_gap_When_the_read_journal_is_registered_and_hocon_names_no_class_and_the_switch_is_on()
+        {
+            var calls = 0;
+            var setup = Registered((_, _) =>
+            {
+                Interlocked.Increment(ref calls);
+                return new RegisteredProvider();
+            });
+
+            await RunAsync(true, $"{ProviderId}.color = from-hocon", setup, system =>
+            {
+                PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId).Should().BeOfType<DummyReadJournal>();
+                calls.Should().Be(1);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should start the registered read journal When the HOCON class names it and the switch is off")]
+        public async Task Should_start_the_registered_read_journal_When_the_hocon_class_names_it_and_the_switch_is_off()
+        {
+            var setup = Registered((_, _) => new RegisteredProvider());
+
+            await RunAsync(false, ProviderHocon(typeof(RegisteredProvider)), setup, system =>
+            {
+                PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId).Should().BeOfType<DummyReadJournal>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should throw naming both types When the HOCON class names another type and the switch is off")]
+        public async Task Should_throw_naming_both_types_When_the_hocon_class_names_another_type_and_the_switch_is_off()
+        {
+            var setup = Registered((_, _) => new RegisteredProvider());
+
+            await RunAsync(false, ProviderHocon(typeof(OtherProvider)), setup, system =>
+            {
+                var exception = Assert.Throws<ConfigurationException>(() => PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId));
+
+                exception.Message.Should().Contain($"[{ProviderId}.class]");
+                exception.Message.Should().Contain(typeof(OtherProvider).FullName!);
+                exception.Message.Should().Contain(typeof(RegisteredProvider).FullName!);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should keep the HOCON class When the read journal is registered and the switch is on")]
+        public async Task Should_keep_the_hocon_class_When_the_read_journal_is_registered_and_the_switch_is_on()
+        {
+            var calls = 0;
+            var setup = Registered((_, _) =>
+            {
+                Interlocked.Increment(ref calls);
+                return new RegisteredProvider();
+            });
+
+            // with reflection on nothing changes: HOCON names the provider, the registration is not consulted
+            await RunAsync(true, ProviderHocon(typeof(OtherProvider)), setup, system =>
+            {
+                PersistenceQuery.Get(system).ReadJournalFor<IReadJournal>(ProviderId).Should().BeOfType<OtherReadJournal>();
+                calls.Should().Be(0);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should not call DefaultConfiguration When the read journal is registered and the switch is off")]
+        public async Task Should_not_call_default_configuration_When_the_read_journal_is_registered_and_the_switch_is_off()
+        {
+            DefaultConfigurationCalls = 0;
+            var setup = PersistenceSetup.Create().WithPlugin(ReadJournalDetails.Create(InjectedPath, (_, _) => new ProviderWithDefaultConfigJournal()));
+
+            await RunAsync(false, "", setup, system =>
+            {
+                PersistenceQuery.Get(system).ReadJournalFor<ProviderWithDefaultConfigJournal>(InjectedPath)
+                    .Should().BeOfType<ProviderWithDefaultConfigJournal>();
+
+                DefaultConfigurationCalls.Should().Be(0, "nothing finds DefaultConfiguration by reflection");
+                system.Settings.Config.HasPath(InjectedPath).Should().BeFalse("nothing was injected into the settings");
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should inject the default configuration by reflection When the read journal is registered and the switch is on")]
+        public async Task Should_inject_the_default_configuration_by_reflection_When_the_read_journal_is_registered_and_the_switch_is_on()
+        {
+            DefaultConfigurationCalls = 0;
+            var calls = 0;
+            var setup = PersistenceSetup.Create().WithPlugin(ReadJournalDetails.Create(InjectedPath, (_, _) =>
+            {
+                Interlocked.Increment(ref calls);
+                return new ProviderWithDefaultConfigJournal();
+            }));
+
+            // with reflection on the journal type's DefaultConfiguration is injected as it always was, and its `class`
+            // is HOCON that decides
+            await RunAsync(true, "", setup, system =>
+            {
+                PersistenceQuery.Get(system).ReadJournalFor<ProviderWithDefaultConfigJournal>(InjectedPath)
+                    .Should().BeOfType<ProviderWithDefaultConfigJournal>();
+
+                DefaultConfigurationCalls.Should().Be(1);
+                system.Settings.Config.HasPath(InjectedPath).Should().BeTrue();
+                calls.Should().Be(0, "the injected `class` names the provider, so HOCON decides");
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should throw a ConfigurationException naming the setting When the read journal is unregistered and the switch is off")]
+        public async Task Should_throw_ConfigurationException_When_read_journal_is_unregistered_and_switch_is_off()
+        {
+            await RunAsync(false, ProviderHocon(typeof(RegisteredProvider)), null, system =>
+            {
+                var query = PersistenceQuery.Get(system);
+
+                var exception = Assert.Throws<ConfigurationException>(() => query.ReadJournalFor<DummyReadJournal>(ProviderId));
+
+                exception.Message.Should().Contain($"[{ProviderId}.class]");
+                exception.Message.Should().Contain(typeof(RegisteredProvider).FullName!);
+                exception.Message.Should().Contain("Akka.DynamicTypeLoading");
+                exception.Message.Should().Contain("Akka.Persistence.Hosting");
+                exception.Message.Should().Contain("JournalOptions<TJournal, TReadJournalProvider>");
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should inject the default configuration by reflection When the read journal is unregistered and the switch is on")]
+        public async Task Should_inject_default_configuration_by_reflection_When_read_journal_is_unregistered_and_switch_is_on()
+        {
+            // nothing registered; the plugin section only exists because the journal type's DefaultConfiguration is injected
+            DefaultConfigurationCalls = 0;
+
+            await RunAsync(true, "", null, system =>
+            {
+                PersistenceQuery.Get(system).ReadJournalFor<ProviderWithDefaultConfigJournal>(InjectedPath)
+                    .Should().BeOfType<ProviderWithDefaultConfigJournal>();
+
+                DefaultConfigurationCalls.Should().Be(1);
+                system.Settings.Config.HasPath(InjectedPath).Should().BeTrue();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should share one setup with journals When a read journal is added to a PersistenceSetup")]
+        public async Task Should_share_one_setup_with_journals_When_read_journal_is_added()
+        {
+            const string journalPath = "akka.persistence.journal.registered";
+            var setup = PersistenceSetup.Create()
+                .WithPlugin(JournalDetails.Create(journalPath, _ => new RegisteredJournal()))
+                .WithPlugin(ReadJournalDetails.Create(ProviderId, (_, _) => new RegisteredProvider()));
+
+            await RunAsync(false, "", setup, system =>
+            {
+                UnderlyingProps(Persistence.Instance.Apply(system).JournalFor(journalPath)).Type.Should().Be(typeof(RegisteredJournal));
+                PersistenceQuery.Get(system).ReadJournalFor<DummyReadJournal>(ProviderId).Should().BeOfType<DummyReadJournal>();
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "ReadJournalDetails should reject a null factory or a blank id When registering")]
+        public void Should_reject_null_factory_or_blank_id_When_registering()
+        {
+            Assert.Throws<ArgumentNullException>(() => ReadJournalDetails.Create<RegisteredProvider>(ProviderId, null!));
+            Assert.Throws<ArgumentException>(() => ReadJournalDetails.Create(" ", (_, _) => new RegisteredProvider()));
+        }
+
+        // ---- helpers ----
+
+        private const string ProviderId = "akka.persistence.query.journal.registered";
+        private const string InjectedPath = "akka.persistence.query.journal.from-default-config";
+
+        public static int DefaultConfigurationCalls;
+
+        private static PersistenceSetup Registered(Func<ExtendedActorSystem, Config, RegisteredProvider> factory, Config? defaultConfig = null)
+            => PersistenceSetup.Create().WithPlugin(ReadJournalDetails.Create(ProviderId, factory, defaultConfig));
+
+        private static Props UnderlyingProps(IActorRef actor) => ((ActorRefWithCell)actor).Underlying.Props;
+
+        private static string ProviderHocon(Type type) => $$"""
+            {{ProviderId}} {
+                class = "{{type.FullName}}, {{TestAssembly}}"
+                marker = from-hocon
+            }
+            """;
+
+        private static async Task RunAsync(bool dynamicTypeLoading, string hocon, PersistenceSetup? setup, Func<ExtendedActorSystem, Task> body)
+        {
+            var hadSwitch = AppContext.TryGetSwitch(SwitchName, out var previous);
+            AppContext.SetSwitch(SwitchName, dynamicTypeLoading);
+            try
+            {
+                var actorSystemSetup = BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(hocon)).And(setup ?? PersistenceSetup.Create());
+                var system = ActorSystem.Create("query-setup-spec-" + Guid.NewGuid().ToString("N").Substring(0, 8), actorSystemSetup);
+                try
+                {
+                    await body((ExtendedActorSystem)system);
+                }
+                finally
+                {
+                    await system.Terminate().WaitAsync(Timeout);
+                }
+            }
+            finally
+            {
+                AppContext.SetSwitch(SwitchName, !hadSwitch || previous);
+            }
+        }
+
+        public sealed class RegisteredJournal : MemoryJournal
+        {
+        }
+
+        public sealed class RegisteredProvider : IReadJournalProvider
+        {
+            public IReadJournal GetReadJournal() => new DummyReadJournal();
+        }
+
+        public sealed class OtherReadJournal : IReadJournal
+        {
+        }
+
+        public sealed class OtherProvider : IReadJournalProvider
+        {
+            public IReadJournal GetReadJournal() => new OtherReadJournal();
+        }
+
+        public sealed class ProviderWithDefaultConfigJournal : IReadJournal, IReadJournalProvider
+        {
+            public static Config DefaultConfiguration()
+            {
+                Interlocked.Increment(ref DefaultConfigurationCalls);
+                return ConfigurationFactory.ParseString($"{InjectedPath} {{ class = \"{typeof(ProviderWithDefaultConfigJournal).FullName}, {TestAssembly}\" }}");
+            }
+
+            public IReadJournal GetReadJournal() => this;
+        }
+    }
+}

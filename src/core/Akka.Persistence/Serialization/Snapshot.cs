@@ -20,16 +20,16 @@ namespace Akka.Persistence.Serialization
     public sealed class Snapshot
     {
         /// <summary>
-        /// TBD
+        /// Initializes a snapshot data wrapper.
         /// </summary>
-        /// <param name="data">TBD</param>
+        /// <param name="data">Snapshot data to wrap.</param>
         public Snapshot(object data)
         {
             Data = data;
         }
 
         /// <summary>
-        /// TBD
+        /// Snapshot data wrapped by this object.
         /// </summary>
         public object Data { get; private set; }
 

@@ -1,0 +1,10 @@
+﻿case: scalars-max
+message-type: SmallScalarsMessage
+manifest: small-scalars-v1
+serializer-id: 122003
+byte-count: 50
+
+0000  89 01 cf 7f ff ff ff ff  ff ff ff 02 ca 7f 7f ff  |................|
+0010  ff 03 cd 7f ff 04 cc ff  05 7f 06 cd ff ff 07 ce  |................|
+0020  ff ff ff ff 08 cf ff ff  ff ff ff ff ff ff 09 cd  |................|
+0030  ff ff                                             |..|

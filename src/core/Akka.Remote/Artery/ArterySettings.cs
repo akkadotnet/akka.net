@@ -189,8 +189,9 @@ namespace Akka.Remote.Artery
         /// How long to wait before re-materializing an association's outbound stream (ordinary
         /// or control, independently) after it terminates for any reason other than this
         /// system's own transport <c>Shutdown()</c> -- design.md group 9, "Association
-        /// outbound-stream lifecycle: reconnect". Restarts are unlimited at this fixed backoff;
-        /// there is deliberately no restart-count give-up (see design.md's rationale).
+        /// outbound-stream lifecycle: reconnect". Pending traffic and unacknowledged system
+        /// messages keep retrying at this backoff. A failed stream with no remaining work waits
+        /// for the next send instead of reconnecting to an idle, departed peer.
         /// </summary>
         public TimeSpan OutboundRestartBackoff { get; }
 

@@ -6,11 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Akka.Tests.Actor.Scheduler
 {
@@ -112,18 +114,36 @@ namespace Akka.Tests.Actor.Scheduler
             try
             {
                 var cancelable = new Cancelable(scheduler);
-                scheduler.ScheduleTellRepeatedly(0, 150, TestActor, "Test", ActorRefs.NoSender, cancelable);
+                var interval = TimeSpan.FromMilliseconds(150);
+                scheduler.ScheduleTellRepeatedly(TimeSpan.Zero, interval, TestActor, "Test", ActorRefs.NoSender, cancelable);
                 await ExpectMsgAsync("Test");
                 cancelable.Cancel();
 
-                //Validate that no more messages were sent
-                await ExpectNoMsgAsync(200);
+                // A tick that fired before Cancel() ran (for instance because this thread was
+                // starved for longer than the interval) can legitimately sit in the TestActor's
+                // queue. Drain those, then require the stream of ticks to stop: two intervals
+                // of silence. If cancellation were broken, a tick would arrive every interval,
+                // the silence would never happen and the deadline below would expire.
+                await DrainInFlightTicksAsync(
+                    quietPeriod: interval + interval,
+                    deadline: TimeSpan.FromSeconds(5));
             }
             finally
             {
                 scheduler.AsInstanceOf<IDisposable>().Dispose();
             }
-            
+
+        }
+
+        private async Task DrainInFlightTicksAsync(TimeSpan quietPeriod, TimeSpan deadline)
+        {
+            var clock = Stopwatch.StartNew();
+            while (await ReceiveOneAsync(quietPeriod) != null)
+            {
+                if (clock.Elapsed > deadline)
+                    throw new XunitException(
+                        $"Still receiving scheduled messages {clock.Elapsed} after the repeater was canceled.");
+            }
         }
 
         [Fact]

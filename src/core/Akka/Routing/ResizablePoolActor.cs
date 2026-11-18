@@ -18,17 +18,17 @@ namespace Akka.Routing
     internal class ResizablePoolActor : RouterPoolActor
     {
         /// <summary>
-        /// TBD
+        /// Creates a resizable pool router actor with the supplied supervision strategy.
         /// </summary>
-        /// <param name="supervisorStrategy">TBD</param>
+        /// <param name="supervisorStrategy">The strategy used to supervise routees.</param>
         public ResizablePoolActor(SupervisorStrategy supervisorStrategy) : base(supervisorStrategy)
         {
         }
 
         /// <summary>
-        /// TBD
+        /// The resizable pool cell hosting this actor.
         /// </summary>
-        /// <exception cref="ActorInitializationException">TBD</exception>
+        /// <exception cref="ActorInitializationException">The actor is not running inside a resizable pool cell.</exception>
         protected ResizablePoolCell ResizerCell
         {
             get
@@ -39,10 +39,9 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Processes resize commands and delegates other messages to the pool router actor.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The resize command or other message to handle.</param>
         protected override void OnReceive(object message)
         {
             if (message is Resize && ResizerCell != null)
@@ -56,7 +55,7 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Keeps the resizable router alive when all current routees are removed.
         /// </summary>
         protected override void StopIfAllRouteesRemoved()
         {

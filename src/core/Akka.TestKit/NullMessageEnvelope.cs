@@ -10,12 +10,12 @@ using Akka.Actor;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// Sentinel envelope indicating that the test actor has not dequeued a message.
     /// </summary>
     public sealed class NullMessageEnvelope : MessageEnvelope
     {
         /// <summary>
-        /// TBD
+        /// The shared sentinel instance.
         /// </summary>
         public static NullMessageEnvelope Instance = new();
 

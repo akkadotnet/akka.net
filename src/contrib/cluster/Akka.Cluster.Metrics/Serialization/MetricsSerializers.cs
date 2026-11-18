@@ -13,7 +13,7 @@ using Akka.Serialization;
 namespace Akka.Cluster.Metrics.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Akka.Cluster.Metrics' reference.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.Cluster.Metrics' serializers, bindings and ids. They register as defaults when the module is deployed; its reference.conf carries no rows for them.
     /// </summary>
     internal sealed class MetricsSerializers : ModuleSerializers
     {

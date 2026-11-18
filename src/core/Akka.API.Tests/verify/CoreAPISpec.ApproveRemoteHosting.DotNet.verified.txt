@@ -9,6 +9,17 @@ namespace Akka.Remote.Hosting
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Remote.Hosting.RemoteOptions> configure) { }
         public static Akka.Hosting.AkkaConfigurationBuilder WithRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, string? hostname = null, int? port = default, string? publicHostname = null, int? publicPort = default) { }
     }
+    public static class ArteryRemoteHostingExtensions
+    {
+        public static Akka.Hosting.AkkaConfigurationBuilder WithArteryRemoting(this Akka.Hosting.AkkaConfigurationBuilder builder, System.Action<Akka.Remote.Hosting.ArteryRemoteOptions> configure) { }
+    }
+    public sealed class ArteryRemoteOptions
+    {
+        public ArteryRemoteOptions() { }
+        public string? HostName { get; set; }
+        public int? Port { get; set; }
+        public Akka.Remote.Artery.ArteryTlsSettings? Tls { get; set; }
+    }
     public class DeadlineFailureDetectorOptions
     {
         public DeadlineFailureDetectorOptions() { }
@@ -46,6 +57,7 @@ namespace Akka.Remote.Hosting
     public sealed class SslCertificateOptions
     {
         public SslCertificateOptions() { }
+        public string? CommonName { get; set; }
         public string? Password { get; set; }
         public string? Path { get; set; }
         public string? StoreLocation { get; set; }
@@ -57,6 +69,7 @@ namespace Akka.Remote.Hosting
     {
         public SslOptions() { }
         public Akka.Remote.Hosting.SslCertificateOptions CertificateOptions { get; set; }
+        public Akka.IO.TlsCertificateSource? CertificateSource { get; set; }
         public Akka.Remote.Transport.DotNetty.CertificateValidationCallback? CustomValidator { get; set; }
         public bool? RequireMutualAuthentication { get; set; }
         public bool? SuppressValidation { get; set; }

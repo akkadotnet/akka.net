@@ -38,6 +38,10 @@ The following example shows a simple Telnet client. The client send lines entere
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/TelnetClient.cs?name=telnetClient)]
 
+### TLS Connections
+
+Akka.IO TCP supports TLS on individual connections and listeners. See [TLS for Akka.IO, Akka.Streams, and Artery](../remoting/tls-for-io-streams-artery.md) for the current Akka.IO API, trust policies, and handshake behavior.
+
 ### Server Connection
 
 To accept connections, an actor sends an `Tcp.Bind` message to the TCP manager, passing the `bind handler` in the message.

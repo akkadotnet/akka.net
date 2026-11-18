@@ -25,20 +25,20 @@ namespace Akka.DistributedData
     /// i.e. if used outside the Replicator infrastructure, but the worst thing that can happen is that
     /// a full merge is performed instead of the fast forward merge.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The concrete replicated-data type that supports fast-forward merge.</typeparam>
     [InternalApi]
     public abstract class FastMerge<T> : IReplicatedData<T> where T : FastMerge<T>
     {
         /// <summary>
-        /// TBD
+        /// The previously linked instance used to recognize an update followed by its merge.
         /// </summary>
         internal FastMerge<T> Ancestor = null;
 
         /// <summary>
         /// INTERNAL API: should be called from "updating" methods
         /// </summary>
-        /// <param name="newData">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="newData">The updated instance to associate with this instance.</param>
+        /// <returns><paramref name="newData"/> with its ancestor link assigned.</returns>
         [InternalApi]
         protected T AssignAncestor(T newData)
         {
@@ -50,15 +50,15 @@ namespace Akka.DistributedData
         /// <summary>
         /// INTERNAL API: should be used from merge
         /// </summary>
-        /// <param name="newData">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="newData">The candidate descendant instance.</param>
+        /// <returns><see langword="true"/> when <paramref name="newData"/> records this instance as its ancestor.</returns>
         [InternalApi]
         protected bool IsAncestorOf(T newData) => ReferenceEquals(newData.Ancestor, this);
 
         /// <summary>
         /// INTERNAL API: should be called from merge 
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>This instance after clearing its ancestor link.</returns>
         [InternalApi]
         protected T ClearAncestor()
         {
@@ -67,17 +67,17 @@ namespace Akka.DistributedData
         }
 
         /// <summary>
-        /// TBD
+        /// Merges this replicated-data value with another value of the same concrete type.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">The value to merge.</param>
+        /// <returns>The merged value.</returns>
         public abstract T Merge(T other);
 
         /// <summary>
-        /// TBD
+        /// Merges this replicated-data value with another replicated-data value.
         /// </summary>
-        /// <param name="other">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="other">A value of the same concrete type as this instance.</param>
+        /// <returns>The merged replicated-data value.</returns>
         public IReplicatedData Merge(IReplicatedData other) => Merge((T)other);
     }
 }

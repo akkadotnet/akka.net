@@ -13,7 +13,7 @@ using Akka.Serialization;
 namespace Akka.DistributedData.Serialization
 {
     /// <summary>
-    /// INTERNAL API. The serializer and binding rows of Akka.DistributedData's reference.conf, so they resolve without reflection.
+    /// INTERNAL API. Akka.DistributedData's serializers, bindings and ids. They register as defaults when the module is deployed; its reference.conf carries no rows for them.
     /// </summary>
     internal sealed class DistributedDataSerializers : ModuleSerializers
     {

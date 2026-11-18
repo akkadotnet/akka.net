@@ -18,28 +18,28 @@ public class StartsWithString : IStringMatcher
     private readonly string _start;
 
     /// <summary>
-    /// TBD
+    /// Creates a matcher for strings that begin with a case-insensitive prefix.
     /// </summary>
-    /// <param name="start">TBD</param>
+    /// <param name="start">The required prefix.</param>
     public StartsWithString(string start)
     {
         _start = start;
     }
 
     /// <summary>
-    /// TBD
+    /// Checks whether the string starts with the configured prefix, ignoring case.
     /// </summary>
-    /// <param name="s">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="s">The string to inspect.</param>
+    /// <returns><c>true</c> if the string starts with the prefix; otherwise, <c>false</c>.</returns>
     public bool IsMatch(string s)
     {
         return s.StartsWith(_start, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// TBD
+    /// Returns the prefix criterion in diagnostic form.
     /// </summary>
-    /// <returns>TBD</returns>
+    /// <returns>A description of the prefix match.</returns>
     public override string ToString()
     {
         return "starts with \"" + _start + "\"";

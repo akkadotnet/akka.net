@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Akka.Reminders.PostgreSql</PackageId>
+    <Description>PostgreSQL storage implementation for Akka.Reminders.</Description>
+    <PackageTags>$(AkkaPackageTags);reminders;sql;postgresql</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka.Reminders\Akka.Reminders.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Akka.Event" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\PostgreSql-Create.sql" />
+  </ItemGroup>
+
+</Project>

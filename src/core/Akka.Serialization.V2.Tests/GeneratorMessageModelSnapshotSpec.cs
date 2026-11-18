@@ -115,8 +115,6 @@ public sealed class GeneratorMessageModelSnapshotSpec
                 var flags = new List<string> { $"nullable: {field.IsNullable}" };
                 if (field.Mapping.IsValueType)
                     flags.Add("valueType");
-                if (field.UnionDeclaredOnObjectField)
-                    flags.Add("unionDeclaredOnObjectField");
 
                 sb.AppendLine($"  [{field.Index}] {field.Name}: kind={field.Mapping.Kind}, type={field.TypeFullName} ({string.Join(", ", flags)})");
 
@@ -125,7 +123,7 @@ public sealed class GeneratorMessageModelSnapshotSpec
                     foreach (var member in field.UnionMembers.OrderBy(m => m.TypeFullName, StringComparer.Ordinal))
                     {
                         sb.AppendLine(
-                            $"      union member: {member.TypeFullName} (valueType={member.IsValueType}, assignable={member.IsAssignable}, " +
+                            $"      union member: {member.TypeFullName} (valueType={member.IsValueType}, " +
                             $"supported={member.IsSupported}, sealed={member.IsSealed}, abstract={member.IsAbstract})");
                     }
                 }

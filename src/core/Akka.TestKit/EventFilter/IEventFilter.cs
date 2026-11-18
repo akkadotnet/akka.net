@@ -12,14 +12,14 @@ namespace Akka.TestKit;
 
 // ReSharper disable once InconsistentNaming
 /// <summary>
-/// TBD
+/// A predicate that determines whether a log event should be suppressed by a test event filter.
 /// </summary>
 public interface IEventFilter
 {
     /// <summary>
-    /// TBD
+    /// Applies this filter to a log event.
     /// </summary>
-    /// <param name="logEvent">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="logEvent">The log event to inspect.</param>
+    /// <returns><c>true</c> if the event matches and should be filtered; otherwise, <c>false</c>.</returns>
     bool Apply(LogEvent logEvent);
 }

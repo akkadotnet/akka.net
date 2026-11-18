@@ -130,10 +130,12 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         /// <summary>
-        /// TBD
+        /// Handles an exception raised while processing a TCP channel and closes the channel.
+        /// Socket shutdown and reset errors notify the association listener of a shutdown; other
+        /// errors notify it of an unknown disassociation, with TLS errors logged with details.
         /// </summary>
-        /// <param name="context">TBD</param>
-        /// <param name="exception">TBD</param>
+        /// <param name="context">The channel context for the connection that raised the exception.</param>
+        /// <param name="exception">The exception raised while processing the channel.</param>
         public override void ExceptionCaught(IChannelHandlerContext context, Exception exception)
         {
             var se = exception as SocketException;

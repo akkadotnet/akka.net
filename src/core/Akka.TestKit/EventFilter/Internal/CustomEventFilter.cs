@@ -19,9 +19,9 @@ public class CustomEventFilter : EventFilterBase
     private readonly Predicate<LogEvent> _predicate;
 
     /// <summary>
-    /// TBD
+    /// Creates a custom filter that evaluates each log event with the supplied predicate.
     /// </summary>
-    /// <param name="predicate">TBD</param>
+    /// <param name="predicate">Returns true for log events that this filter should suppress.</param>
     public CustomEventFilter(Predicate<LogEvent> predicate)
         : base(null, null)
     {
@@ -29,17 +29,17 @@ public class CustomEventFilter : EventFilterBase
     }
 
     /// <summary>
-    /// TBD
+    /// Evaluates the predicate for the specified event.
     /// </summary>
-    /// <param name="evt">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="evt">The log event to inspect.</param>
+    /// <returns>The result of the configured predicate.</returns>
     protected override bool IsMatch(LogEvent evt)
     {
         return _predicate(evt);
     }
 
     /// <summary>
-    /// TBD
+    /// Gets the label used to describe this filter in diagnostics.
     /// </summary>
     protected override string FilterDescriptiveName { get { return "Custom"; } }
 }

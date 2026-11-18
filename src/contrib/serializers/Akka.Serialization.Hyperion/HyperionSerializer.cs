@@ -30,7 +30,7 @@ namespace Akka.Serialization
         /// <summary>
         /// Returns a default configuration for Hyperion serializer.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The default Hyperion serializer configuration loaded from its embedded reference configuration.</returns>
         public static Config DefaultConfiguration()
         {
             return ConfigurationFactory.FromResource<HyperionSerializer>("Akka.Serialization.Hyperion.reference.conf");

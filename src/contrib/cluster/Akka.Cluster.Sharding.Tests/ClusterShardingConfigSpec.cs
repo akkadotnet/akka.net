@@ -46,7 +46,7 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(TimeSpan.FromSeconds(10), config.GetTimeSpan("rebalance-interval"));
             Assert.Equal(string.Empty, config.GetString("journal-plugin-id"));
             Assert.Equal(string.Empty, config.GetString("snapshot-plugin-id"));
-            Assert.Equal("persistence", config.GetString("state-store-mode"));
+            Assert.Equal("ddata", config.GetString("state-store-mode"));
             Assert.Equal("ddata", config.GetString("remember-entities-store"));
             Assert.Equal(TimeSpan.FromSeconds(2), config.GetTimeSpan("waiting-for-state-timeout"));
             Assert.Equal(TimeSpan.FromSeconds(5), config.GetTimeSpan("updating-state-timeout"));

@@ -46,7 +46,7 @@ public sealed class ObjectElementSpec : IAsyncLifetime
         // non-SerializerV2 serializer (so an element's SizeHint can be deliberately un-sizable).
         var setup = ActorSystemSetup.Create(SerializationSetup.Create(extendedSystem =>
         {
-            var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
+            var generated = GeneratedTestSerializer.CreateSerializerDetails(extendedSystem);
             var custom = SerializerDetails.Create(
                 "custom-protobuf",
                 new CustomProtobufPayloadSerializer(extendedSystem),
@@ -217,7 +217,7 @@ public sealed class ObjectElementSpec : IAsyncLifetime
             [AkkaSerializer<IProtocol>("sample", 121101)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
-                public static partial SerializerRegistration CreateRegistration();
+                public static partial global::Akka.Serialization.SerializerDetails CreateSerializerDetails(global::Akka.Actor.ExtendedActorSystem system);
             }
 
             [AkkaSerializable(Manifest = "bad-key-v1")]

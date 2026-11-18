@@ -28,12 +28,12 @@ namespace Akka.Actor
         private bool IsWalking => !_terminationPromise.Task.IsCompleted;
 
         /// <summary>
-        /// TBD
+        /// Creates the supervisor responsible for completing actor system termination.
         /// </summary>
-        /// <param name="root">TBD</param>
-        /// <param name="provider">TBD</param>
-        /// <param name="terminationPromise">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="root">The actor system's root path.</param>
+        /// <param name="provider">The actor reference provider for the system.</param>
+        /// <param name="terminationPromise">The task completed with the system's final status.</param>
+        /// <param name="log">The logger used for unexpected messages and guardian failures.</param>
         public RootGuardianSupervisor(RootActorPath root, IActorRefProvider provider, TaskCompletionSource<Status> terminationPromise, ILoggingAdapter log)
         {
             _log = log;
@@ -43,10 +43,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Logs ordinary messages received while the root supervisor is waiting for termination.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message received.</param>
+        /// <param name="sender">The sender of the message.</param>
         /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
         protected override void TellInternal(object message, IActorRef sender)
         {
@@ -58,9 +58,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Handles root guardian failures and termination notifications.
         /// </summary>
-        /// <param name="systemMessage">TBD</param>
+        /// <param name="systemMessage">The system message to process.</param>
         public override void SendSystemMessage(ISystemMessage systemMessage)
         {
             var failed = systemMessage as Failed;
@@ -89,11 +89,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The cause recorded from a failed root guardian, if termination followed a failure.
         /// </summary>
         public Exception CauseOfTermination { get; private set; }
         /// <summary>
-        /// TBD
+        /// Completes the system termination task with success or the recorded guardian failure.
         /// </summary>
         public override void Stop()
         {
@@ -103,7 +103,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The path assigned to this root supervisor.
         /// </summary>
         public override ActorPath Path
         {
@@ -111,7 +111,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The actor reference provider for this supervisor.
         /// </summary>
         public override IActorRefProvider Provider
         {
@@ -119,4 +119,3 @@ namespace Akka.Actor
         }
     }
 }
-

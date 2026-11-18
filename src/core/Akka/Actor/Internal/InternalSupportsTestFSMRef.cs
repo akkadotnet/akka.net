@@ -14,8 +14,8 @@ namespace Akka.Actor.Internal
     /// This is used to let TestFSMRef in TestKit access to internal methods.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    /// <typeparam name="TState">TBD</typeparam>
-    /// <typeparam name="TData">TBD</typeparam>
+    /// <typeparam name="TState">The type used to represent FSM states.</typeparam>
+    /// <typeparam name="TData">The type used to represent FSM state data.</typeparam>
     [InternalApi]
     public interface IInternalSupportsTestFSMRef<TState, TData>
     {
@@ -23,7 +23,7 @@ namespace Akka.Actor.Internal
         /// INTERNAL API. Used for testing.
         /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
         /// </summary>
-        /// <param name="upcomingState">TBD</param>
+        /// <param name="upcomingState">The FSM state and data to apply to the actor.</param>
         void ApplyState(FSMBase.State<TState, TData> upcomingState);
 
         /// <summary>
@@ -48,4 +48,3 @@ namespace Akka.Actor.Internal
         public static InternalActivateFsmLogging Instance { get; } = new();
     }
 }
-

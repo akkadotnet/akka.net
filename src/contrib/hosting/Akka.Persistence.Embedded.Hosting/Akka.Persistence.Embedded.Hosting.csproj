@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Akka.Hosting support for Akka.Persistence.Embedded, the SQLite journal, snapshot store and read journal. Native AOT compatible.</Description>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <PackageTags>$(AkkaPackageTags);hosting;persistence;event sourcing;sqlite;aot</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsAotCompatible>true</IsAotCompatible>
+        <PackageProjectUrl>https://getakka.net/articles/hosting/index.html</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Drop the repo-root README that Directory.Build.props packs into every package,
+             then pack this module's own README in its place. -->
+        <None Remove="$([System.IO.Path]::GetDirectoryName($(DirectoryBuildPropsPath)))/README.md" />
+        <None Update="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />
+        <ProjectReference Include="..\..\persistence\Akka.Persistence.Embedded\Akka.Persistence.Embedded.csproj" />
+    </ItemGroup>
+
+</Project>

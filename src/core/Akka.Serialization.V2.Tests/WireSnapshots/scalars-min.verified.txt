@@ -1,0 +1,9 @@
+﻿case: scalars-min
+message-type: SmallScalarsMessage
+manifest: small-scalars-v1
+serializer-id: 122003
+byte-count: 34
+
+0000  89 01 d3 80 00 00 00 00  00 00 00 02 ca ff 7f ff  |................|
+0010  ff 03 d1 80 00 04 00 05  d0 80 06 00 07 00 08 00  |................|
+0020  09 00                                             |..|

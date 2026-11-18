@@ -29,7 +29,8 @@ namespace Akka.DistributedData
         private readonly ActorSystem _system;
 
         /// <summary>
-        /// Returns true if this member is not tagged with the role configured for the replicas.
+        /// Returns true if the cluster has terminated or this member does not have the configured replica role.
+        /// When either condition holds as the extension is constructed, its <see cref="Replicator"/> is set to dead letters.
         /// </summary>
         public bool IsTerminated => Cluster.Cluster.Get(_system).IsTerminated || (!string.IsNullOrEmpty(_settings.Role) && !Cluster.Cluster.Get(_system).SelfRoles.Contains(_settings.Role));
 
@@ -44,17 +45,17 @@ namespace Akka.DistributedData
         public bool IsDurable => _settings.IsDurable;
 
         /// <summary>
-        /// TBD
+        /// Gets the distributed-data extension for an actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The actor system that owns the extension.</param>
+        /// <returns>The distributed-data extension associated with <paramref name="system"/>.</returns>
         public static DistributedData Get(ActorSystem system) =>
             system.WithExtension<DistributedData, DistributedDataProvider>();
 
         /// <summary>
-        /// TBD
+        /// Creates the extension, loads its settings, and starts the replicator when the local cluster member is eligible to host replicas.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The extended actor system that owns the extension.</param>
         public DistributedData(ExtendedActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DefaultConfig());
@@ -105,9 +106,9 @@ namespace Akka.DistributedData
         
 
         /// <summary>
-        /// TBD
+        /// Loads the default distributed-data HOCON configuration resource.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The configuration from the packaged <c>Akka.DistributedData.reference.conf</c> resource.</returns>
         public static Config DefaultConfig() =>
             ConfigurationFactory.FromResource<DistributedData>("Akka.DistributedData.reference.conf");
 
@@ -116,7 +117,7 @@ namespace Akka.DistributedData
         /// <summary>
         /// Asynchronously returns list of locally known keys.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A task that completes with the key identifiers currently stored in the local replicator; deleted keys are omitted.</returns>
         public async Task<IImmutableSet<string>> GetKeysAsync(CancellationToken cancellation = default (CancellationToken))
         {
             var response = await Replicator.Ask(Dsl.GetKeyIds, cancellation);
@@ -240,15 +241,15 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// TBD
+    /// Provides <see cref="DistributedData"/> as an actor-system extension.
     /// </summary>
     public class DistributedDataProvider : ExtensionIdProvider<DistributedData>
     {
         /// <summary>
-        /// TBD
+        /// Creates the distributed-data extension for the supplied actor system.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="system">The extended actor system that owns the extension.</param>
+        /// <returns>The initialized distributed-data extension.</returns>
         public override DistributedData CreateExtension(ExtendedActorSystem system) => new(system);
     }
 

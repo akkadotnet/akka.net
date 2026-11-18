@@ -197,6 +197,17 @@ namespace Akka.IO
             private HandlerDied() { }
         }
 
+        /// <summary>Result of asynchronous transport initialization sent through the actor mailbox.</summary>
+        private sealed class TransportInitializationCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            public Exception? Failure { get; }
+
+            public TransportInitializationCompleted(Exception? failure)
+            {
+                Failure = failure;
+            }
+        }
+
         #endregion
 
         #region Write command wrapper
@@ -222,6 +233,7 @@ namespace Akka.IO
 
         // Transport connection — owns pipes, pump loops, stream
         private ITransportConnection? _transport;
+        private bool _transportStarted;
 
         // CTS for pipe read cancellation
         private CancellationTokenSource? _cts;
@@ -322,8 +334,9 @@ namespace Akka.IO
             {
                 // Graceful close only when the close actually completed: ConfirmedClosed, or Closed
                 // after an upgrade. Anything else aborts below; CloseAsync could wait on a stuck write.
-                if (_closeInformation?.ClosedEvent is ConfirmedClosed ||
+                if (_transportStarted && (_closeInformation?.ClosedEvent is ConfirmedClosed ||
                     (_fullCloseCommander is not null && _closeInformation?.ClosedEvent is Closed))
+                )
                 {
                     // Only ShutdownAsync ran, so the socket is still open: close it without Abort's
                     // linger-0 RST. Fire-and-forget keeps PostStop non-blocking; the fault is observed below.
@@ -354,9 +367,12 @@ namespace Akka.IO
             }
             else
             {
-                // Transport was never created (e.g. PoisonPill before Register).
+                // Transport was never created (e.g. PoisonPill before TCP connect).
                 // Close the socket directly since no transport owns it.
-                try { Socket.Close(); }
+                try
+                {
+                    Socket.Close();
+                }
                 catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
             }
 
@@ -383,6 +399,7 @@ namespace Akka.IO
                 foreach (var sub in _closeInformation.NotificationsTo)
                     sub.Tell(_closeInformation.ClosedEvent);
             }
+
         }
 
         protected override void PostRestart(Exception reason)
@@ -393,7 +410,7 @@ namespace Akka.IO
         /// <summary>
         /// Used in subclasses to start the common machinery above once a channel is connected.
         /// </summary>
-        protected void CompleteConnect(IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        private void CompleteConnect(IActorRef commander, IEnumerable<Inet.SocketOption> options)
         {
             // Turn off Nagle's algorithm by default
             try
@@ -410,21 +427,81 @@ namespace Akka.IO
                 option.AfterConnect(Socket);
             }
 
-            _commander = commander;
-            Context.WatchWith(_commander, CommanderDied.Instance);
             commander.Tell(new Connected(Socket.RemoteEndPoint!, Socket.LocalEndPoint!));
 
             Context.SetReceiveTimeout(Settings.RegisterTimeout);
             Become(AwaitRegBehaviour);
         }
 
+        /// <summary>Creates and initializes a transport before notifying the connection owner.</summary>
+        protected void InitializeTransport(IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        {
+            _commander = commander;
+            Context.WatchWith(commander, CommanderDied.Instance);
+
+            Task ready;
+            try
+            {
+                _transport = CreateTransport();
+                ready = _transport.InitializeAsync();
+            }
+            catch (Exception cause)
+            {
+                OnTransportInitializationFailed(cause);
+                return;
+            }
+
+            if (ready.IsCompletedSuccessfully)
+            {
+                CompleteConnect(commander, options);
+                return;
+            }
+
+            Become(() => TransportInitializingBehaviour(commander, options));
+            var self = Self;
+            ready.PipeTo(self, self,
+                success: () => new TransportInitializationCompleted(failure: null),
+                failure: cause => new TransportInitializationCompleted(cause));
+        }
+
+        /// <summary>Handles a transport initialization failure in the owning actor.</summary>
+        protected virtual void OnTransportInitializationFailed(Exception cause)
+        {
+            // A certificate provider that already logged why it failed throws a TlsCertificateUnavailableException,
+            // so one cause does not log a Warning for every connection. Nothing is lost: the line is still written,
+            // at Debug, and its cause chain holds the provider's original exception.
+            if (TlsCertificateUnavailableException.IsIn(cause))
+                Log.Debug(cause, "Could not initialize TCP transport for [{0}]; the certificate provider already reported why",
+                    Socket.RemoteEndPoint);
+            else
+                Log.Warning(cause, "Could not initialize TCP transport for [{0}]", Socket.RemoteEndPoint);
+            Context.Stop(Self);
+        }
+
+        private void TransportInitializingBehaviour(IActorRef commander, IEnumerable<Inet.SocketOption> options)
+        {
+            Receive<TransportInitializationCompleted>(result =>
+            {
+                if (result.Failure is not null)
+                {
+                    OnTransportInitializationFailed(result.Failure);
+                    return;
+                }
+
+                CompleteConnect(commander, options);
+            });
+            Receive<CommanderDied>(_ => Context.Stop(Self));
+        }
+
         /// <summary>
         /// Starts the transport connection and monitors its read pump.
         /// Called after registration is complete.
         /// </summary>
-        protected void StartTransport(ITransportConnection transport)
+        private void StartTransport()
         {
-            _transport = transport;
+            var transport = _transport ?? throw new InvalidOperationException("TCP transport was not initialized.");
+            transport.Start();
+            _transportStarted = true;
             _cts = new CancellationTokenSource();
 
             // Monitor the read pump for completion/errors
@@ -536,9 +613,8 @@ namespace Akka.IO
                 _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
                 Context.SetReceiveTimeout(null);
 
-                // Create and start the transport now that we have a handler
-                var transport = CreateTransport();
-                StartTransport(transport);
+                // Start the initialized transport now that we have a handler
+                StartTransport();
 
                 // Allow reading unless pull mode
                 if (!_pullMode)
@@ -852,28 +928,7 @@ namespace Akka.IO
 
             if (_traceLogging) Log.Debug("RequestPipeRead: kicking off pipe read");
 
-            var self = Self;
-            var reader = _transport.Input;
-            var ct = _cts.Token;
-
-            _ = AwaitPipeReadAsync();
-
-            async Task AwaitPipeReadAsync()
-            {
-                try
-                {
-                    var result = await ReadPipeChunkAsync(reader, ct).ConfigureAwait(false);
-                    self.Tell(result);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    self.Tell(PipeReadCanceled.Instance);
-                }
-                catch (Exception ex)
-                {
-                    self.Tell(new IoTaskFailed(ex));
-                }
-            }
+            _ = ReadPipeAndSendAsync(_transport.Input, _cts.Token, Self);
         }
 
         /// <summary>
@@ -951,35 +1006,45 @@ namespace Akka.IO
                 Log.Debug("Pipe read cancelled");
         }
 
-        private static async ValueTask<PipeReadCompleted> ReadPipeChunkAsync(PipeReader reader, CancellationToken ct)
+        private static async Task ReadPipeAndSendAsync(PipeReader reader, CancellationToken ct, IActorRef self)
         {
-            while (true)
+            try
             {
-                var result = await reader.ReadAsync(ct).ConfigureAwait(false);
-                var buffer = result.Buffer;
-
-                // We must copy out of the pipe's pooled segments before AdvanceTo because
-                // Tell is non-blocking — the handler may not have consumed the data by the
-                // time the segments are returned to the pool. Zero-copy reads require an
-                // explicit ack protocol with the handler that's out of scope here.
-                // The result is wrapped in ReadOnlySequence<byte> (single-segment in practice)
-                // so downstream Streams stages can chain sequences without further copies.
-                ReadOnlySequence<byte> data;
-                if (buffer.Length > 0)
+                while (true)
                 {
-                    var array = new byte[checked((int)buffer.Length)];
-                    buffer.CopyTo(array);
-                    data = new ReadOnlySequence<byte>(array);
-                }
-                else
-                {
-                    data = ReadOnlySequence<byte>.Empty;
-                }
+                    var result = await reader.ReadAsync(ct).ConfigureAwait(false);
+                    var buffer = result.Buffer;
 
-                reader.AdvanceTo(buffer.End);
+                    // Tell is asynchronous, so consumers must own stable bytes before AdvanceTo
+                    // returns the pipe's segments to its pool. Keep this copy on the ordinary TCP path.
+                    ReadOnlySequence<byte> data;
+                    if (buffer.Length > 0)
+                    {
+                        var array = new byte[checked((int)buffer.Length)];
+                        buffer.CopyTo(array);
+                        data = new ReadOnlySequence<byte>(array);
+                    }
+                    else
+                    {
+                        data = ReadOnlySequence<byte>.Empty;
+                    }
 
-                if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
-                    return new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled);
+                    reader.AdvanceTo(buffer.End);
+
+                    if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
+                    {
+                        self.Tell(new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled));
+                        return;
+                    }
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                self.Tell(PipeReadCanceled.Instance);
+            }
+            catch (Exception ex)
+            {
+                self.Tell(new IoTaskFailed(ex));
             }
         }
 

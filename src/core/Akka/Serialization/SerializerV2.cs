@@ -6,17 +6,21 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
-using System;
 using System.Buffers;
 using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.Serialization
 {
     /// <summary>
     /// A serializer that writes directly into caller-owned buffers and reads from sequence-backed input.
     /// </summary>
-    public abstract class SerializerV2 : Serializer
+    /// <remarks>
+    /// <see cref="SerializerV2"/> derives from <see cref="SerializerWithStringManifest"/> so that code written
+    /// against the 1.5 contract - for example a persistence plugin that stores
+    /// <c>serializer is SerializerWithStringManifest s ? s.Manifest(payload) : ...</c> - stores the manifest this
+    /// serializer returns from <see cref="Manifest(object)"/> rather than a CLR type name it cannot read back.
+    /// </remarks>
+    public abstract class SerializerV2 : SerializerWithStringManifest
     {
         /// <summary>
         /// Returned by <see cref="SizeHint"/> when the serialized size cannot be cheaply predicted.
@@ -32,13 +36,8 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// V2 serializers use manifest-aware dispatch. New V2 serializers should emit
-        /// non-empty manifests; legacy serializer-id ports may preserve empty manifests.
-        /// </summary>
-        public sealed override bool IncludeManifest => true;
-
-        /// <summary>
-        /// Returns the manifest used by this serializer for <paramref name="obj"/>.
+        /// Returns the manifest used by this serializer for <paramref name="obj"/>. New V2 serializers should
+        /// emit non-empty manifests; legacy serializer-id ports may preserve empty manifests.
         /// </summary>
         public abstract override string Manifest(object obj);
 
@@ -75,14 +74,6 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, string manifest)
         {
             return Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
-        }
-
-        /// <summary>
-        /// Deserializes a byte array using a type manifest.
-        /// </summary>
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            return FromBinary(bytes, type?.TypeQualifiedName() ?? string.Empty);
         }
     }
 }

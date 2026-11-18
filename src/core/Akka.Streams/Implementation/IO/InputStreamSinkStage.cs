@@ -24,19 +24,19 @@ namespace Akka.Streams.Implementation.IO
         #region internal classes
 
         /// <summary>
-        /// TBD
+        /// Marker for messages sent from the materialized stream adapter to the stage.
         /// </summary>
         internal interface IAdapterToStageMessage
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Signals that the adapter consumed a queued element and the stage may pull again.
         /// </summary>
         internal sealed class ReadElementAcknowledgement : IAdapterToStageMessage
         {
             /// <summary>
-            /// TBD
+            /// The shared read acknowledgement message.
             /// </summary>
             public static readonly ReadElementAcknowledgement Instance = new();
 
@@ -47,12 +47,12 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Requests completion of the stage when the materialized adapter is disposed.
         /// </summary>
         internal sealed class Close : IAdapterToStageMessage
         {
             /// <summary>
-            /// TBD
+            /// The shared close message.
             /// </summary>
             public static readonly Close Instance = new();
 
@@ -63,26 +63,26 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Marker for data and lifecycle messages read by the materialized stream adapter.
         /// </summary>
         internal interface IStreamToAdapterMessage
         {
         }
 
         /// <summary>
-        /// TBD
+        /// Carries a byte sequence from the stage to the materialized stream adapter.
         /// </summary>
         internal readonly struct Data : IStreamToAdapterMessage
         {
             /// <summary>
-            /// TBD
+            /// The byte sequence supplied by the upstream stream.
             /// </summary>
             public readonly ReadOnlySequence<byte> Bytes;
 
             /// <summary>
-            /// TBD
+            /// Creates a data message for the supplied byte sequence.
             /// </summary>
-            /// <param name="bytes">TBD</param>
+            /// <param name="bytes">The bytes to make available to the adapter.</param>
             public Data(ReadOnlySequence<byte> bytes)
             {
                 Bytes = bytes;
@@ -90,12 +90,12 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Signals that the upstream stream completed normally.
         /// </summary>
         internal sealed class Finished : IStreamToAdapterMessage
         {
             /// <summary>
-            /// TBD
+            /// The shared upstream-completion message.
             /// </summary>
             public static readonly Finished Instance = new();
 
@@ -106,12 +106,12 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Marks the start of the stage-to-adapter message sequence.
         /// </summary>
         internal sealed class Initialized : IStreamToAdapterMessage
         {
             /// <summary>
-            /// TBD
+            /// The shared initialization message.
             /// </summary>
             public static readonly Initialized Instance = new();
 
@@ -122,19 +122,19 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Signals that the upstream stream failed.
         /// </summary>
         internal readonly struct Failed : IStreamToAdapterMessage
         {
             /// <summary>
-            /// TBD
+            /// The upstream failure.
             /// </summary>
             public readonly Exception Cause;
 
             /// <summary>
-            /// TBD
+            /// Creates a failure message for the upstream exception.
             /// </summary>
-            /// <param name="cause">TBD</param>
+            /// <param name="cause">The failure to report to the adapter.</param>
             public Failed(Exception cause)
             {
                 Cause = cause;
@@ -142,14 +142,14 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Provides asynchronous callbacks from the materialized adapter to the stage.
         /// </summary>
         internal interface IStageWithCallback
         {
             /// <summary>
-            /// TBD
+            /// Sends an adapter message to be handled on the stage callback.
             /// </summary>
-            /// <param name="msg">TBD</param>
+            /// <param name="msg">The message to deliver to the stage.</param>
             void WakeUp(IAdapterToStageMessage msg);
         }
 
@@ -226,9 +226,9 @@ namespace Akka.Streams.Implementation.IO
         private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
 
         /// <summary>
-        /// TBD
+        /// Creates a sink stage that materializes a read-only stream backed by its upstream.
         /// </summary>
-        /// <param name="readTimeout">TBD</param>
+        /// <param name="readTimeout">The maximum time to wait for stage initialization and the first queued message read by the adapter. Reads needing additional chunks after a partial chunk may block without this timeout.</param>
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
@@ -236,23 +236,21 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// The default attributes for the input-stream sink.
         /// </summary>
         protected override Attributes InitialAttributes => DefaultAttributes.InputStreamSink;
 
         /// <summary>
-        /// TBD
+        /// The sink shape that accepts byte sequences.
         /// </summary>
         public override SinkShape<ReadOnlySequence<byte>> Shape { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates stage logic and a read-only stream backed by a bounded queue of upstream elements.
         /// </summary>
-        /// <param name="inheritedAttributes">TBD</param>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the maximum size of the input buffer is less than or equal to zero.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="inheritedAttributes">Attributes inherited by this stage, including the input buffer size.</param>
+        /// <exception cref="ArgumentException">Thrown when the maximum input buffer size is not positive.</exception>
+        /// <returns>The stage logic and its materialized read-only stream.</returns>
         public override ILogicAndMaterializedValue<Stream> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
@@ -269,58 +267,55 @@ namespace Akka.Streams.Implementation.IO
     }
 
     /// <summary>
-    /// INTERNAL API
-    /// InputStreamAdapter that interacts with InputStreamSinkStage
+    /// Read-only stream adapter that exposes byte sequences received by <see cref="InputStreamSinkStage"/>.
     /// </summary>
     internal sealed class InputStreamAdapter : Stream
     {
 #region not supported 
 
         /// <summary>
-        /// TBD
+        /// Flush is unsupported because this adapter is read-only.
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports reading only.</exception>
         public override void Flush() => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
-        /// TBD
+        /// Seeking is unsupported because this adapter is not seekable.
         /// </summary>
-        /// <param name="offset">TBD</param>
-        /// <param name="origin">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="offset">The offset from the requested origin.</param>
+        /// <param name="origin">The position used as the reference point for the offset.</param>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports reading only.</exception>
+        /// <returns>This method does not return; it always throws.</returns>
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException(
             "This stream can only read");
 
         /// <summary>
-        /// TBD
+        /// Changing the stream length is unsupported because this adapter is read-only.
         /// </summary>
-        /// <param name="value">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="value">The requested length.</param>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports reading only.</exception>
         public override void SetLength(long value) => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
-        /// TBD
+        /// Writing is unsupported because this adapter is read-only.
         /// </summary>
-        /// <param name="buffer">TBD</param>
-        /// <param name="offset">TBD</param>
-        /// <param name="count">TBD</param>
-        /// <exception cref="NotSupportedException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="buffer">The buffer that would receive the written bytes.</param>
+        /// <param name="offset">The buffer offset at which writing would start.</param>
+        /// <param name="count">The number of bytes that would be written.</param>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter supports reading only.</exception>
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException(
             "This stream can only read");
 
         /// <summary>
-        /// TBD
+        /// Getting the stream length is unsupported because this adapter is not seekable.
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter does not expose a seekable length.</exception>
         public override long Length => throw new NotSupportedException("This stream can only read");
 
         /// <summary>
-        /// TBD
+        /// Getting or setting the stream position is unsupported because this adapter is not seekable.
         /// </summary>
-        /// <exception cref="NotSupportedException">TBD</exception>
+        /// <exception cref="NotSupportedException">Always thrown because the adapter does not expose a seekable position.</exception>
         public override long Position
         {
             get => throw new NotSupportedException("This stream can only read");
@@ -341,11 +336,11 @@ namespace Akka.Streams.Implementation.IO
         private ReadOnlySequence<byte>? _detachedChunk;
 
         /// <summary>
-        /// TBD
+        /// Creates an adapter that reads stage messages from a bounded queue.
         /// </summary>
-        /// <param name="sharedBuffer">TBD</param>
-        /// <param name="sendToStage">TBD</param>
-        /// <param name="readTimeout">TBD</param>
+        /// <param name="sharedBuffer">The queue containing initialization, data, and termination messages.</param>
+        /// <param name="sendToStage">The callback used to acknowledge consumed data and request closure.</param>
+        /// <param name="readTimeout">The maximum time to wait for stage initialization and the first queued message read by the adapter. Reads needing additional chunks after a partial chunk may block without this timeout.</param>
         public InputStreamAdapter(BlockingCollection<IStreamToAdapterMessage> sharedBuffer,
             IStageWithCallback sendToStage, TimeSpan readTimeout)
         {
@@ -355,9 +350,9 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Marks the adapter closed and asks the stage to complete.
         /// </summary>
-        /// <param name="disposing">TBD</param>
+        /// <param name="disposing">Whether managed resources should be disposed.</param>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -374,15 +369,11 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Reads one byte from the upstream stream, blocking until data arrives or the stream terminates.
         /// </summary>
-        /// <exception cref="IllegalStateException">
-        /// This exception is thrown when an <see cref="Initialized"/> message is not the first message.
-        /// </exception>
-        /// <exception cref="IOException">
-        /// This exception is thrown when a timeout occurs waiting on new data.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <exception cref="IllegalStateException">Thrown when the adapter receives messages before initialization.</exception>
+        /// <exception cref="IOException">Thrown when the timed wait for initialization or the first queued message exceeds the configured timeout.</exception>
+        /// <returns>The next byte as an unsigned value from 0 through 255, or -1 when the upstream has completed.</returns>
         public sealed override int ReadByte()
         {
             var a = new byte[1];
@@ -390,27 +381,15 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Reads up to the requested number of bytes from the upstream stream.
         /// </summary>
-        /// <param name="buffer">TBD</param>
-        /// <param name="offset">TBD</param>
-        /// <param name="count">TBD</param>
-        /// <exception cref="ArgumentException">TBD
-        /// This exception is thrown for a number of reasons. These include:
-        /// <ul>
-        /// <li>the specified <paramref name="buffer"/> size is less than or equal to zero</li>
-        /// <li>the specified <paramref name="buffer"/> size is less than the combination of <paramref name="offset"/> and <paramref name="count"/></li>
-        /// <li>the specified <paramref name="offset"/> is less than zero</li>
-        /// <li>the specified <paramref name="count"/> is less than or equal to zero</li>
-        /// </ul>
-        /// </exception>
-        /// <exception cref="IllegalStateException">
-        /// This exception is thrown when an <see cref="Initialized"/> message is not the first message.
-        /// </exception>
-        /// <exception cref="IOException">
-        /// This exception is thrown when a timeout occurs waiting on new data.
-        /// </exception>
-        /// <returns>TBD</returns>
+        /// <param name="buffer">The buffer that receives the bytes.</param>
+        /// <param name="offset">The zero-based offset in <paramref name="buffer"/> at which to store data.</param>
+        /// <param name="count">The maximum number of bytes to read.</param>
+        /// <exception cref="ArgumentException">Thrown when the buffer is empty, the offset is negative, the count is not positive, or the requested range extends past the buffer.</exception>
+        /// <exception cref="IllegalStateException">Thrown when the adapter receives messages before initialization.</exception>
+        /// <exception cref="IOException">Thrown when the timed wait for initialization or the first queued message exceeds the configured timeout. Fetching additional chunks within the same read may block without this timeout.</exception>
+        /// <returns>The number of bytes read, or zero when the upstream has completed.</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (buffer.Length <= 0) throw new ArgumentException("array size must be > 0", nameof(buffer));
@@ -533,17 +512,17 @@ namespace Akka.Streams.Implementation.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates that this adapter supports reading.
         /// </summary>
         public override bool CanRead => true;
 
         /// <summary>
-        /// TBD
+        /// Indicates that this adapter does not support seeking.
         /// </summary>
         public override bool CanSeek => false;
 
         /// <summary>
-        /// TBD
+        /// Indicates that this adapter does not support writing.
         /// </summary>
         public override bool CanWrite => false;
     }

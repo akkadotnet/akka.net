@@ -13,16 +13,16 @@ using Akka.Routing;
 namespace Akka.Cluster.Tools.PublishSubscribe
 {
     /// <summary>
-    /// TBD
+    /// Immutable settings that control mediator placement, routing, gossip, and buffered publications.
     /// </summary>
     public sealed record DistributedPubSubSettings : INoSerializationVerificationNeeded
     {
         /// <summary>
         /// Creates cluster publish/subscribe settings from the default configuration `akka.cluster.pub-sub`.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="system">Actor system whose configuration supplies mediator settings.</param>
+        /// <exception cref="ConfigurationException">Thrown when the actor system has no cluster publish-subscribe configuration.</exception>
+        /// <returns>Settings loaded from <c>akka.cluster.pub-sub</c>.</returns>
         public static DistributedPubSubSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
@@ -37,9 +37,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// Creates cluster publish subscribe settings from provided configuration with the same layout as `akka.cluster.pub-sub`.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        /// <returns>TBD</returns>
+        /// <param name="config">Configuration with the layout of <c>akka.cluster.pub-sub</c>.</param>
+        /// <exception cref="ConfigurationException">Thrown when the supplied configuration is empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the routing logic is unknown or uses unsupported consistent hashing.</exception>
+        /// <returns>Settings parsed from the supplied configuration.</returns>
         public static DistributedPubSubSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())

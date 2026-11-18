@@ -17,20 +17,20 @@ namespace Akka.TestKit.Internal;
 public class InfoFilter : EventFilterBase
 {
     /// <summary>
-    /// TBD
+    /// Creates a filter for info events, optionally matching their message and source.
     /// </summary>
-    /// <param name="messageMatcher">TBD</param>
-    /// <param name="sourceMatcher">TBD</param>
+    /// <param name="messageMatcher">Matches the event message, or null to match any message.</param>
+    /// <param name="sourceMatcher">Matches the event source, or null to match any source.</param>
     public InfoFilter(IStringMatcher? messageMatcher = null, IStringMatcher? sourceMatcher = null)
         : base(messageMatcher, sourceMatcher)
     {
     }
 
     /// <summary>
-    /// TBD
+    /// Checks whether the event is an info event that matches the configured source and message criteria.
     /// </summary>
-    /// <param name="evt">TBD</param>
-    /// <returns>TBD</returns>
+    /// <param name="evt">The log event to inspect.</param>
+    /// <returns><c>true</c> if the event matches; otherwise, <c>false</c>.</returns>
     protected override bool IsMatch(LogEvent evt)
     {
         var info = evt as Info;
@@ -43,7 +43,7 @@ public class InfoFilter : EventFilterBase
     }
 
     /// <summary>
-    /// TBD
+    /// Gets the label used to describe this filter in diagnostics.
     /// </summary>
     protected override string FilterDescriptiveName { get { return "Info"; } }
 }
