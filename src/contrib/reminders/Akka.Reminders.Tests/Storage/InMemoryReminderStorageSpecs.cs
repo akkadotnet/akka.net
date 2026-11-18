@@ -18,6 +18,35 @@ public class InMemoryReminderStorageSpecs : ReminderStorageSpecBase
         return Task.CompletedTask;
     }
 
+    [Fact(DisplayName = "Should_ReturnRowsInEntityKeyOrder_When_RowsShareADueTime")]
+    public async Task RowsWithTheSameDueTime_ComeBackInTheSameOrderEveryTime()
+    {
+        // Rows with equal due times used to come back in hash order, which differs from one process to the next.
+        var storage = new InMemoryReminderStorage();
+        var when = DateTimeOffset.UtcNow.AddMinutes(1);
+        var scheduled = (from region in new[] { "r2", "r0", "r1" }
+                         from id in new[] { "e9", "e1", "e5" }
+                         from key in new[] { "k2", "k0", "k1" }
+                         select (Region: region, Id: id, Key: key)).ToList();
+        foreach (var row in scheduled)
+        {
+            await storage.ScheduleReminderAsync(
+                CreateTestReminder(CreateTestEntity(row.Region, row.Id), CreateTestKey(row.Key), when),
+                TestContext.Current.CancellationToken);
+        }
+
+        var expected = scheduled
+            .OrderBy(r => r.Region, StringComparer.Ordinal).ThenBy(r => r.Id, StringComparer.Ordinal).ThenBy(r => r.Key, StringComparer.Ordinal)
+            .ToList();
+
+        var fetched = await storage.GetNextRemindersAsync(when, when, new ReminderBatchSize(100), TestContext.Current.CancellationToken);
+        Assert.Equal(expected, fetched.Reminders.Select(r => (r.Entity.ShardRegionName, r.Entity.EntityId, r.Key.Name)).ToList());
+
+        // One entity: the list orders by due time, then key.
+        var listed = await storage.GetRemindersForEntityAsync(CreateTestEntity("r1", "e5"), 10, 0, TestContext.Current.CancellationToken);
+        Assert.Equal(["k0", "k1", "k2"], listed.Select(r => r.Key.Name).ToList());
+    }
+
     [Fact]
     public async Task RejectedMutationBatch_ShouldNotChangeAnyOccurrenceState()
     {
