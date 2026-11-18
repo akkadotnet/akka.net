@@ -166,7 +166,9 @@ Checked after every operation, trouble or not (`SafetyRules.cs`). Each check is 
 
 One tolerance: when a slow commit ends at the moment of a delivery, the delivery counts from when that commit began (`History.CommittedAt`). `NotAfterDeadline` and `NoRepeatWithoutCause` use it.
 
-`ReminderApp` also fails a run if the scheduler does not answer (`SchedulerResponds`) or keeps working while time stands still (`GoesIdle`). `RuleSpecs.cs` tests the rules themselves with a hand-written history that breaks each one.
+`ReminderApp` also fails a run if the scheduler does not answer (`SchedulerResponds`), does not stop before a restart (`SchedulerStops`), or keeps working while time stands still (`GoesIdle`). `RuleSpecs.cs` tests the rules themselves with a hand-written history that breaks each one; `HarnessSpecs.cs` does the same for the harness (`SchedulerStops`, reply journaling, `FireDue` order).
+
+The harness writes each reply to the journal when the scheduler sends it (`JournalingReply`), so journal order is the order things happened. Two things can still vary between runs of one seed: the order of acks in a round (`Task.WhenAll` sends them one at a time, and the scheduler may flush its buffer between two sends), and, on the SQL providers, possibly the order of rows with the same due time (only the in-memory storage breaks those ties; see #8984).
 
 ## Recovery regressions
 

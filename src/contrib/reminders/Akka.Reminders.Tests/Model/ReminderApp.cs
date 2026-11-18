@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Akka.Actor;
 using Akka.Reminders.Storage;
 
@@ -31,7 +32,8 @@ public sealed class ReminderApp
     public const int Keys = 2;
     public const int Regions = 2;
 
-    private static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(5);
+    // Real time. A scenario runs on virtual time, so this only has to outlast a starved thread pool.
+    private static readonly TimeSpan AskTimeout = TimeSpan.FromSeconds(30);
     private static readonly ConcurrentQueue<ReminderApp> Stopped = new();
 
     private readonly IModelStorageFactory _factory;
@@ -60,6 +62,13 @@ public sealed class ReminderApp
     }
 
     public ModelSettings Settings { get; }
+
+    /// <summary>What a stop sends to the scheduler. Tests of the harness swap in a message the scheduler ignores.</summary>
+    internal object StopMessage { get; init; } = PoisonPill.Instance;
+
+    /// <summary>How long (real time) the scheduler has to stop.</summary>
+    internal TimeSpan StopTimeout { get; init; } = AskTimeout;
+
     public Journal Journal { get; }
     private VirtualClock Clock => _host!.Clock;
 
@@ -84,24 +93,26 @@ public sealed class ReminderApp
         var id = _nextId++; // the payload: a delivery carries it, so it names the call that asked for it
         var firstDue = Clock.Now + dueIn;
         var reply = await AskAsync<ReminderProtocol.ReminderScheduled>(new ReminderProtocol.ScheduleReminder(
-            EntityOf(entity), KeyOf(key), firstDue, Journal.Payload(id), every, window));
-        return Journal.Add(new Scheduled(id, entity, key, firstDue, every, window, reply.ResponseCode)).Reply;
+                EntityOf(entity), KeyOf(key), firstDue, Journal.Payload(id), every, window),
+            r => Journal.Add(new Scheduled(id, entity, key, firstDue, every, window, r.ResponseCode)));
+        return reply.ResponseCode;
     });
 
     /// <summary>Cancels one reminder, or every reminder of the entity when <paramref name="key"/> is null.</summary>
     public Task<ReminderCancelResponseCode> Cancel(int entity, int? key) => Do(async () =>
     {
         var reply = await AskAsync<ReminderProtocol.RemindersCancelled>(key is { } k
-            ? new ReminderProtocol.CancelReminder(EntityOf(entity), KeyOf(k))
-            : new ReminderProtocol.CancelAllReminders(EntityOf(entity)));
-        return Journal.Add(new CancelAnswered(entity, key, reply.ResponseCode)).Reply;
+                ? new ReminderProtocol.CancelReminder(EntityOf(entity), KeyOf(k))
+                : new ReminderProtocol.CancelAllReminders(EntityOf(entity)),
+            r => Journal.Add(new CancelAnswered(entity, key, r.ResponseCode)));
+        return reply.ResponseCode;
     });
 
     public Task List(int entity) => Do(async () =>
     {
-        var reply = await AskAsync<ReminderProtocol.RemindersForEntity>(new ReminderProtocol.GetReminders(EntityOf(entity)));
-        Journal.Add(new Listed(entity, reply.ResponseCode,
-            reply.Reminders.Select(r => (IndexOf(r.Key), Journal.IdOf(r.Message), r.DueTimeUtc)).ToList()));
+        await AskAsync<ReminderProtocol.RemindersForEntity>(new ReminderProtocol.GetReminders(EntityOf(entity)),
+            reply => Journal.Add(new Listed(entity, reply.ResponseCode,
+                reply.Reminders.Select(r => (IndexOf(r.Key), Journal.IdOf(r.Message), r.DueTimeUtc)).ToList())));
     });
 
     /// <summary>Acks every delivery that got no answer yet (all entities, or one).</summary>
@@ -234,7 +245,7 @@ public sealed class ReminderApp
     private async Task StartAsync()
     {
         await DisposeStoppedAsync();
-        _host = ModelHost.Rent();
+        _host = await ModelHost.RentAsync();
         Clock.Reset();
         _resolver = new RecordingShardRegionResolver(Journal, _signals);
         _inner = await _factory.CreateAsync(_host.System);
@@ -294,54 +305,56 @@ public sealed class ReminderApp
     {
         if (_scheduler.IsNobody())
             return;
-        try
+        // GracefulStop does not throw on timeout; it returns false.
+        if (!await _supervisor.GracefulStop(StopTimeout, StopMessage))
         {
-            await _supervisor.GracefulStop(AskTimeout);
-        }
-        catch (TaskCanceledException)
-        {
-            // Graceful shutdown timed out. Retire the whole host during cleanup so actors from
-            // this trace cannot survive into another sample; a restart cannot safely continue.
+            // Retire the whole host during cleanup so actors from this trace cannot survive into
+            // another sample; a restart cannot safely continue.
             _signals.Stuck = true;
             if (!_stopped)
-                throw new ModelViolation("SchedulerStops: the scheduler did not stop before restart");
+                throw new ModelViolation($"SchedulerStops: the scheduler did not stop within {StopTimeout.TotalSeconds}s of real time before restart");
         }
 
         _scheduler = ActorRefs.Nobody;
     }
 
-    private async Task<T> AskAsync<T>(object message)
+    /// <summary>
+    /// Sends a call and waits for the answer. <paramref name="journal"/> writes the answer to the journal
+    /// as the scheduler sends it, not when this method wakes up (see <see cref="JournalingReply{T}"/>).
+    /// </summary>
+    private async Task<T> AskAsync<T>(object message, Action<T>? journal = null)
     {
-        try
+        var replyTo = new JournalingReply<T>(_host!.System, journal);
+        _scheduler.Tell(message, replyTo);
+        var waited = Stopwatch.StartNew();
+        // A scheduler that restarted and cannot reload its state answers only after its retry timer fires.
+        while (!replyTo.Reply.IsCompleted && await Task.WhenAny(replyTo.Reply, Task.Delay(10)) != replyTo.Reply)
         {
-            var ask = _scheduler.Ask<T>(message, AskTimeout);
-            // A scheduler that restarted and cannot reload its state answers only after its retry timer fires.
-            while (!ask.IsCompleted && await Task.WhenAny(ask, Task.Delay(10)) != ask)
-                RetryFailedInitialLoad();
-            return await ask;
-        }
-        catch (AskTimeoutException ex)
-        {
+            RetryFailedInitialLoad();
+            if (waited.Elapsed <= AskTimeout)
+                continue;
             _signals.Stuck = true;
-            throw new ModelViolation($"SchedulerResponds: no answer to {message.GetType().Name} within {AskTimeout.TotalSeconds}s of real time, at {Journal.T(Clock.Now)}: {ex.Message}\n{Journal.Read().Timeline(15)}");
+            throw new ModelViolation($"SchedulerResponds: no answer to {message.GetType().Name} within {AskTimeout.TotalSeconds}s of real time, at {Journal.T(Clock.Now)}\n{Journal.Read().Timeline(15)}");
         }
+
+        return await replyTo.Reply;
     }
 
     private async Task AckAsync(Delivered d)
     {
         var asked = Journal.Seq;
-        var reply = await AskAsync<ReminderProtocol.ReminderAckResponse>(
-            new ReminderProtocol.ReminderAck(EntityOf(d.Entity), KeyOf(d.Key), d.Due));
-        Journal.Add(new AckAnswered(asked, d.Id, d.Entity, d.Key, d.Due, reply.ResponseCode));
+        await AskAsync<ReminderProtocol.ReminderAckResponse>(
+            new ReminderProtocol.ReminderAck(EntityOf(d.Entity), KeyOf(d.Key), d.Due),
+            reply => Journal.Add(new AckAnswered(asked, d.Id, d.Entity, d.Key, d.Due, reply.ResponseCode)));
         await ProbeAsync(); // the reply is sent before the scheduler has finished the ack
     }
 
     private async Task NackAsync(Delivered d)
     {
         var asked = Journal.Seq;
-        var reply = await AskAsync<ReminderProtocol.ReminderNackResponse>(
-            new ReminderProtocol.ReminderNack(EntityOf(d.Entity), KeyOf(d.Key), d.Due, "model nack"));
-        Journal.Add(new NackAnswered(asked, d.Id, d.Entity, d.Key, d.Due, reply.ResponseCode, reply.NextAttemptAtUtc));
+        await AskAsync<ReminderProtocol.ReminderNackResponse>(
+            new ReminderProtocol.ReminderNack(EntityOf(d.Entity), KeyOf(d.Key), d.Due, "model nack"),
+            reply => Journal.Add(new NackAnswered(asked, d.Id, d.Entity, d.Key, d.Due, reply.ResponseCode, reply.NextAttemptAtUtc)));
     }
 
     private Task ProbeAsync() => AskAsync<ReminderProtocol.ReminderOccurrenceStatusResponse>(
@@ -382,6 +395,9 @@ public sealed class ReminderApp
             // One answer per occurrence: a slow pass can deliver the same one twice before the recipient runs.
             var latest = fresh.GroupBy(d => (d.Id, d.Due)).Select(g => g.Last()).ToList();
             _unanswered.AddRange(latest.Where(d => _recipients[d.Entity] == Recipient.Ignore));
+            // Known gap (#8984): WhenAll sends the acks one at a time, and the scheduler may flush its ack
+            // buffer between two sends. Which acks share a storage batch, and so which ones an Ack fault
+            // hits, can vary from run to run. Fixing it needs a way to hold the scheduler's flush.
             await Task.WhenAll(latest.Where(d => _recipients[d.Entity] == Recipient.Ack).Select(AckAsync));
             foreach (var d in latest.Where(d => _recipients[d.Entity] == Recipient.Nack))
                 await NackAsync(d);
