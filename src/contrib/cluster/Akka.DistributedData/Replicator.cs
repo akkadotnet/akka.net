@@ -287,7 +287,8 @@ namespace Akka.DistributedData
 
         // The member sets below are keyed by UniqueAddress, not Address, so the replicator can tell
         // two incarnations of the same host:port apart. Convert to Address only where messages are
-        // sent, since replicas are reached through ActorSelection by address.
+        // sent, since replicas are reached through ActorSelection by address. NodesForReadWrite
+        // de-duplicates addresses so one host:port never counts twice toward a quorum.
 
         /// <summary>
         /// Cluster nodes, doesn't contain selfAddress.
@@ -452,16 +453,16 @@ namespace Akka.DistributedData
             if (excludeExiting && !_exitingNodes.IsEmpty)
             {
                 if (_settings.PreferOldest)
-                    return _membersByAge.Where(i => !_exitingNodes.Contains(i.UniqueAddress)).Select(i => i.Address).ToImmutableList();
+                    return _membersByAge.Where(i => !_exitingNodes.Contains(i.UniqueAddress)).Select(i => i.Address).Distinct().ToImmutableList();
                 else
-                    return _nodes.Except(_exitingNodes).Select(n => n.Address).ToImmutableList();
+                    return _nodes.Except(_exitingNodes).Select(n => n.Address).Distinct().ToImmutableList();
             }
             else
             {
                 if (_settings.PreferOldest)
-                    return _membersByAge.Select(i => i.Address).ToImmutableList();
+                    return _membersByAge.Select(i => i.Address).Distinct().ToImmutableList();
                 else
-                    return _nodes.Select(n => n.Address).ToImmutableList();
+                    return _nodes.Select(n => n.Address).Distinct().ToImmutableList();
             }
         }
 
@@ -1310,69 +1311,14 @@ namespace Akka.DistributedData
             }
         }
 
-        private static bool IsOtherIncarnation(UniqueAddress candidate, UniqueAddress node) =>
-            candidate.Address.Equals(node.Address) && !candidate.Equals(node);
-
-        /// <summary>
-        /// Drops every entry for a different incarnation (UID) at the address of <paramref name="m"/>.
-        /// </summary>
-        /// <remarks>
-        /// The cluster never holds two incarnations of one address at once: a restarted node can
-        /// join only after the old one is removed. So a member event for one UID means any other UID
-        /// we still track at that address is an older, dead incarnation whose MemberRemoved has not
-        /// reached us yet. ClusterEvent.DiffMemberEvents publishes additions before removals, so
-        /// without this step the replicator would briefly hold both UIDs, and NodesForReadWrite
-        /// would count one address twice toward a majority.
-        /// </remarks>
-        private void EvictOtherIncarnations(Member m)
-        {
-            var node = m.UniqueAddress;
-            var evicted = false;
-
-            ImmutableSortedSet<UniqueAddress> Evict(ImmutableSortedSet<UniqueAddress> set)
-            {
-                var stale = set.Where(n => IsOtherIncarnation(n, node)).ToList();
-                if (stale.Count == 0) return set;
-                evicted = true;
-                return set.Except(stale);
-            }
-
-            _nodes = Evict(_nodes);
-            _weaklyUpNodes = Evict(_weaklyUpNodes);
-            _joiningNodes = Evict(_joiningNodes);
-            _exitingNodes = Evict(_exitingNodes);
-
-            if (_unreachable.Any(n => IsOtherIncarnation(n, node)))
-                _unreachable = _unreachable.Where(n => !IsOtherIncarnation(n, node)).ToImmutableHashSet();
-
-            if (_leader.Any(x => IsOtherIncarnation(x.UniqueAddress, node)))
-                _leader = _leader.Where(x => !IsOtherIncarnation(x.UniqueAddress, node))
-                    .ToImmutableSortedSet(Member.LeaderStatusOrdering);
-
-            if (_membersByAge.Any(x => IsOtherIncarnation(x.UniqueAddress, node)))
-                _membersByAge = _membersByAge.Where(x => !IsOtherIncarnation(x.UniqueAddress, node))
-                    .ToImmutableSortedSet(Member.AgeOrdering);
-
-            if (evicted)
-            {
-                _log.Debug("Replaced older incarnation of [{0}] with [{1}]", node.Address, node);
-                // The new incarnation has none of the deltas we sent to the old one.
-                _deltaPropagationSelector.CleanupRemovedNode(node.Address);
-            }
-        }
-
-        // The add handlers compare Address with _selfAddress on purpose: no incarnation at our own
-        // address, current or older, is ever a peer replica.
         private void ReceiveMemberJoining(Member m)
         {
-            EvictOtherIncarnations(m);
             if (MatchingRole(m) && m.Address != _selfAddress)
                 _joiningNodes = _joiningNodes.Add(m.UniqueAddress);
         }
 
         private void ReceiveMemberWeaklyUp(Member m)
         {
-            EvictOtherIncarnations(m);
             if (MatchingRole(m) && m.Address != _selfAddress)
             {
                 _weaklyUpNodes = _weaklyUpNodes.Add(m.UniqueAddress);
@@ -1382,7 +1328,6 @@ namespace Akka.DistributedData
 
         private void ReceiveMemberUp(Member m)
         {
-            EvictOtherIncarnations(m);
             if (MatchingRole(m))
             {
                 _leader = _leader.Add(m);
@@ -1399,7 +1344,6 @@ namespace Akka.DistributedData
 
         private void ReceiveMemberExiting(Member m)
         {
-            EvictOtherIncarnations(m);
             if (MatchingRole(m) && m.Address != _selfAddress)
                 _exitingNodes = _exitingNodes.Add(m.UniqueAddress);
         }
@@ -1411,8 +1355,8 @@ namespace Akka.DistributedData
             {
                 _log.Debug("Adding removed node [{0}] from MemberRemoved", m.UniqueAddress);
 
-                // Remove by UniqueAddress only. With the current event order a newer incarnation at
-                // the same address may already be tracked, and it must stay.
+                // Remove by UniqueAddress only, so removing an old incarnation never touches a
+                // newer one at the same address.
                 var node = m.UniqueAddress;
 
                 // filter, it's possible that the ordering is changed since it based on MemberStatus
@@ -1426,10 +1370,7 @@ namespace Akka.DistributedData
                 _removedNodes = _removedNodes.SetItem(node, _allReachableClockTime);
                 _unreachable = _unreachable.Remove(node);
                 if (_settings.PreferOldest)
-                    _membersByAge = _membersByAge.Where(x => !x.UniqueAddress.Equals(node)).ToImmutableSortedSet(Member.AgeOrdering);
-
-                // Delta tracking is keyed by address. If a newer incarnation already lives there,
-                // clearing it only makes us resend deltas that the new incarnation may lack anyway.
+                    _membersByAge = _membersByAge.Remove(m);
                 _deltaPropagationSelector.CleanupRemovedNode(m.Address);
             }
         }
@@ -1446,7 +1387,6 @@ namespace Akka.DistributedData
 
         private void ReceiveOtherMemberEvent(Member m)
         {
-            EvictOtherIncarnations(m);
             if (MatchingRole(m))
             {
                 // replace, it's possible that the ordering is changed since it based on MemberStatus

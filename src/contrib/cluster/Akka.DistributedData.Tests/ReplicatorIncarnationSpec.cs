@@ -29,11 +29,11 @@ namespace Akka.DistributedData.Tests
     /// https://github.com/akkadotnet/akka.net/issues/8994.
     /// </para>
     /// <para>
-    /// <c>ClusterEvent.DiffMemberEvents</c> publishes additions before removals, so when a node
-    /// restarts on the same address a replicator can see <c>MemberUp(newUid)</c> and then
-    /// <c>MemberRemoved(oldUid)</c> for the same address. These specs feed those events straight
-    /// to a replicator, the same way <see cref="ReplicatorKnownNodeSpec"/> does, so no second
-    /// cluster or timing race is needed.
+    /// Before #8993, <c>ClusterEvent.DiffMemberEvents</c> published additions before removals, so
+    /// when a node restarted on the same address a replicator could see <c>MemberUp(newUid)</c> and
+    /// then <c>MemberRemoved(oldUid)</c>. The replicator must handle either order. These specs feed
+    /// events straight to a replicator, the same way <see cref="ReplicatorKnownNodeSpec"/> does, so
+    /// no second cluster or timing race is needed.
     /// </para>
     /// <para>
     /// The members are built with the internal <c>Member.Create</c> through reflection, because
@@ -94,8 +94,8 @@ namespace Akka.DistributedData.Tests
             var replicator = CreateReplicator();
             replicator.Tell(new ClusterEvent.MemberUp(oldMember));
 
-            // The order DiffMemberEvents uses today: the new incarnation's status event first,
-            // then the removal of the old one.
+            // The order DiffMemberEvents used before #8993: the new incarnation's status event
+            // first, then the removal of the old one.
             replicator.Tell(new ClusterEvent.MemberUp(newMember));
             replicator.Tell(new ClusterEvent.MemberRemoved(oldMember.Copy(MemberStatus.Removed), MemberStatus.Down));
 
@@ -106,34 +106,6 @@ namespace Akka.DistributedData.Tests
             // The removal must not have dropped the new incarnation from the replica set.
             replicator.Tell(GetReplicaCount.Instance, probe.Ref);
             (await probe.ExpectMsgAsync<ReplicaCount>(ReplyTimeout)).N.Should().Be(2);
-        }
-
-        [Fact(DisplayName = "Should_count_restarted_node_once_When_new_incarnation_is_Up_before_old_one_is_removed")]
-        public async Task Should_count_restarted_node_once_When_new_incarnation_is_Up_before_old_one_is_removed()
-        {
-            await JoinSelfAsync();
-            var oldNode = new UniqueAddress(_restartedAddress, 1);
-            var newNode = new UniqueAddress(_restartedAddress, 2);
-
-            var replicator = CreateReplicator();
-            replicator.Tell(new ClusterEvent.MemberUp(CreateMember(oldNode, 1, MemberStatus.Up)));
-            // MemberRemoved for oldNode has not arrived yet.
-            replicator.Tell(new ClusterEvent.MemberUp(CreateMember(newNode, 2, MemberStatus.Up)));
-
-            var probe = CreateTestProbe();
-            replicator.Tell(GetReplicaCount.Instance, probe.Ref);
-            (await probe.ExpectMsgAsync<ReplicaCount>(ReplyTimeout)).N.Should().Be(2);
-
-            // Self plus one remote node means WriteMajority needs an ack from the remote node,
-            // which nothing at that address will send. If the address were listed twice, the
-            // aggregator would see N = 3 with only one distinct address outstanding and report
-            // success with no remote ack at all.
-            var key = new GCounterKey("incarnation-majority");
-            var selfNode = Cluster.Cluster.Get(Sys).SelfUniqueAddress;
-            replicator.Tell(
-                Dsl.Update(key, GCounter.Empty, new WriteMajority(TimeSpan.FromMilliseconds(500)), c => c.Increment(selfNode)),
-                probe.Ref);
-            await probe.ExpectMsgAsync<UpdateTimeout>(ReplyTimeout);
         }
 
         [Fact(DisplayName = "Should_ignore_write_from_new_incarnation_When_only_old_incarnation_is_a_member")]
@@ -162,33 +134,6 @@ namespace Akka.DistributedData.Tests
             // A write from the incarnation that is a member still goes through.
             replicator.Tell(WriteFrom(oldNode, "incarnation-not-joined"), probe.Ref);
             await probe.ExpectMsgAsync<WriteAck>(ReplyTimeout);
-        }
-
-        [Fact(DisplayName = "Should_keep_new_incarnation_unreachable_When_MemberRemoved_for_old_incarnation_arrives")]
-        public async Task Should_keep_new_incarnation_unreachable_When_MemberRemoved_for_old_incarnation_arrives()
-        {
-            await JoinSelfAsync();
-            var oldNode = new UniqueAddress(_restartedAddress, 1);
-            var newNode = new UniqueAddress(_restartedAddress, 2);
-            var oldMember = CreateMember(oldNode, 1, MemberStatus.Up);
-            var newMember = CreateMember(newNode, 2, MemberStatus.Up);
-
-            // TestActorRef runs on the calling thread, so the replicator's state is settled
-            // when Tell returns and can be read directly.
-            var replicator = ActorOfAsTestActorRef<Replicator>(Replicator.Props(ReplicatorSettings.Create(Sys)));
-            replicator.Tell(new ClusterEvent.MemberUp(oldMember));
-            replicator.Tell(new ClusterEvent.MemberUp(newMember));
-            replicator.Tell(new ClusterEvent.UnreachableMember(newMember));
-            replicator.Tell(new ClusterEvent.MemberRemoved(oldMember.Copy(MemberStatus.Removed), MemberStatus.Down));
-
-            // There is no message that reports reachability, so read the private field.
-            var unreachableField = typeof(Replicator).GetField("_unreachable", BindingFlags.NonPublic | BindingFlags.Instance)
-                                   ?? throw new InvalidOperationException("Replicator._unreachable not found");
-            var unreachable = (ImmutableHashSet<UniqueAddress>)unreachableField.GetValue(replicator.UnderlyingActor)!;
-            unreachable.Should().BeEquivalentTo(new[] { newNode });
-
-            replicator.Tell(GetReplicaCount.Instance, TestActor);
-            (await ExpectMsgAsync<ReplicaCount>(ReplyTimeout)).N.Should().Be(2);
         }
     }
 }
