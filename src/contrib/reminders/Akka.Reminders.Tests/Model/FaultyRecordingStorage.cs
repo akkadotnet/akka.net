@@ -46,12 +46,16 @@ public sealed class FaultyRecordingStorage : IConditionalReminderMutationStorage
     /// <summary>Entity used by the harness's own probe queries; never counted or faulted.</summary>
     public static readonly ReminderEntity ProbeEntity = new("__probe", "__probe");
 
+    /// <summary>Key of the harness's hold query: its storage call stays open until the hold is released (see <see cref="SchedulerHold"/>).</summary>
+    public static readonly ReminderKey HoldKey = new("hold");
+
     private readonly IReminderStorage _inner;
     private readonly VirtualClock _clock;
     private readonly Journal _journal;
     private readonly HarnessSignals _signals;
     private readonly TimeSpan _recovery;
     private readonly List<(StorageCall Call, FaultKind Kind, int Remaining, TimeSpan Delay, bool Fire)> _faults = [];
+    private SchedulerHold? _hold;
 
     public FaultyRecordingStorage(IReminderStorage inner, VirtualClock clock, Journal journal, HarnessSignals signals, TimeSpan recovery)
     {
@@ -74,6 +78,14 @@ public sealed class FaultyRecordingStorage : IConditionalReminderMutationStorage
     {
         lock (_faults)
             _faults.Clear();
+    }
+
+    /// <summary>Arms a hold: the next hold query the scheduler makes stays in its storage call until the hold is released.</summary>
+    internal SchedulerHold NewHold()
+    {
+        var hold = new SchedulerHold();
+        Volatile.Write(ref _hold, hold);
+        return hold;
     }
 
     private (FaultKind Kind, TimeSpan Delay, bool Fire)? TakeFault(StorageCall call)
@@ -228,9 +240,16 @@ public sealed class FaultyRecordingStorage : IConditionalReminderMutationStorage
 
     public Task<ReminderOccurrenceStatus?> GetReminderOccurrenceStatusAsync(ReminderEntity entity, ReminderKey key, DateTimeOffset dueTimeUtc,
         CancellationToken ct = default)
-        => entity == ProbeEntity
-            ? Task.FromResult<ReminderOccurrenceStatus?>(null)
-            : Run(StorageCall.Status, () => _inner.GetReminderOccurrenceStatusAsync(entity, key, dueTimeUtc, ct));
+    {
+        if (entity != ProbeEntity)
+            return Run(StorageCall.Status, () => _inner.GetReminderOccurrenceStatusAsync(entity, key, dueTimeUtc, ct));
+
+        // A probe answers at once. A hold answers when the harness releases it, and ignores the token: the
+        // scheduler's real-time storage timeout must not end it early.
+        return key == HoldKey && Volatile.Read(ref _hold) is { } hold
+            ? hold.Enter()
+            : Task.FromResult<ReminderOccurrenceStatus?>(null);
+    }
 
     public Task<DateTimeOffset?> GetNextAwaitingAckDeadlineAsync(CancellationToken ct = default)
         => RunInit(StorageCall.NextAckDeadline, () => _inner.GetNextAwaitingAckDeadlineAsync(ct), endsInit: true);

@@ -1,8 +1,13 @@
 namespace Akka.Reminders.Tests.Model;
 
-/// <summary>Scheduler settings for one run, in milliseconds.</summary>
+/// <summary>
+/// Scheduler settings for one run, in milliseconds. <c>AckGroup</c> is not a scheduler setting: it is how the
+/// harness splits the acks of one round. It sends them in groups of this many, holding the scheduler while it
+/// queues each group (see <see cref="SchedulerHold"/>), so the scheduler flushes a group together; 0 sends the
+/// whole round as one group. Together with <c>AckFlushBatch</c> this decides which acks share a storage call.
+/// </summary>
 public sealed record ModelSettings(int MaxSlippageMs, int AckTimeoutMs, int BackoffBaseMs, int MaxBackoffMs, int MaxAttempts,
-    int MaxBatch = 1000, int Chunk = 100, int AckFlushBatch = 256)
+    int MaxBatch = 1000, int Chunk = 100, int AckFlushBatch = 256, int AckGroup = 0)
 {
     public static ModelSettings Default { get; } = new(1000, 10_000, 1000, 10_000, 3);
 
@@ -37,5 +42,5 @@ public sealed record ModelSettings(int MaxSlippageMs, int AckTimeoutMs, int Back
     };
 
     public override string ToString() =>
-        $"new ModelSettings({MaxSlippageMs}, {AckTimeoutMs}, {BackoffBaseMs}, {MaxBackoffMs}, {MaxAttempts}, {MaxBatch}, {Chunk}, {AckFlushBatch})";
+        $"new ModelSettings({MaxSlippageMs}, {AckTimeoutMs}, {BackoffBaseMs}, {MaxBackoffMs}, {MaxAttempts}, {MaxBatch}, {Chunk}, {AckFlushBatch}, {AckGroup})";
 }
