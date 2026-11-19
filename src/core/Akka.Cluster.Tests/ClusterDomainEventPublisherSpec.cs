@@ -199,6 +199,29 @@ namespace Akka.Cluster.Tests
             await subscriber.ExpectNoMsgAsync(500.Milliseconds());
         }
 
+        [Fact(DisplayName = "ClusterDomainEventPublisher should deliver MemberRemoved for the old incarnation before MemberUp for the new one at the same address")]
+        public async Task Should_DeliverMemberRemovedBeforeMemberUp_When_IncarnationReplacedAtSameAddress()
+        {
+            var address = new Address("akka.tcp", "sys", "f", 2552);
+            var fOldDown = TestMember.Create(address, MemberStatus.Down, uid: 1);
+            var fOldRemoved = fOldDown.Copy(MemberStatus.Removed);
+            var fNewUp = TestMember.Create(address, MemberStatus.Up, uid: 2);
+
+            var gOld = new Gossip(ImmutableSortedSet.Create(aUp, fOldDown)).Seen(aUp.UniqueAddress);
+            var gNew = new Gossip(ImmutableSortedSet.Create(aUp, fNewUp)).Seen(aUp.UniqueAddress);
+
+            _publisher.Tell(new InternalClusterAction.PublishChanges(new MembershipState(gOld, aUp.UniqueAddress)));
+            await _memberSubscriber.ExpectMsgAsync(new ClusterEvent.MemberDowned(fOldDown));
+
+            _publisher.Tell(new InternalClusterAction.PublishChanges(new MembershipState(gNew, aUp.UniqueAddress)));
+            var removed = await _memberSubscriber.ExpectMsgAsync<ClusterEvent.MemberRemoved>();
+            removed.Should().Be(new ClusterEvent.MemberRemoved(fOldRemoved, MemberStatus.Down));
+            removed.Member.UniqueAddress.Uid.Should().Be(1);
+            var up = await _memberSubscriber.ExpectMsgAsync<ClusterEvent.MemberUp>();
+            up.Member.UniqueAddress.Should().Be(fNewUp.UniqueAddress);
+            await _memberSubscriber.ExpectNoMsgAsync(500.Milliseconds());
+        }
+
         [Fact]
         public async Task ClusterDomainEventPublisher_must_publish_removed_when_stopped()
         {

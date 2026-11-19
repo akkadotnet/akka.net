@@ -887,7 +887,10 @@ namespace Akka.Cluster
             var removedMembers = oldState.Members.Except(newState.Members);
             var removedEvents = removedMembers.Select(m => new MemberRemoved(m.Copy(status: MemberStatus.Removed), m.Status));
 
-            return memberEvents.Concat(removedEvents).ToImmutableList();
+            // Publish removals first. If one diff replaces an incarnation at the same address
+            // (old UID removed, new UID added), subscribers that track members by Address must
+            // see the old UID leave before the new UID arrives. See https://github.com/akkadotnet/akka.net/issues/8993
+            return removedEvents.Concat(memberEvents).ToImmutableList();
         }
 
         private static IEnumerable<IMemberEvent> CollectMemberEvents(IEnumerable<Member> members)
