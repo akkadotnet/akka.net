@@ -6,8 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.TestKit.Configs;
 using Xunit;
 
@@ -109,6 +112,71 @@ namespace Akka.TestKit.Tests
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(20));
             Assert.Equal(1, firstId);
             Assert.Equal(2, secondId);
+        }
+
+        [Fact(DisplayName = "Should_RunEachItemOnce_When_ManyThreadsAdvanceConcurrently")]
+        public async Task Should_RunEachItemOnce_When_ManyThreadsAdvanceConcurrently()
+        {
+            const int rounds = 50;
+            const int threads = 4;
+            const int advancesPerThread = 50;
+            const int totalAdvances = threads * advancesPerThread;
+            const int repeatingItems = 5;
+
+            for (var round = 0; round < rounds; round++)
+            {
+                var scheduler = new TestScheduler(Config.Empty, null);
+                var oneShotCounts = new int[totalAdvances * 2];
+                var repeatingCounts = new int[repeatingItems];
+
+                // two one-shots per second, so some slots hold more than one item
+                for (var i = 0; i < totalAdvances; i++)
+                {
+                    var a = i * 2;
+                    var b = a + 1;
+                    scheduler.ScheduleOnce(TimeSpan.FromSeconds(i + 1), () => Interlocked.Increment(ref oneShotCounts[a]));
+                    scheduler.ScheduleOnce(TimeSpan.FromSeconds(i + 1), () => Interlocked.Increment(ref oneShotCounts[b]));
+                }
+
+                for (var r = 0; r < repeatingItems; r++)
+                {
+                    var index = r;
+                    scheduler.ScheduleRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1),
+                        () => Interlocked.Increment(ref repeatingCounts[index]));
+                }
+
+                var start = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var workers = Enumerable.Range(0, threads).Select(_ => Task.Run(async () =>
+                {
+                    await start.Task;
+                    for (var i = 0; i < advancesPerThread; i++)
+                        scheduler.Advance(TimeSpan.FromSeconds(1));
+                })).ToArray();
+
+                start.SetResult(true);
+                await Task.WhenAll(workers);
+
+                Assert.All(oneShotCounts, count => Assert.Equal(1, count));
+                // Advances are serialized, so each one runs a repeating item exactly once
+                Assert.All(repeatingCounts, count => Assert.Equal(totalAdvances, count));
+            }
+        }
+
+        [Fact(DisplayName = "Should_NotRerunItems_When_ActionCallsAdvance")]
+        public void Should_NotRerunItems_When_ActionCallsAdvance()
+        {
+            var scheduler = new TestScheduler(Config.Empty, null);
+            var runs = 0;
+
+            scheduler.ScheduleOnce(TimeSpan.FromSeconds(1), () =>
+            {
+                Interlocked.Increment(ref runs);
+                scheduler.Advance(TimeSpan.FromSeconds(1));
+            });
+
+            scheduler.Advance(TimeSpan.FromSeconds(1));
+
+            Assert.Equal(1, runs);
         }
 
         class TestReceiveActor : ReceiveActor
