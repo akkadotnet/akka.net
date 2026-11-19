@@ -22,6 +22,17 @@ jobs:
       - name: xunit.skip.local.theory
         value: true
     steps:
+      # Hosted Ubuntu agents start with little free space on /, and a full-solution
+      # Release build plus the Reminders lane's SQL Server and PostgreSQL containers
+      # can fill it. Remove large preinstalled toolchains we never use before building.
+      - script: |
+          df -h / /mnt || true
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/local/.ghcup /usr/share/swift /opt/hostedtoolcache/CodeQL /usr/local/share/boost || true
+          sudo docker image prune --all --force || true
+          df -h / /mnt || true
+        displayName: 'Free disk space (Linux)'
+        condition: eq(variables['Agent.OS'], 'Linux')
+
       - task: UseDotNet@2
         displayName: 'Use .NET'
         inputs:
@@ -54,8 +65,18 @@ jobs:
         displayName: "Compile"
         continueOnError: false
 
+      - script: df -h / /mnt || true
+        displayName: 'Report disk usage after compile (Linux)'
+        condition: eq(variables['Agent.OS'], 'Linux')
+
       - script: ${{ parameters.command }}
         continueOnError: true
+
+      - script: |
+          df -h / /mnt || true
+          docker system df || true
+        displayName: 'Report disk usage after tests (Linux)'
+        condition: and(always(), eq(variables['Agent.OS'], 'Linux'))
 
       - task: PublishTestResults@2
         inputs:
