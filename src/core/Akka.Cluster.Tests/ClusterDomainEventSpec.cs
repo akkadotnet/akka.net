@@ -203,6 +203,46 @@ namespace Akka.Cluster.Tests
                 .BeEquivalentTo(ImmutableList.Create(new ClusterEvent.SeenChanged(true, s2.Select(s => s.Address).ToImmutableHashSet())));
         }
 
+        [Fact(DisplayName = "DiffMemberEvents should publish MemberRemoved for the old incarnation before MemberUp for the new one at the same address")]
+        public void Should_PublishMemberRemovedBeforeMemberUp_When_IncarnationReplacedAtSameAddress()
+        {
+            var address = new Address("akka.tcp", "sys", "f", 2552);
+            var fOldDown = TestMember.Create(address, MemberStatus.Down, ImmutableHashSet<string>.Empty, uid: 1);
+            var fNewUp = TestMember.Create(address, MemberStatus.Up, ImmutableHashSet<string>.Empty, uid: 2);
+
+            var g1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, fOldDown))).Item1;
+            var g2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, fNewUp))).Item1;
+
+            var events = ClusterEvent.DiffMemberEvents(State(g1), State(g2));
+
+            events.Should().HaveCount(2);
+            var removed = events[0].Should().BeOfType<ClusterEvent.MemberRemoved>().Subject;
+            removed.Member.UniqueAddress.Should().Be(fOldDown.UniqueAddress);
+            removed.PreviousStatus.Should().Be(MemberStatus.Down);
+            events[1].Should().BeOfType<ClusterEvent.MemberUp>()
+                .Which.Member.UniqueAddress.Should().Be(fNewUp.UniqueAddress);
+        }
+
+        [Fact(DisplayName = "DiffMemberEvents should publish MemberRemoved for the old incarnation before MemberJoined for the new one at the same address")]
+        public void Should_PublishMemberRemovedBeforeMemberJoined_When_IncarnationReplacedAtSameAddress()
+        {
+            var address = new Address("akka.tcp", "sys", "f", 2552);
+            var fOldDown = TestMember.Create(address, MemberStatus.Down, ImmutableHashSet<string>.Empty, uid: 1);
+            var fNewJoining = TestMember.Create(address, MemberStatus.Joining, ImmutableHashSet<string>.Empty, uid: 2);
+
+            var g1 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, fOldDown))).Item1;
+            var g2 = Converge(new Gossip(ImmutableSortedSet.Create(aUp, fNewJoining))).Item1;
+
+            var events = ClusterEvent.DiffMemberEvents(State(g1), State(g2));
+
+            events.Should().HaveCount(2);
+            var removed = events[0].Should().BeOfType<ClusterEvent.MemberRemoved>().Subject;
+            removed.Member.UniqueAddress.Should().Be(fOldDown.UniqueAddress);
+            removed.PreviousStatus.Should().Be(MemberStatus.Down);
+            events[1].Should().BeOfType<ClusterEvent.MemberJoined>()
+                .Which.Member.UniqueAddress.Should().Be(fNewJoining.UniqueAddress);
+        }
+
         [Fact]
         public void DomainEvents_must_be_produced_for_convergence_changes()
         {
