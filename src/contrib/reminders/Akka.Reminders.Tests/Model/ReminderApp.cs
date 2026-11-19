@@ -122,7 +122,7 @@ public sealed class ReminderApp
         _unanswered.RemoveAll(d => entity is null || d.Entity == entity);
         // In batches: a long-silent entity can owe thousands of acks, and each ask has a real-time limit.
         foreach (var batch in late.Chunk(200))
-            await Task.WhenAll(batch.Select(AckAsync));
+            await AckAllAsync(batch);
     });
 
     /// <summary>Acks a particular observed delivery, including a late or duplicate acknowledgement.</summary>
@@ -321,23 +321,105 @@ public sealed class ReminderApp
     /// <summary>
     /// Sends a call and waits for the answer. <paramref name="journal"/> writes the answer to the journal
     /// as the scheduler sends it, not when this method wakes up (see <see cref="JournalingReply{T}"/>).
+    /// The call is sent before the first await, so starting several asks one after another sends them in that order.
     /// </summary>
     private async Task<T> AskAsync<T>(object message, Action<T>? journal = null)
     {
+        var replyTo = Send(message, journal);
+        await WaitAsync(replyTo.Reply, message.GetType().Name);
+        return await replyTo.Reply;
+    }
+
+    private JournalingReply<T> Send<T>(object message, Action<T>? journal = null)
+    {
         var replyTo = new JournalingReply<T>(_host!.System, journal);
         _scheduler.Tell(message, replyTo);
+        return replyTo;
+    }
+
+    /// <summary>Waits (real time) until <paramref name="done"/> completes, or fails the run if the scheduler stays silent.</summary>
+    private async Task WaitAsync(Task done, string what)
+    {
         var waited = Stopwatch.StartNew();
         // A scheduler that restarted and cannot reload its state answers only after its retry timer fires.
-        while (!replyTo.Reply.IsCompleted && await Task.WhenAny(replyTo.Reply, Task.Delay(10)) != replyTo.Reply)
+        while (!done.IsCompleted && await Task.WhenAny(done, Task.Delay(10)) != done)
         {
             RetryFailedInitialLoad();
             if (waited.Elapsed <= AskTimeout)
                 continue;
             _signals.Stuck = true;
-            throw new ModelViolation($"SchedulerResponds: no answer to {message.GetType().Name} within {AskTimeout.TotalSeconds}s of real time, at {Journal.T(Clock.Now)}\n{Journal.Read().Timeline(15)}");
+            throw new ModelViolation($"SchedulerResponds: no answer to {what} within {AskTimeout.TotalSeconds}s of real time, at {Journal.T(Clock.Now)}\n{Journal.Read().Timeline(15)}");
+        }
+    }
+
+    /// <summary>
+    /// Acks deliveries in groups of <see cref="ModelSettings.AckGroup"/> (all at once when it is 0), one
+    /// group after the other. The scheduler buffers acks and flushes them in batches, so which acks share a
+    /// storage call decides which ones a fault on that call hits. Each group is sent while the scheduler is
+    /// held, so its acks are in the mailbox, in order, before the scheduler reads the first of them: the
+    /// group and <see cref="ModelSettings.AckFlushBatch"/> decide the batches, and timing does not.
+    /// </summary>
+    private async Task AckAllAsync(IReadOnlyList<Delivered> deliveries)
+    {
+        var size = Settings.AckGroup > 0 ? Settings.AckGroup : Math.Max(1, deliveries.Count);
+        foreach (var group in deliveries.Chunk(size))
+            await AckGroupAsync(group);
+    }
+
+    private async Task AckGroupAsync(Delivered[] group)
+    {
+        if (group.Length == 1)
+        {
+            await AckAsync(group[0]); // nothing to order
+            return;
         }
 
-        return await replyTo.Reply;
+        var hold = await HoldSchedulerAsync();
+        Task[] acks;
+        try
+        {
+            // No await between the hold and its release, so nothing can wait on the scheduler while it is held.
+            // Each AckAsync sends its ack before its first await.
+            acks = group.Select(AckAsync).ToArray();
+        }
+        finally
+        {
+            hold.Release();
+        }
+
+        // The hold's own answer is bounded like every other: a scheduler that never sends it fails the run.
+        await Task.WhenAll(acks.Append(WaitAsync(hold.Reply, "the hold query")));
+    }
+
+    /// <summary>
+    /// Returns once the scheduler is inside a held storage call, so its mailbox is suspended. The caller must
+    /// <see cref="SchedulerHold.Release"/> it, and must not wait for the scheduler in between.
+    /// </summary>
+    internal async Task<SchedulerHold> HoldSchedulerAsync()
+    {
+        var hold = _storage.NewHold();
+        var reply = Send<ReminderProtocol.ReminderOccurrenceStatusResponse>(
+            new ReminderProtocol.GetReminderOccurrenceStatus(FaultyRecordingStorage.ProbeEntity, FaultyRecordingStorage.HoldKey, VirtualClock.Origin));
+        hold.Reply = reply.Reply;
+        try
+        {
+            if (await WaitFirstAsync(hold.Entered, reply.Reply) == reply.Reply)
+                throw new ModelViolation("SchedulerHolds: the scheduler answered the hold query without entering the held storage call");
+        }
+        catch
+        {
+            hold.Release(); // a scheduler that enters the call late must not stay suspended
+            throw;
+        }
+
+        return hold;
+    }
+
+    private async Task<Task> WaitFirstAsync(Task first, Task second)
+    {
+        var either = Task.WhenAny(first, second);
+        await WaitAsync(either, "the hold query");
+        return await either;
     }
 
     private async Task AckAsync(Delivered d)
@@ -395,10 +477,7 @@ public sealed class ReminderApp
             // One answer per occurrence: a slow pass can deliver the same one twice before the recipient runs.
             var latest = fresh.GroupBy(d => (d.Id, d.Due)).Select(g => g.Last()).ToList();
             _unanswered.AddRange(latest.Where(d => _recipients[d.Entity] == Recipient.Ignore));
-            // Known gap (#8984): WhenAll sends the acks one at a time, and the scheduler may flush its ack
-            // buffer between two sends. Which acks share a storage batch, and so which ones an Ack fault
-            // hits, can vary from run to run. Fixing it needs a way to hold the scheduler's flush.
-            await Task.WhenAll(latest.Where(d => _recipients[d.Entity] == Recipient.Ack).Select(AckAsync));
+            await AckAllAsync(latest.Where(d => _recipients[d.Entity] == Recipient.Ack).ToList());
             foreach (var d in latest.Where(d => _recipients[d.Entity] == Recipient.Nack))
                 await NackAsync(d);
         }

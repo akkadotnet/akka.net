@@ -65,7 +65,7 @@ A seed identifies a case only for the exact generator composition that produced 
 argument domains and weights are preserved. Old full-model seeds are not interchangeable with new ones.
 Use the emitted seed with `CsCheck_Iter=1` on the same generator, or retain concrete commands in
 `ModelRegressionSpecs.cs` when changing generators. The past-anchor regression pins the earlier
-one-command superseded-ack failure for this reason.
+one-command superseded-ack failure for this reason. The ack group (see Ack batches) is drawn after the commands, so a seed that predates it still gives the same settings and commands.
 
 Commands now print using their record's normal representation, for example `Tick { Ms = 9000 }`.
 That is readable diagnostic output, not a promise of a pasteable C# constructor. A fixed regression uses
@@ -166,9 +166,17 @@ Checked after every operation, trouble or not (`SafetyRules.cs`). Each check is 
 
 One tolerance: when a slow commit ends at the moment of a delivery, the delivery counts from when that commit began (`History.CommittedAt`). `NotAfterDeadline` and `NoRepeatWithoutCause` use it.
 
-`ReminderApp` also fails a run if the scheduler does not answer (`SchedulerResponds`), does not stop before a restart (`SchedulerStops`), or keeps working while time stands still (`GoesIdle`). `RuleSpecs.cs` tests the rules themselves with a hand-written history that breaks each one; `HarnessSpecs.cs` does the same for the harness (`SchedulerStops`, reply journaling, `FireDue` order).
+`ReminderApp` also fails a run if the scheduler does not answer (`SchedulerResponds`), does not stop before a restart (`SchedulerStops`), or keeps working while time stands still (`GoesIdle`). `RuleSpecs.cs` tests the rules themselves with a hand-written history that breaks each one; `HarnessSpecs.cs` does the same for the harness (`SchedulerStops`, reply journaling, `FireDue` order, ack batches, the scheduler hold).
 
-The harness writes each reply to the journal when the scheduler sends it (`JournalingReply`), so journal order is the order things happened. Two things can still vary between runs of one seed: the order of acks in a round (`Task.WhenAll` sends them one at a time, and the scheduler may flush its buffer between two sends), and, on the SQL providers, possibly the order of rows with the same due time (only the in-memory storage breaks those ties; see #8984).
+The harness writes each reply to the journal when the scheduler sends it (`JournalingReply`), so journal order is the order things happened. One thing can still vary between runs of one seed: on the SQL providers, possibly the order of rows with the same due time (only the in-memory storage breaks those ties; see #8984).
+
+### Ack batches
+
+The scheduler buffers acks and writes them to storage in batches of up to `AckFlushBatchSize`. Which acks share a storage call decides which ones an `Ack` fault hits, so timing must not decide it, or a seed would not replay.
+
+The harness sends the acks of one round in groups. Before each group it holds the scheduler (`SchedulerHold`): a status query for a key only the harness uses, whose storage call does not return. `RunTask` suspends the scheduler's mailbox while that call is open, so the acks queue behind it, in order. The harness then releases the hold, and the scheduler reads ack 1, ack 2 and so on, then its own flush message. A group of one ack needs no hold. `ModelSettings.AckGroup` sets the group size (0: the whole round) and `AckFlushBatch` splits a group further. CsCheck generates both, so a seed always gives the same batches.
+
+Only user messages wait on a hold. System messages run on a suspended mailbox: a stop, and the wake-up when the held call returns. The harness sends the group without awaiting anything and releases the hold in a `finally`, so nothing waits on the scheduler while it is held.
 
 ## Recovery regressions
 
