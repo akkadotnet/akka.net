@@ -355,9 +355,21 @@ namespace Akka.Remote
         /// <param name="localAddress">TBD</param>
         /// <param name="remoteAddress">TBD</param>
         public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress)
+            : this(localAddress, remoteAddress, null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ThisActorSystemQuarantinedEvent"/>.
+        /// </summary>
+        /// <param name="localAddress">The address of this actor system.</param>
+        /// <param name="remoteAddress">The address of the remote system that quarantined this system.</param>
+        /// <param name="remoteUid">The UID of the remote system that quarantined this system, when known.</param>
+        public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress, int? remoteUid)
         {
             LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
+            RemoteUid = remoteUid;
         }
 
         /// <summary>
@@ -369,6 +381,12 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         public Address RemoteAddress { get; private set; }
+
+        /// <summary>
+        /// The UID of the remote system that quarantined this system, or <c>null</c> if it isn't known.
+        /// Use it to tell which incarnation of the remote system quarantined this one.
+        /// </summary>
+        public int? RemoteUid { get; private set; }
 
         /// <summary>
         /// TBD
@@ -385,7 +403,9 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override string ToString()
         {
-            return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
+            return RemoteUid.HasValue
+                ? string.Format("The remote system {0} (UID [{1}]) has quarantined this system {2}.", RemoteAddress, RemoteUid.Value, LocalAddress)
+                : string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
         }
     }
 

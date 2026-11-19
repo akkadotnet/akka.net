@@ -64,7 +64,8 @@ namespace Akka.Cluster.Tests.SBR
                 IActorRef probe,
                 UniqueAddress selfUniqueAddress,
                 TimeSpan downAllWhenUnstable,
-                TimeSpan tick)
+                TimeSpan tick,
+                bool downSelfWhenQuarantinedByMember = true)
             {
                 return Actor.Props.Create(() => new DowningTestActor(
                     stableAfter,
@@ -72,7 +73,8 @@ namespace Akka.Cluster.Tests.SBR
                     probe,
                     selfUniqueAddress,
                     downAllWhenUnstable,
-                    tick));
+                    tick,
+                    downSelfWhenQuarantinedByMember));
             }
 
             public DowningTestActor(
@@ -81,14 +83,18 @@ namespace Akka.Cluster.Tests.SBR
                 IActorRef probe,
                 UniqueAddress selfUniqueAddress,
                 TimeSpan downAllWhenUnstable,
-                TimeSpan tick)
+                TimeSpan tick,
+                bool downSelfWhenQuarantinedByMember)
                 : base(stableAfter, strategy)
             {
                 Probe = probe;
                 SelfUniqueAddress = selfUniqueAddress;
                 DownAllWhenUnstable = downAllWhenUnstable;
                 Tick = tick;
+                DownSelfWhenQuarantinedByMember = downSelfWhenQuarantinedByMember;
             }
+
+            public override bool DownSelfWhenQuarantinedByMember { get; }
 
             public IActorRef Probe { get; }
 
@@ -110,12 +116,14 @@ namespace Akka.Cluster.Tests.SBR
 
             public override void Down(UniqueAddress node, IDecision decision)
             {
-                if (Leader && !downed.Contains(node.Address))
+                // downing itself after being quarantined is allowed on any node, not just the leader
+                var allowed = Leader || decision is DownSelfQuarantinedByRemote;
+                if (allowed && !downed.Contains(node.Address))
                 {
                     downed = downed.Add(node.Address);
                     Probe.Tell(new DownCalled(node.Address));
                 }
-                else if (!Leader)
+                else if (!allowed)
                     Probe.Tell("down must only be done by leader");
             }
 
@@ -1388,14 +1396,16 @@ namespace Akka.Cluster.Tests.SBR
                 UniqueAddress selfUniqueAddress,
                 string role,
                 TimeSpan? downAllWhenUnstable = null,
-                TimeSpan? tickInterval = null)
+                TimeSpan? tickInterval = null,
+                bool downSelfWhenQuarantinedByMember = true)
                 : base(
                       owner,
                       stableAfter,
                       new Akka.Cluster.SBR.KeepMajority(role),
                       selfUniqueAddress,
                       downAllWhenUnstable,
-                      tickInterval)
+                      tickInterval,
+                      downSelfWhenQuarantinedByMember)
             {
             }
         }
@@ -1483,7 +1493,8 @@ namespace Akka.Cluster.Tests.SBR
                 DowningStrategy strategy,
                 UniqueAddress selfUniqueAddress,
                 TimeSpan? downAllWhenUnstable = null,
-                TimeSpan? tickInterval = null)
+                TimeSpan? tickInterval = null,
+                bool downSelfWhenQuarantinedByMember = true)
             {
                 Owner = owner;
                 StableAfter = stableAfter;
@@ -1494,7 +1505,7 @@ namespace Akka.Cluster.Tests.SBR
 
                 A = owner.Sys.ActorOf(
                   DowningTestActor
-                    .Props(stableAfter, strategy, owner.TestActor, selfUniqueAddress, DownAllWhenUnstable, TickInterval));
+                    .Props(stableAfter, strategy, owner.TestActor, selfUniqueAddress, DownAllWhenUnstable, TickInterval, downSelfWhenQuarantinedByMember));
             }
 
             public SplitBrainResolverSpec Owner { get; }
@@ -1552,6 +1563,22 @@ namespace Akka.Cluster.Tests.SBR
                 A.Tell(SplitBrainResolverBase.Tick.Instance);
             }
 
+            public void MemberLeft(params Member[] members)
+            {
+                foreach (var m in members)
+                    A.Tell(new ClusterEvent.MemberLeft(m.Copy(MemberStatus.Leaving)));
+            }
+
+            public void QuarantinedBy(Address remoteAddress, int? remoteUid)
+            {
+                A.Tell(new ThisActorSystemQuarantinedEvent(SelfUniqueAddress.Address, remoteAddress, remoteUid));
+            }
+
+            public void QuarantinedBy(Member member)
+            {
+                QuarantinedBy(member.Address, member.UniqueAddress.Uid);
+            }
+
             public void ExpectDownCalled(params Member[] members)
             {
                 Owner.ReceiveN(members.Length).ToImmutableHashSet().Should().BeEquivalentTo(members.Select(m => new DownCalled(m.Address)).ToImmutableHashSet());
@@ -1568,6 +1595,117 @@ namespace Akka.Cluster.Tests.SBR
                 Owner.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             }
         }
+
+        #region DownSelfQuarantinedByRemote (#9002)
+
+        [Fact(DisplayName = "Should_DownSelf_When_QuarantinedByCurrentMember")]
+        public void Should_DownSelf_When_QuarantinedByCurrentMember()
+        {
+            // B is not the leader: downing itself must not depend on leadership
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.QuarantinedBy(MemberA);
+            setup.ExpectDownCalled(MemberB);
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_DownSelf_When_QuarantinedByUnreachableMember_With_LeaseMajority")]
+        public void Should_DownSelf_When_QuarantinedByUnreachableMember_With_LeaseMajority()
+        {
+            // the stale-node case: B sees everyone else as unreachable and is leader of its own view,
+            // but must not wait for stable-after or the lease once a member has quarantined it
+            var setup = new SetupLeaseMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null,
+                new TestLease(testLeaseSettings, ExtSystem));
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberB);
+            setup.Unreachable(MemberA, MemberC);
+            setup.QuarantinedBy(MemberA);
+            setup.ExpectDownCalled(MemberB);
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_NotDownSelf_When_QuarantinedByNonMember")]
+        public async Task Should_NotDownSelf_When_QuarantinedByNonMember()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.QuarantinedBy(MemberD);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_NotDownSelf_When_QuarantinedByOtherIncarnationOfMember")]
+        public async Task Should_NotDownSelf_When_QuarantinedByOtherIncarnationOfMember()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.QuarantinedBy(MemberA.Address, MemberA.UniqueAddress.Uid + 1);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_NotDownSelf_When_RemoteUidUnknown")]
+        public async Task Should_NotDownSelf_When_RemoteUidUnknown()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.QuarantinedBy(MemberA.Address, null);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_NotDownSelf_When_QuarantinedByLeavingMember")]
+        public async Task Should_NotDownSelf_When_QuarantinedByLeavingMember()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.MemberLeft(MemberC);
+            setup.QuarantinedBy(MemberC);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_NotDownSelf_When_SelfIsLeaving")]
+        public async Task Should_NotDownSelf_When_SelfIsLeaving()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.MemberLeft(MemberB);
+            setup.QuarantinedBy(MemberA);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_NotDownSelf_When_DownSelfWhenQuarantinedByMemberIsOff")]
+        public async Task Should_NotDownSelf_When_DownSelfWhenQuarantinedByMemberIsOff()
+        {
+            var setup = new SetupKeepMajority(this, TimeSpan.FromMinutes(1), MemberB.UniqueAddress, null,
+                downSelfWhenQuarantinedByMember: false);
+            setup.MemberUp(MemberA, MemberB, MemberC);
+            setup.Leader(MemberA);
+            setup.QuarantinedBy(MemberA);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            setup.Stop();
+        }
+
+        [Fact(DisplayName = "Should_EnableDownSelfWhenQuarantinedByMember_By_Default")]
+        public void Should_EnableDownSelfWhenQuarantinedByMember_By_Default()
+        {
+            new SplitBrainResolverSettings(Sys.Settings.Config).DownSelfWhenQuarantinedByMember.Should().BeTrue();
+
+            var off = ConfigurationFactory
+                .ParseString("akka.cluster.split-brain-resolver.down-self-when-quarantined-by-member = off")
+                .WithFallback(Sys.Settings.Config);
+            new SplitBrainResolverSettings(off).DownSelfWhenQuarantinedByMember.Should().BeFalse();
+        }
+
+        #endregion
 
         [Fact]
         public void Split_Brain_Resolver_must_have_downRemovalMargin_equal_to_stable_after()

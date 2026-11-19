@@ -427,6 +427,7 @@ namespace Akka.Cluster.SBR
         public const string StaticQuorumName = "static-quorum";
         public SplitBrainResolverSettings(Akka.Configuration.Config config) { }
         public System.TimeSpan DownAllWhenUnstable { get; }
+        public bool DownSelfWhenQuarantinedByMember { get; }
         public System.TimeSpan DowningStableAfter { get; }
         public string DowningStrategy { get; }
         public string KeepMajorityRole { get; }
