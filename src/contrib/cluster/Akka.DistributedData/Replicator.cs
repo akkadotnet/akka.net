@@ -285,31 +285,36 @@ namespace Akka.DistributedData
         private readonly Serializer _serializer;
         private readonly long _maxPruningDisseminationNanos;
 
+        // The member sets below are keyed by UniqueAddress, not Address, so the replicator can tell
+        // two incarnations of the same host:port apart. Convert to Address only where messages are
+        // sent, since replicas are reached through ActorSelection by address. NodesForReadWrite
+        // de-duplicates addresses so one host:port never counts twice toward a quorum.
+
         /// <summary>
         /// Cluster nodes, doesn't contain selfAddress.
         /// </summary>
-        private ImmutableSortedSet<Address> _nodes = ImmutableSortedSet<Address>.Empty;
+        private ImmutableSortedSet<UniqueAddress> _nodes = ImmutableSortedSet<UniqueAddress>.Empty;
 
         // cluster members sorted by age, oldest first,, doesn't contain selfAddress, doesn't contain joining and weaklyUp
         // only used when prefer-oldest is enabled
         private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering);
 
-        private ImmutableSortedSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
+        private ImmutableSortedSet<UniqueAddress> AllNodes => _nodes.Union(_weaklyUpNodes);
 
         /// <summary>
         /// Cluster weaklyUp nodes, doesn't contain joining and not selfAddress
         /// </summary>
-        private ImmutableSortedSet<Address> _weaklyUpNodes = ImmutableSortedSet<Address>.Empty;
+        private ImmutableSortedSet<UniqueAddress> _weaklyUpNodes = ImmutableSortedSet<UniqueAddress>.Empty;
 
         /// <summary>
         /// cluster joining nodes, doesn't contain selfAddress
         /// </summary>
-        private ImmutableSortedSet<Address> _joiningNodes = ImmutableSortedSet<Address>.Empty;
+        private ImmutableSortedSet<UniqueAddress> _joiningNodes = ImmutableSortedSet<UniqueAddress>.Empty;
 
         /// <summary>
         /// cluster exiting nodes, doesn't contain selfAddress
         /// </summary>
-        private ImmutableSortedSet<Address> _exitingNodes = ImmutableSortedSet<Address>.Empty;
+        private ImmutableSortedSet<UniqueAddress> _exitingNodes = ImmutableSortedSet<UniqueAddress>.Empty;
 
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
 
@@ -317,7 +322,7 @@ namespace Akka.DistributedData
         /// All nodes sorted with the leader first
         /// </summary>
         private ImmutableSortedSet<Member> _leader = ImmutableSortedSet<Member>.Empty.WithComparer(Member.LeaderStatusOrdering);
-        private bool IsLeader => !_leader.IsEmpty && _leader.First().Address == _selfAddress;
+        private bool IsLeader => !_leader.IsEmpty && _leader.First().UniqueAddress == _selfUniqueAddress;
 
         // A Replicator subscribes to cluster events with InitialStateAsEvents, and that replay
         // reports each current member at its CURRENT status. A Replicator that starts after a
@@ -328,16 +333,24 @@ namespace Akka.DistributedData
         // there via ReceiveOtherMemberEvent. Both sets are pruned in ReceiveMemberRemoved, so a
         // removed node stops being trusted. Reusing sets that are already maintained avoids
         // introducing new membership state purely to answer this question.
-        private bool IsKnownNode(Address node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
-                                                  _joiningNodes.Contains(node) || _exitingNodes.Contains(node) ||
-                                                  _leader.Any(x => x.Address == node) || _selfAddress == node;
+        //
+        // The check compares UniqueAddress, so a restarted process at the same host:port is not
+        // trusted until its own UID shows up in a member event.
+        private bool IsKnownNode(UniqueAddress node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
+                                                        _joiningNodes.Contains(node) || _exitingNodes.Contains(node) ||
+                                                        _leader.Any(x => x.UniqueAddress.Equals(node)) || _selfUniqueAddress.Equals(node);
 
         /// <summary>
         /// For pruning timeouts are based on clock that is only increased when all nodes are reachable.
         /// </summary>
         private long _previousClockTime;
         private long _allReachableClockTime = 0;
-        private ImmutableHashSet<Address> _unreachable = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<UniqueAddress> _unreachable = ImmutableHashSet<UniqueAddress>.Empty;
+
+        /// <summary>
+        /// <see cref="_unreachable"/> as addresses, for the read/write aggregators.
+        /// </summary>
+        private IImmutableSet<Address> UnreachableAddresses => _unreachable.Select(n => n.Address).ToImmutableHashSet();
 
         /// <summary>
         /// The actual data.
@@ -440,16 +453,16 @@ namespace Akka.DistributedData
             if (excludeExiting && !_exitingNodes.IsEmpty)
             {
                 if (_settings.PreferOldest)
-                    return _membersByAge.Where(i => !_exitingNodes.Contains(i.Address)).Select(i => i.Address).ToImmutableList();
+                    return _membersByAge.Where(i => !_exitingNodes.Contains(i.UniqueAddress)).Select(i => i.Address).Distinct().ToImmutableList();
                 else
-                    return _nodes.Except(_exitingNodes).ToImmutableList();
+                    return _nodes.Except(_exitingNodes).Select(n => n.Address).Distinct().ToImmutableList();
             }
             else
             {
                 if (_settings.PreferOldest)
-                    return _membersByAge.Select(i => i.Address).ToImmutableList();
+                    return _membersByAge.Select(i => i.Address).Distinct().ToImmutableList();
                 else
-                    return _nodes.ToImmutableList();
+                    return _nodes.Select(n => n.Address).Distinct().ToImmutableList();
             }
         }
 
@@ -575,7 +588,7 @@ namespace Akka.DistributedData
                     return true;
 
                 case ISendingSystemUid msg:
-                    if (msg.FromNode != null && !IsKnownNode(msg.FromNode.Address))
+                    if (msg.FromNode != null && !IsKnownNode(msg.FromNode))
                     {
                         // When restarting a node with same host:port it is possible that a Replicator on another node
                         // is sending messages to the restarted node even if it hasn't joined the same cluster.
@@ -639,7 +652,7 @@ namespace Akka.DistributedData
             {
                 var excludeExiting = consistency is ReadMajorityPlus or ReadAll;
 
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, localValue, Sender)
+                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(excludeExiting), UnreachableAddresses, !_settings.PreferOldest, localValue, Sender)
                     .WithDispatcher(Context.Props.Dispatcher));
             }
         }
@@ -757,7 +770,7 @@ namespace Akka.DistributedData
                     var excludeExiting = consistency is WriteMajorityPlus or WriteAll;
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, shuffle, Sender, durable)
+                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(excludeExiting), UnreachableAddresses, shuffle, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -883,7 +896,7 @@ namespace Akka.DistributedData
                     var excludeExiting = consistency is WriteMajorityPlus or WriteAll;
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, Sender, durable)
+                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(excludeExiting), UnreachableAddresses, !_settings.PreferOldest, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -1138,11 +1151,11 @@ namespace Akka.DistributedData
             }
         }
 
-        private Address SelectRandomNode(IReadOnlyList<Address> addresses)
+        private Address SelectRandomNode(IReadOnlyList<UniqueAddress> nodes)
         {
-            if (addresses.Count > 0)
+            if (nodes.Count > 0)
             {
-                return addresses[ThreadLocalRandom.Current.Next(addresses.Count)];
+                return nodes[ThreadLocalRandom.Current.Next(nodes.Count)].Address;
             }
             return null;
         }
@@ -1301,15 +1314,15 @@ namespace Akka.DistributedData
         private void ReceiveMemberJoining(Member m)
         {
             if (MatchingRole(m) && m.Address != _selfAddress)
-                _joiningNodes = _joiningNodes.Add(m.Address);
+                _joiningNodes = _joiningNodes.Add(m.UniqueAddress);
         }
 
         private void ReceiveMemberWeaklyUp(Member m)
         {
             if (MatchingRole(m) && m.Address != _selfAddress)
             {
-                _weaklyUpNodes = _weaklyUpNodes.Add(m.Address);
-                _joiningNodes = _joiningNodes.Remove(m.Address);
+                _weaklyUpNodes = _weaklyUpNodes.Add(m.UniqueAddress);
+                _joiningNodes = _joiningNodes.Remove(m.UniqueAddress);
             }
         }
 
@@ -1320,9 +1333,9 @@ namespace Akka.DistributedData
                 _leader = _leader.Add(m);
                 if (m.Address != _selfAddress)
                 {
-                    _nodes = _nodes.Add(m.Address);
-                    _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
-                    _joiningNodes = _joiningNodes.Remove(m.Address);
+                    _nodes = _nodes.Add(m.UniqueAddress);
+                    _weaklyUpNodes = _weaklyUpNodes.Remove(m.UniqueAddress);
+                    _joiningNodes = _joiningNodes.Remove(m.UniqueAddress);
                     if (_settings.PreferOldest)
                         _membersByAge = _membersByAge.Add(m);
                 }
@@ -1332,26 +1345,30 @@ namespace Akka.DistributedData
         private void ReceiveMemberExiting(Member m)
         {
             if (MatchingRole(m) && m.Address != _selfAddress)
-                _exitingNodes = _exitingNodes.Add(m.Address);
+                _exitingNodes = _exitingNodes.Add(m.UniqueAddress);
         }
 
         private void ReceiveMemberRemoved(Member m)
         {
-            if (m.Address == _selfAddress) Context.Stop(Self);
+            if (m.UniqueAddress.Equals(_selfUniqueAddress)) Context.Stop(Self);
             else if (MatchingRole(m))
             {
                 _log.Debug("Adding removed node [{0}] from MemberRemoved", m.UniqueAddress);
 
+                // Remove by UniqueAddress only, so removing an old incarnation never touches a
+                // newer one at the same address.
+                var node = m.UniqueAddress;
+
                 // filter, it's possible that the ordering is changed since it based on MemberStatus
-                _leader = _leader.Where(x => x.Address != m.Address).ToImmutableSortedSet(Member.LeaderStatusOrdering);
+                _leader = _leader.Where(x => !x.UniqueAddress.Equals(node)).ToImmutableSortedSet(Member.LeaderStatusOrdering);
 
-                _nodes = _nodes.Remove(m.Address);
-                _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
-                _joiningNodes = _joiningNodes.Remove(m.Address);
-                _exitingNodes = _exitingNodes.Remove(m.Address);
+                _nodes = _nodes.Remove(node);
+                _weaklyUpNodes = _weaklyUpNodes.Remove(node);
+                _joiningNodes = _joiningNodes.Remove(node);
+                _exitingNodes = _exitingNodes.Remove(node);
 
-                _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
-                _unreachable = _unreachable.Remove(m.Address);
+                _removedNodes = _removedNodes.SetItem(node, _allReachableClockTime);
+                _unreachable = _unreachable.Remove(node);
                 if (_settings.PreferOldest)
                     _membersByAge = _membersByAge.Remove(m);
                 _deltaPropagationSelector.CleanupRemovedNode(m.Address);
@@ -1360,12 +1377,12 @@ namespace Akka.DistributedData
 
         private void ReceiveUnreachable(Member m)
         {
-            if (MatchingRole(m)) _unreachable = _unreachable.Add(m.Address);
+            if (MatchingRole(m)) _unreachable = _unreachable.Add(m.UniqueAddress);
         }
 
         private void ReceiveReachable(Member m)
         {
-            if (MatchingRole(m)) _unreachable = _unreachable.Remove(m.Address);
+            if (MatchingRole(m)) _unreachable = _unreachable.Remove(m.UniqueAddress);
         }
 
         private void ReceiveOtherMemberEvent(Member m)
@@ -1405,13 +1422,15 @@ namespace Akka.DistributedData
 
         private void CollectRemovedNodes()
         {
-            var knownNodes = AllNodes.Union(_removedNodes.Keys.Select(x => x.Address));
+            // Compare by UniqueAddress: data written by an older incarnation counts as removed even
+            // when a newer incarnation now lives at the same address.
+            var knownNodes = AllNodes.Union(_removedNodes.Keys);
             var newRemovedNodes = new HashSet<UniqueAddress>();
             foreach (var pair in _dataEntries)
             {
                 if (pair.Value.envelope.Data is IRemovedNodePruning removedNodePruning)
                 {
-                    newRemovedNodes.UnionWith(removedNodePruning.ModifiedByNodes.Where(n => !(n == _selfUniqueAddress || knownNodes.Contains(n.Address))));
+                    newRemovedNodes.UnionWith(removedNodePruning.ModifiedByNodes.Where(n => !(n == _selfUniqueAddress || knownNodes.Contains(n))));
                 }
             }
 
@@ -1481,7 +1500,7 @@ namespace Akka.DistributedData
                 {
                     foreach (var entry2 in envelope.Pruning)
                     {
-                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (AllNodes.IsEmpty || AllNodes.IsSubsetOf(init.Seen)))
+                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (AllNodes.IsEmpty || AllNodes.All(n => init.Seen.Contains(n.Address))))
                         {
                             var removed = entry2.Key;
                             var isDurable = IsDurable(key);
@@ -1551,7 +1570,10 @@ namespace Akka.DistributedData
             {
                 get
                 {
-                    var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).ToImmutableArray();
+                    var allNodes = _replicator.AllNodes
+                        .Where(n => !_replicator._unreachable.Contains(n))
+                        .Select(n => n.Address)
+                        .ToImmutableArray();
                     return allNodes;
                 }
             }
