@@ -254,12 +254,14 @@ namespace Akka.Remote
         /// <param name="remoteAddress">TbD</param>
         /// <param name="cause">TBD</param>
         /// <param name="disassociateInfo">TBD</param>
-        public InvalidAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null, DisassociateInfo? disassociateInfo = null)
+        /// <param name="remoteUid">The UID of the remote system, when known from the handshake.</param>
+        public InvalidAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null, DisassociateInfo? disassociateInfo = null, int? remoteUid = null)
             : base(message, cause)
         {
             RemoteAddress = remoteAddress;
             LocalAddress = localAddress;
             DisassociationInfo = disassociateInfo;
+            RemoteUid = remoteUid;
         }
 
         /// <summary>
@@ -276,6 +278,11 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         public DisassociateInfo? DisassociationInfo { get; private set; }
+
+        /// <summary>
+        /// The UID of the remote system, when known from the handshake.
+        /// </summary>
+        public int? RemoteUid { get; private set; }
     }
 
     /// <summary>
@@ -1946,7 +1953,7 @@ namespace Akka.Remote
             {
                 case DisassociateInfo.Quarantined:
                     throw new InvalidAssociation("The remote system has quarantined this system. No further associations " +
-                                                   "to the remote system are possible until this system is restarted.", LocalAddress, RemoteAddress, disassociateInfo: DisassociateInfo.Quarantined);
+                                                   "to the remote system are possible until this system is restarted.", LocalAddress, RemoteAddress, disassociateInfo: DisassociateInfo.Quarantined, remoteUid: _uid);
                 case DisassociateInfo.Shutdown:
                     throw new ShutDownAssociation($"The remote system terminated the association because it is shutting down. Shut down address: {RemoteAddress}", LocalAddress, RemoteAddress);
                 case DisassociateInfo.Unknown:

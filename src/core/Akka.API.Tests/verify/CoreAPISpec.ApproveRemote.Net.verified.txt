@@ -394,8 +394,10 @@ namespace Akka.Remote
     public sealed class ThisActorSystemQuarantinedEvent : Akka.Remote.RemotingLifecycleEvent
     {
         public ThisActorSystemQuarantinedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress) { }
+        public ThisActorSystemQuarantinedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, System.Nullable<int> remoteUid) { }
         public Akka.Actor.Address LocalAddress { get; }
         public Akka.Actor.Address RemoteAddress { get; }
+        public System.Nullable<int> RemoteUid { get; }
         public override Akka.Event.LogLevel LogLevel() { }
         public override string ToString() { }
     }

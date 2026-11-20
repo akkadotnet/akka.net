@@ -15,46 +15,44 @@ using Akka.Util.Internal;
 namespace Akka.Remote
 {
     /// <summary>
-    /// Remote lifecycle events that are published to the <see cref="EventStream"/> when
-    /// initialization / connect / disconnect events that occur during network operations
+    /// Base class for the remoting lifecycle events that remoting publishes to the <see cref="EventStream"/>
+    /// when it starts listening, connects, disconnects, quarantines, fails, or shuts down.
     /// </summary>
     public abstract class RemotingLifecycleEvent
     {
         /// <summary>
-        ///     Logs the level.
+        /// The level at which remoting logs this event.
         /// </summary>
-        /// <returns>LogLevel.</returns>
+        /// <returns>The <see cref="Event.LogLevel"/> for this event.</returns>
         public abstract LogLevel LogLevel();
     }
 
     /// <summary>
-    /// TBD
+    /// Base class for events about an association (a connection) between this actor system and a remote one.
     /// </summary>
     public abstract class AssociationEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// The address of this actor system.
         /// </summary>
         public abstract Address LocalAddress { get; protected set; }
+
         /// <summary>
-        /// TBD
+        /// The address of the remote actor system.
         /// </summary>
         public abstract Address RemoteAddress { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// <c>true</c> if the remote system opened the association, <c>false</c> if this system did.
         /// </summary>
         public abstract bool IsInbound { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// The name of the event, used by <see cref="ToString"/>.
         /// </summary>
         protected string EventName;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             var networkDirection = IsInbound ? "<-" : "->";
@@ -63,38 +61,31 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when an association to another <see cref="ActorSystem"/> is established.
     /// </summary>
     public sealed class AssociatedEvent : AssociationEvent
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.DebugLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override Address LocalAddress { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public override Address RemoteAddress { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public override bool IsInbound { get; protected set; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="AssociatedEvent"/> instance.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="inbound">TBD</param>
+        /// <param name="localAddress">The address of the current actor system.</param>
+        /// <param name="remoteAddress">The address of the remote actor system.</param>
+        /// <param name="inbound"><c>true</c> if the remote system opened the association, <c>false</c> if this system did.</param>
         public AssociatedEvent(Address localAddress, Address remoteAddress, bool inbound)
         {
             LocalAddress = localAddress;
@@ -129,7 +120,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="localAddress">The address of the current actor system.</param>
         /// <param name="remoteAddress">The address of the remote actor system.</param>
-        /// <param name="inbound"><c>true</c> if this side of the connection as inbound, <c>false</c> if it was outbound.</param>
+        /// <param name="inbound"><c>true</c> if this side of the connection was inbound, <c>false</c> if it was outbound.</param>
         public DisassociatedEvent(Address localAddress, Address remoteAddress, bool inbound)
         {
             LocalAddress = localAddress;
@@ -140,18 +131,18 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when an association to another <see cref="ActorSystem"/> fails.
     /// </summary>
     public sealed class AssociationErrorEvent : AssociationEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="AssociationErrorEvent"/> instance.
         /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="inbound">TBD</param>
-        /// <param name="level">TBD</param>
+        /// <param name="cause">The error that made the association fail.</param>
+        /// <param name="localAddress">The address of the current actor system.</param>
+        /// <param name="remoteAddress">The address of the remote actor system.</param>
+        /// <param name="inbound"><c>true</c> if the remote system opened the association, <c>false</c> if this system did.</param>
+        /// <param name="level">The level at which to log this event.</param>
         public AssociationErrorEvent(Exception cause, Address localAddress, Address remoteAddress, bool inbound, LogLevel level)
         {
             LocalAddress = localAddress;
@@ -163,37 +154,28 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// The error that made the association fail.
         /// </summary>
         public Exception Cause { get; private set; }
 
         private readonly LogLevel _level;
-        /// <summary>
-        /// TBD
-        /// </summary>
-		/// <returns>TBD</returns>
+
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return _level;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override Address LocalAddress { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public override Address RemoteAddress { get; protected set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
+
+        /// <inheritdoc/>
         public override bool IsInbound { get; protected set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return string.Format("{0}: Error [{1}] [{2}]", base.ToString(), Cause.Message, Cause.StackTrace);
@@ -201,37 +183,31 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when remoting starts listening for inbound connections.
     /// </summary>
     public sealed class RemotingListenEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="RemotingListenEvent"/> instance.
         /// </summary>
-        /// <param name="listenAddresses">TBD</param>
+        /// <param name="listenAddresses">The addresses remoting listens on.</param>
         public RemotingListenEvent(IList<Address> listenAddresses)
         {
             ListenAddresses = listenAddresses;
         }
 
         /// <summary>
-        /// TBD
+        /// The addresses remoting listens on, one per transport.
         /// </summary>
         public IList<Address> ListenAddresses { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.InfoLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return string.Format("Remoting now listens on addresses: [{0}]",
@@ -250,7 +226,7 @@ namespace Akka.Remote
             return Event.LogLevel.InfoLevel;
         }
 
-       
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "Remoting shut down";
@@ -258,37 +234,31 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when remoting fails to start or fails to shut down cleanly.
     /// </summary>
     public sealed class RemotingErrorEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="RemotingErrorEvent"/> instance.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The error.</param>
         public RemotingErrorEvent(Exception cause)
         {
             Cause = cause;
         }
 
         /// <summary>
-        /// TBD
+        /// The error.
         /// </summary>
         public Exception Cause { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.ErrorLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return string.Format("Remoting error: [{0}] [{1}]", Cause.Message, Cause.StackTrace);
@@ -296,15 +266,17 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when this actor system quarantines a remote actor system.
+    /// All further messages to that incarnation (UID) of the remote system go to dead letters,
+    /// and it must restart to talk to this system again.
     /// </summary>
     public sealed class QuarantinedEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="QuarantinedEvent"/> instance.
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <param name="uid">TBD</param>
+        /// <param name="address">The address of the quarantined remote system.</param>
+        /// <param name="uid">The UID of the quarantined remote system.</param>
         public QuarantinedEvent(Address address, int uid)
         {
             Uid = uid;
@@ -312,28 +284,22 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// The address of the quarantined remote system.
         /// </summary>
         public Address Address { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The UID of the quarantined remote system.
         /// </summary>
         public int Uid { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.WarningLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return
@@ -345,78 +311,93 @@ namespace Akka.Remote
     }
 
     /// <summary>
-    /// TBD
+    /// Event that is published when a remote actor system has quarantined this actor system and refuses
+    /// to talk to it. This system must restart to talk to that remote system again.
     /// </summary>
     public sealed class ThisActorSystemQuarantinedEvent : RemotingLifecycleEvent
     {
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ThisActorSystemQuarantinedEvent"/> without a remote UID.
         /// </summary>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
+        /// <param name="localAddress">The address of this actor system.</param>
+        /// <param name="remoteAddress">The address of the remote system that quarantined this system.</param>
         public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress)
+            : this(localAddress, remoteAddress, null)
         {
-            LocalAddress = localAddress;
-            RemoteAddress = remoteAddress;
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="ThisActorSystemQuarantinedEvent"/>.
+        /// </summary>
+        /// <param name="localAddress">The address of this actor system.</param>
+        /// <param name="remoteAddress">The address of the remote system that quarantined this system.</param>
+        /// <param name="remoteUid">The UID of the remote system that quarantined this system, when known.</param>
+        public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress, int? remoteUid)
+        {
+            LocalAddress = localAddress;
+            RemoteAddress = remoteAddress;
+            RemoteUid = remoteUid;
+        }
+
+        /// <summary>
+        /// The address of this actor system.
         /// </summary>
         public Address LocalAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The address of the remote system that quarantined this system.
         /// </summary>
         public Address RemoteAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The UID of the remote system that quarantined this system, or <c>null</c> if it isn't known.
+        /// Use it to tell which incarnation of the remote system quarantined this one.
         /// </summary>
-        /// <returns>TBD</returns>
+        public int? RemoteUid { get; private set; }
+
+        /// <inheritdoc/>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.WarningLevel;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
+            return RemoteUid.HasValue
+                ? string.Format("The remote system {0} (UID [{1}]) has quarantined this system {2}.", RemoteAddress, RemoteUid.Value, LocalAddress)
+                : string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
         }
     }
 
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Used for publishing remote lifecycle events to the <see cref="EventStream"/> of the provided <see cref="ActorSystem"/>.
     /// </summary>
     internal sealed class EventPublisher
     {
         /// <summary>
-        /// TBD
+        /// The actor system whose <see cref="EventStream"/> receives the events.
         /// </summary>
         public ActorSystem System { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// The logger used to log published events.
         /// </summary>
         public ILoggingAdapter Log { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Events at or above this level are also logged.
         /// </summary>
         public readonly LogLevel LogLevel;
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="EventPublisher"/>.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <param name="logLevel">TBD</param>
+        /// <param name="system">The actor system whose <see cref="EventStream"/> receives the events.</param>
+        /// <param name="log">The logger used to log published events.</param>
+        /// <param name="logLevel">Events at or above this level are also logged.</param>
         public EventPublisher(ActorSystem system, ILoggingAdapter log, LogLevel logLevel)
         {
             System = system;
@@ -425,9 +406,9 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Publishes the event to the <see cref="EventStream"/>, and logs it if its level is at or above <see cref="LogLevel"/>.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The event to publish.</param>
         public void NotifyListeners(RemotingLifecycleEvent message)
         {
             System.EventStream.Publish(message);
@@ -435,4 +416,3 @@ namespace Akka.Remote
         }
     }
 }
-

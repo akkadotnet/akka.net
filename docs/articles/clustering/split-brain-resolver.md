@@ -317,6 +317,22 @@ akka.cluster.split-brain-resolver {
 > [!WARNING]
 > It is recommended to keep `down-all-when-unstable` enabled and not to set it to be longer than `stable-after` because that can cause a delayed SBR decision on partition sides that should be downed, e.g. in the case of a clean network partition followed by continued instability on the side that should be downed. This can result in members being removed in one side but kept on running on the other side.
 
+### Down Self When Quarantined by a Member
+
+When the rest of the cluster downs and removes a node, the other members quarantine it, and they won't talk to that incarnation again. Usually the removed node finds out through gossip and shuts itself down. But a node that was frozen or paused while this happened (for example, a long garbage collection pause or a paused VM) misses that gossip. When it wakes up it sees every other member as unreachable, and with `lease-majority` it may even find the lease free, take it, and down everyone else in its own view. Left alone, it keeps running as a cluster of one, and new nodes can join it.
+
+To prevent that, a node downs itself as soon as a current cluster member quarantines it. It does this right away, without waiting for `stable-after`, and it works with every strategy. A node only learns it was quarantined when it tries to talk to the member that quarantined it, which a woken node does within seconds.
+
+Quarantines from addresses that are not cluster members are ignored, and so are quarantines from members that are leaving, exiting, or already down, so one node that is shutting down can't take others down with it.
+
+This is on by default. To turn it off:
+
+```hocon
+akka.cluster.split-brain-resolver {
+    down-self-when-quarantined-by-member = off
+}
+```
+
 ### How Split Brain Resolver Works
 
 * The SBR actor subscribes itself to all cluster events from the event bus during actor `PreStart`.

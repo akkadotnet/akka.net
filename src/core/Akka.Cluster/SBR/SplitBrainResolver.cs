@@ -44,6 +44,8 @@ namespace Akka.Cluster.SBR
         protected override void PreStart()
         {
             _cluster.Subscribe(Self, InitialStateAsEvents, typeof(IClusterDomainEvent));
+            if (DownSelfWhenQuarantinedByMember)
+                Context.System.EventStream.Subscribe(Self, typeof(ThisActorSystemQuarantinedEvent));
 
             base.PreStart();
         }
@@ -52,6 +54,7 @@ namespace Akka.Cluster.SBR
         protected override void PostStop()
         {
             _cluster.Unsubscribe(Self);
+            Context.System.EventStream.Unsubscribe(Self, typeof(ThisActorSystemQuarantinedEvent));
             base.PostStop();
         }
 
@@ -104,6 +107,8 @@ namespace Akka.Cluster.SBR
         public abstract UniqueAddress SelfUniqueAddress { get; }
 
         public virtual TimeSpan DownAllWhenUnstable => _settings.DownAllWhenUnstable;
+
+        public virtual bool DownSelfWhenQuarantinedByMember => _settings.DownSelfWhenQuarantinedByMember;
 
         public virtual TimeSpan TickInterval => TimeSpan.FromSeconds(1);
 
@@ -262,6 +267,9 @@ namespace Akka.Cluster.SBR
                 case LeaderChanged ch:
                     LeaderChanged(ch.Leader);
                     return true;
+                case ThisActorSystemQuarantinedEvent q:
+                    ThisActorSystemWasQuarantined(q.RemoteAddress, q.RemoteUid);
+                    return true;
                 case ReleaseLeaseResult lr:
                     OnReleaseLeaseResult(lr.Released);
                     break;
@@ -279,6 +287,51 @@ namespace Akka.Cluster.SBR
         private void LeaderChanged(Address leaderOption)
         {
             MutateResponsibilityInfo(() => { Leader = leaderOption?.Equals(SelfUniqueAddress.Address) == true; });
+        }
+
+        /// <summary>
+        ///     A remote system has quarantined this one. If that system is a current cluster member, it will never
+        ///     talk to this incarnation again, so down this node right away instead of running on as a cluster
+        ///     of its own. Port of <c>DownSelfQuarantinedByRemote</c> from Akka JVM / Apache Pekko.
+        /// </summary>
+        public void ThisActorSystemWasQuarantined(Address remoteAddress, int? remoteUid)
+        {
+            if (!DownSelfWhenQuarantinedByMember)
+                return;
+
+            if (remoteUid is null)
+            {
+                Log.Debug("SBR: remote [{0}] quarantined this system, but its UID is unknown, ignoring", remoteAddress);
+                return;
+            }
+
+            var remote = new UniqueAddress(remoteAddress, remoteUid.Value);
+            var remoteMember = Strategy.AllMembers.FirstOrDefault(m => m.UniqueAddress.Equals(remote));
+            if (remoteMember is null)
+            {
+                Log.Debug("SBR: remote [{0}] quarantined this system but is not part of the cluster, ignoring", remote);
+                return;
+            }
+
+            // A member on its way out (or already downed) may quarantine us as part of its own shutdown.
+            // Don't let that take this node down too, or one failing node can cascade through the cluster.
+            if (remoteMember.Status is MemberStatus.Leaving or MemberStatus.Exiting or MemberStatus.Down)
+            {
+                Log.Info(
+                    "SBR: member [{0}] with status [{1}] quarantined this system, ignoring because it is leaving or down",
+                    remote, remoteMember.Status);
+                return;
+            }
+
+            var selfMember = Strategy.AllMembers.FirstOrDefault(m => m.UniqueAddress.Equals(SelfUniqueAddress));
+            if (selfMember is null || selfMember.Status is MemberStatus.Leaving or MemberStatus.Exiting or MemberStatus.Down)
+            {
+                Log.Debug("SBR: member [{0}] quarantined this system, but this node is not up, ignoring", remote);
+                return;
+            }
+
+            Log.Warning("SBR: cluster member [{0}] quarantined this system, downing myself", remote);
+            ActOnDecision(new DownSelfQuarantinedByRemote(SelfUniqueAddress));
         }
 
         private void OnTick()

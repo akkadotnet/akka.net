@@ -118,7 +118,7 @@ namespace Akka.Remote.Tests.MultiNode
                 var firstAddress = Node(_config.First).Address;
                 Sys.EventStream.Subscribe(TestActor, typeof (ThisActorSystemQuarantinedEvent));
 
-                var actorRef = _identifyWithUid(_config.First, "subject").Item2;
+                var (firstUid, actorRef) = _identifyWithUid(_config.First, "subject");
 
                 await EnterBarrierAsync("quarantined");
 
@@ -132,7 +132,10 @@ namespace Akka.Remote.Tests.MultiNode
                     });
                 });
 
-                await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                var quarantined = await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                // the event identifies which incarnation of the remote system quarantined us (#9002)
+                quarantined.RemoteAddress.Should().Be(firstAddress);
+                quarantined.RemoteUid.Should().Be(firstUid);
 
                 await EnterBarrierAsync("still-quarantined");
 
