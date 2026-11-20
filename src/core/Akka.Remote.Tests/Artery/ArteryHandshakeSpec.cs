@@ -230,6 +230,46 @@ namespace Akka.Remote.Tests.Artery
             error.Should().BeOfType<HandshakeTimeoutException>();
         }
 
+        [Theory(DisplayName = "Non-control handshake should send its initial request without downstream demand")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Non_control_handshake_should_send_initial_request_without_downstream_demand(bool forceReqOnStart)
+        {
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var remoteAddress = NewRemote();
+            if (forceReqOnStart)
+                registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 555L));
+            var control = CreateTestProbe();
+            var context = new AssociationRegistryOutboundContext(registry, localAddress, remoteAddress,
+                message => control.Ref.Tell(message));
+            var stage = new OutboundHandshakeStage(context,
+                retryInterval: TimeSpan.FromHours(1),
+                handshakeTimeout: TimeSpan.FromHours(2),
+                injectHandshakeInterval: TimeSpan.FromHours(2),
+                isControlStream: false, forceReqOnStart: forceReqOnStart);
+            var materializer = ActorMaterializer.Create(Sys);
+            var (pub, sub) = this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+            try
+            {
+                await sub.EnsureSubscriptionAsync();
+                // No Request: a socket that never connected supplies no downstream demand.
+                // The distant retry timer cannot satisfy this initial-request assertion.
+                var request = await control.ExpectMsgAsync<HandshakeReq>(TimeSpan.FromSeconds(3));
+                request.From.Should().Be(localAddress);
+                request.To.Should().Be(remoteAddress);
+                await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            }
+            finally
+            {
+                await sub.CancelAsync();
+                await pub.ExpectCancellationAsync();
+            }
+        }
+
         [Fact(DisplayName = "OutboundHandshakeStage (isControlStream: false) should route the injected HandshakeReq via Context.SendControl instead of its own Out (task 6.3: ordinary stream's Req travels over the control channel)")]
         public async Task OutboundHandshakeStage_non_control_should_route_req_via_send_control()
         {
