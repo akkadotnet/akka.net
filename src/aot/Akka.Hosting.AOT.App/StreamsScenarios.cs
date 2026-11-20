@@ -5,11 +5,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+using System.Buffers;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Serialization;
+using Akka.Serialization.V2;
 using Akka.Streams;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Serialization;
 
 namespace Akka.Hosting.AOT.App;
 
@@ -68,6 +73,41 @@ internal static class StreamsScenarios
         // the MaterializedValueSource<T> it finds inside.
         await ReadOwnMaterializedValueAsync(mat, 42);
         await ReadOwnMaterializedValueAsync(mat, "forty-two");
+
+        await RoundTripTypedRefsAsync(system, mat);
+    }
+
+    private static async Task RoundTripTypedRefsAsync(ActorSystem system, IMaterializer materializer)
+    {
+        if (!AppContext.TryGetSwitch("Akka.DynamicTypeLoading", out var dynamicLoading) || dynamicLoading)
+            throw new InvalidOperationException("The typed stream reference scenario requires Akka.DynamicTypeLoading=false.");
+
+        Order[] offeredOrders = [new(1), new(2)];
+        Order[] returnedOrders = [new(3), new(4)];
+        var sourceRef = await Source.From(offeredOrders).RunWith(StreamRefs.SourceRef<Order>(), materializer).WaitAsync(Timeout);
+        var (sinkRefTask, receivedAtSink) = StreamRefs.SinkRef<Order>()
+            .ToMaterialized(Sink.Seq<Order>(), Keep.Both).Run(materializer);
+        var sinkRef = await sinkRefTask.WaitAsync(Timeout);
+        var offer = new StreamOffer(sourceRef, sinkRef);
+        var serializer = system.Serialization.FindSerializerFor(offer) as TypedRefSerializer
+            ?? throw new InvalidOperationException("The generated serializer must own the stream offer.");
+
+        var buffer = new ArrayBufferWriter<byte>();
+        var expectedSize = serializer.SizeHint(offer);
+        var written = serializer.Serialize(offer, buffer);
+        if (written <= 0 || written != buffer.WrittenCount || written != expectedSize)
+            throw new InvalidOperationException("The generated serializer must report the exact stream offer size.");
+
+        var decoded = (StreamOffer)system.Serialization.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory),
+            serializer.Identifier, serializer.Manifest(offer));
+        if (ReferenceEquals(sourceRef, decoded.SourceRef) || ReferenceEquals(sinkRef, decoded.SinkRef))
+            throw new InvalidOperationException("Both typed stream references must be reconstructed from bytes.");
+
+        var receivedFromSource = decoded.SourceRef.Source.RunWith(Sink.Seq<Order>(), materializer);
+        Source.From(returnedOrders).RunWith(decoded.SinkRef.Sink, materializer);
+        await ExpectAsync(receivedFromSource, offeredOrders, "decoded source reference");
+        await ExpectAsync(receivedAtSink, returnedOrders, "decoded sink reference");
+        Console.WriteLine("[typed-stream-refs] OK source-elements=2 sink-elements=2");
     }
 
     private static Task FanOutAsync<T>(IMaterializer mat, T[] elements, string typeName)
@@ -132,4 +172,23 @@ internal static class StreamsScenarios
             }
         }
     }
+}
+
+internal interface ITypedRefProtocol
+{
+}
+
+internal sealed record Order(int Number);
+
+[AkkaSerializable(Manifest = "stream-offer")]
+[AkkaMessageFormatter<ISourceRef<Order>, SourceRefFormatter<Order>>]
+[AkkaMessageFormatter<ISinkRef<Order>, SinkRefFormatter<Order>>]
+internal sealed record StreamOffer(
+    [property: AkkaField(1)] ISourceRef<Order> SourceRef,
+    [property: AkkaField(2)] ISinkRef<Order> SinkRef) : ITypedRefProtocol;
+
+[AkkaSerializer<ITypedRefProtocol>("native-typed-stream-refs", 18310)]
+internal sealed partial class TypedRefSerializer : AkkaSerializer
+{
+    public static partial SerializerDetails CreateSerializerDetails(ExtendedActorSystem system);
 }
