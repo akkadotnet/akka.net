@@ -53,36 +53,6 @@ namespace Akka.Remote.Tests.Artery
         {
         }
 
-        public static TheoryData<string, bool> NetworkKinds => ConnectionKinds(SourceFixture.AllKindNames);
-
-        public static TheoryData<string, bool> PollingNetworkKinds => ConnectionKinds(SourceFixture.SkippingKindNames);
-
-        private static TheoryData<string, bool> ConnectionKinds(IEnumerable<string> kinds)
-        {
-            var data = new TheoryData<string, bool>();
-            foreach (var kind in kinds)
-            {
-                data.Add(kind, false);
-                data.Add(kind, true);
-            }
-            return data;
-        }
-
-        public static TheoryData<string, string, bool> BadNewerNetworkCases
-        {
-            get
-            {
-                var data = new TheoryData<string, string, bool>();
-                foreach (var kind in SourceFixture.SkippingKindNames)
-                foreach (var bad in new[] { "no-private-key", "server-use-only" })
-                {
-                    data.Add(kind, bad, false);
-                    data.Add(kind, bad, true);
-                }
-                return data;
-            }
-        }
-
         public static TheoryData<string> AllKinds => SourceFixture.AllKinds;
 
         public static TheoryData<string> SkippingKinds => SourceFixture.SkippingKinds;
@@ -196,25 +166,25 @@ namespace Akka.Remote.Tests.Artery
         // ---- 1 and 2: a new connection uses the new certificate; an open one keeps working ----
 
         [Theory(DisplayName = "Should_Present_The_New_Certificate_On_New_Connections_When_A_Certificate_Is_Added")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_present_the_new_certificate_on_new_connections_when_a_certificate_is_added(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_present_the_new_certificate_on_new_connections_when_a_certificate_is_added(string kind)
         {
             var fixture = Open(kind);
             var oldLeaf = Leaf(fixture, 60);
             var newLeaf = Leaf(fixture, 180);
             fixture.Add(oldLeaf);
-            var node = StartSourceNode(fixture, directOutbound: directOutbound);
+            var node = StartSourceNode(fixture);
             var infos = CreateTestProbe();
             node.Actors.EventStream.Subscribe(infos, typeof(Info));
 
             // The control: before the change the node presents the old certificate in both roles.
-            (await PresentedAsync(node, directOutbound: directOutbound)).Should().Be((oldLeaf.Thumbprint, oldLeaf.Thumbprint));
+            (await PresentedAsync(node)).Should().Be((oldLeaf.Thumbprint, oldLeaf.Thumbprint));
 
             fixture.Add(newLeaf); // no restart
             await fixture.RefreshAsync(); // connections built after the next look-up use it
 
-            (await PresentedAsync(node, directOutbound: directOutbound)).Should().Be((newLeaf.Thumbprint, newLeaf.Thumbprint));
-            (await PresentedAsync(node, directOutbound: directOutbound)).Should().Be((newLeaf.Thumbprint, newLeaf.Thumbprint));
+            (await PresentedAsync(node)).Should().Be((newLeaf.Thumbprint, newLeaf.Thumbprint));
+            (await PresentedAsync(node)).Should().Be((newLeaf.Thumbprint, newLeaf.Thumbprint));
 
             // The change is logged once, not once per connection.
             var changed = $"TLS client and server certificate changed from {Text(oldLeaf)} to {Text(newLeaf)}";
@@ -224,15 +194,15 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "Should_Keep_A_Connection_That_Was_Open_Before_The_Change_Working")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_keep_a_connection_that_was_open_before_the_change_working(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_keep_a_connection_that_was_open_before_the_change_working(string kind)
         {
             var fixture = Open(kind);
             var oldLeaf = Leaf(fixture, 60);
             var newLeaf = Leaf(fixture, 180);
             fixture.Add(oldLeaf);
-            var node = StartSourceNode(fixture, directOutbound: directOutbound);
-            var peer = StartFixedNode(directOutbound: directOutbound);
+            var node = StartSourceNode(fixture);
+            var peer = StartFixedNode();
             await ExchangeAsync(peer, node);
             await ExchangeAsync(node, peer);
             var nodeHandshakes = node.Seen.Count;
@@ -252,8 +222,8 @@ namespace Akka.Remote.Tests.Artery
         // ---- 3: old and new certificate meet, issued by a two-level test CA, a different leaf per node ----
 
         [Theory(DisplayName = "Should_Connect_In_Both_Directions_Between_A_Node_On_The_Old_Certificate_And_A_Node_On_The_New_One")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_connect_in_both_directions_between_a_node_on_the_old_certificate_and_a_node_on_the_new_one(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_connect_in_both_directions_between_a_node_on_the_old_certificate_and_a_node_on_the_new_one(string kind)
         {
             var rotatedFixture = Open(kind);
             var oldFixture1 = Open(kind);
@@ -267,9 +237,9 @@ namespace Akka.Remote.Tests.Artery
             rotatedFixture.Add(rotatedOld);
             oldFixture1.Add(old1);
             oldFixture2.Add(old2);
-            var rotated = StartSourceNode(rotatedFixture, directOutbound: directOutbound);
-            var oldNode1 = StartSourceNode(oldFixture1, directOutbound: directOutbound);
-            var oldNode2 = StartSourceNode(oldFixture2, directOutbound: directOutbound);
+            var rotated = StartSourceNode(rotatedFixture);
+            var oldNode1 = StartSourceNode(oldFixture1);
+            var oldNode2 = StartSourceNode(oldFixture2);
 
             rotatedFixture.Add(rotatedNew); // the rotated node is now on the new certificate, the others are not
             await rotatedFixture.RefreshAsync();
@@ -285,13 +255,13 @@ namespace Akka.Remote.Tests.Artery
         // ---- 4: a bad newer certificate is skipped ----
 
         [Theory(DisplayName = "Should_Skip_A_Bad_Newer_Certificate_And_Keep_Using_The_Old_One")]
-        [MemberData(nameof(BadNewerNetworkCases))]
-        public async Task Should_skip_a_bad_newer_certificate_and_keep_using_the_old_one(string kind, string badCase, bool directOutbound)
+        [MemberData(nameof(BadNewerCertificateCases))]
+        public async Task Should_skip_a_bad_newer_certificate_and_keep_using_the_old_one(string kind, string badCase)
         {
             var fixture = Open(kind);
             var oldLeaf = Leaf(fixture, 60);
             fixture.Add(oldLeaf);
-            var node = StartSourceNode(fixture, directOutbound: directOutbound);
+            var node = StartSourceNode(fixture);
 
             var bad = Leaf(fixture, 180, badCase == "server-use-only" ? new[] { TlsTestCertificates.ServerAuth } : Both);
             fixture.Add(bad, withKey: badCase != "no-private-key");
@@ -301,8 +271,8 @@ namespace Akka.Remote.Tests.Artery
             // one is skipped in both, and the skip is logged once.
             var warnings = CreateTestProbe();
             node.Actors.EventStream.Subscribe(warnings, typeof(Warning));
-            (await PresentedAsync(node, directOutbound: directOutbound)).Should().Be((oldLeaf.Thumbprint, oldLeaf.Thumbprint));
-            (await PresentedAsync(node, directOutbound: directOutbound)).Should().Be((oldLeaf.Thumbprint, oldLeaf.Thumbprint));
+            (await PresentedAsync(node)).Should().Be((oldLeaf.Thumbprint, oldLeaf.Thumbprint));
+            (await PresentedAsync(node)).Should().Be((oldLeaf.Thumbprint, oldLeaf.Thumbprint));
 
             var skipped = await warnings.FishForMessageAsync<Warning>(
                 w => w.Message.ToString()!.Contains(bad.Thumbprint), TimeSpan.FromSeconds(5));
@@ -314,15 +284,15 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "Should_Pick_Up_A_Newer_Server_Only_Certificate_When_Mutual_Tls_Is_Off")]
-        [MemberData(nameof(PollingNetworkKinds))]
-        public async Task Should_pick_up_a_newer_server_only_certificate_when_mutual_tls_is_off(string kind, bool directOutbound)
+        [MemberData(nameof(SkippingKinds))]
+        public async Task Should_pick_up_a_newer_server_only_certificate_when_mutual_tls_is_off(string kind)
         {
             var fixture = Open(kind);
             var oldLeaf = Leaf(fixture, 60);
             var serverOnly = Leaf(fixture, 180, TlsTestCertificates.ServerAuth);
             fixture.Add(oldLeaf);
-            var node = StartNode(policy => ArteryTlsSettings.ServerOnly(fixture.Source, policy), directOutbound: directOutbound);
-            var peer = StartServerOnlyFixedNode(directOutbound: directOutbound);
+            var node = StartNode(policy => ArteryTlsSettings.ServerOnly(fixture.Source, policy));
+            var peer = StartServerOnlyFixedNode();
 
             await ExchangeAsync(peer, node);
             peer.Seen.Distinct().Should().Equal(oldLeaf.Thumbprint);
@@ -330,7 +300,7 @@ namespace Akka.Remote.Tests.Artery
             fixture.Add(serverOnly); // a node that never presents a client certificate needs server use only
             await fixture.RefreshAsync();
 
-            var freshPeer = StartServerOnlyFixedNode(directOutbound: directOutbound);
+            var freshPeer = StartServerOnlyFixedNode();
             await ExchangeAsync(freshPeer, node);
             freshPeer.Seen.Distinct().Should().Equal(serverOnly.Thumbprint);
         }
@@ -344,31 +314,31 @@ namespace Akka.Remote.Tests.Artery
         private const string OtherName = "other.example.com";
 
         [Theory(DisplayName = "Should_Connect_When_Hostname_Validation_Is_On_And_The_Certificate_Names_The_Address_Dialled")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_connect_when_hostname_validation_is_on_and_the_certificate_names_the_address_dialled(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_connect_when_hostname_validation_is_on_and_the_certificate_names_the_address_dialled(string kind)
         {
             var fixture = Open(kind);
             fixture.Add(Leaf(fixture, 60));
-            var server = StartHostnameServer(fixture, directOutbound: directOutbound);
-            var client = StartHostnameClient(directOutbound: directOutbound);
+            var server = StartHostnameServer(fixture);
+            var client = StartHostnameClient();
 
             await ExchangeAsync(client, server);
         }
 
         [Theory(DisplayName = "Should_Fail_The_Handshake_Of_A_New_Connection_When_The_Source_Rotates_To_A_Newer_Certificate_With_Another_Name")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_fail_the_handshake_of_a_new_connection_when_the_source_rotates_to_a_newer_certificate_with_another_name(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_fail_the_handshake_of_a_new_connection_when_the_source_rotates_to_a_newer_certificate_with_another_name(string kind)
         {
             var fixture = Open(kind);
             fixture.Add(Leaf(fixture, 60));
-            var server = StartHostnameServer(fixture, directOutbound: directOutbound);
-            await ExchangeAsync(StartHostnameClient(directOutbound: directOutbound), server); // the control: the old certificate names the address
+            var server = StartHostnameServer(fixture);
+            await ExchangeAsync(StartHostnameClient(), server); // the control: the old certificate names the address
 
             var wrongName = LeafForName(fixture, 180, OtherName);
             fixture.Add(wrongName); // no restart
             await fixture.RefreshAsync();
 
-            var client = StartHostnameClient(directOutbound: directOutbound);
+            var client = StartHostnameClient();
             await Assert.ThrowsAnyAsync<Exception>(() => ExchangeAsync(client, server, timeout: TimeSpan.FromSeconds(5)));
             client.Seen.Should().Contain(wrongName.Thumbprint, "the client was shown the new certificate and rejected it");
             AssertStaysUp(server, "a failed handshake of a peer does not shut the server down");
@@ -376,72 +346,68 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "Should_Connect_On_A_New_Connection_When_The_Source_Rotates_To_A_Newer_Certificate_With_The_Right_Name")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_connect_on_a_new_connection_when_the_source_rotates_to_a_newer_certificate_with_the_right_name(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_connect_on_a_new_connection_when_the_source_rotates_to_a_newer_certificate_with_the_right_name(string kind)
         {
             var fixture = Open(kind);
             fixture.Add(LeafForName(fixture, 60, OtherName)); // the node starts with a certificate that has the wrong name
-            var server = StartHostnameServer(fixture, directOutbound: directOutbound);
+            var server = StartHostnameServer(fixture);
             await Assert.ThrowsAnyAsync<Exception>(() =>
-                ExchangeAsync(StartHostnameClient(directOutbound: directOutbound), server, timeout: TimeSpan.FromSeconds(5))); // the control
+                ExchangeAsync(StartHostnameClient(), server, timeout: TimeSpan.FromSeconds(5))); // the control
 
             fixture.Add(LeafForName(fixture, 180, DialledName)); // no restart
             await fixture.RefreshAsync();
 
-            await ExchangeAsync(StartHostnameClient(directOutbound: directOutbound), server);
+            await ExchangeAsync(StartHostnameClient(), server);
         }
 
         // ---- 7: no usable certificate ----
 
         [Theory(DisplayName = "Should_Fail_At_Startup_With_A_Configuration_Exception_When_No_Certificate_Qualifies")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_fail_at_startup_with_a_configuration_exception_when_no_certificate_qualifies(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_fail_at_startup_with_a_configuration_exception_when_no_certificate_qualifies(string kind)
         {
             var fixture = Open(kind); // holds nothing, so nothing qualifies
             await fixture.RefreshAsync();
             var expected = Record.Exception(() => fixture.Source.GetCertificateWithoutLogging(TlsCertificateRole.ClientAndServer));
             expected.Should().BeAssignableTo<InvalidOperationException>();
 
-            var thrown = Assert.Throws<ConfigurationException>(() => StartSourceNode(fixture, directOutbound: directOutbound));
+            var thrown = Assert.Throws<ConfigurationException>(() => StartSourceNode(fixture));
 
             thrown.Message.Should().Be(expected!.Message);
         }
 
-        [Theory(DisplayName = "Should_Fail_At_Startup_When_Mutual_Tls_Needs_A_Client_Certificate_And_Only_A_Server_Certificate_Exists")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void Should_fail_at_startup_when_mutual_tls_needs_a_client_certificate_and_only_a_server_certificate_exists(bool directOutbound)
+        [Fact(DisplayName = "Should_Fail_At_Startup_When_Mutual_Tls_Needs_A_Client_Certificate_And_Only_A_Server_Certificate_Exists")]
+        public void Should_fail_at_startup_when_mutual_tls_needs_a_client_certificate_and_only_a_server_certificate_exists()
         {
             var fixture = Open("pkcs12-folder");
             fixture.Add(Leaf(fixture, 60, TlsTestCertificates.ServerAuth));
 
-            Assert.Throws<ConfigurationException>(() => StartSourceNode(fixture, directOutbound: directOutbound)).Message.Should().Contain("client");
+            Assert.Throws<ConfigurationException>(() => StartSourceNode(fixture)).Message.Should().Contain("client");
 
             // Without mutual TLS the node never presents a client certificate, so it starts.
-            StartNode(policy => ArteryTlsSettings.ServerOnly(fixture.Source, policy), directOutbound: directOutbound);
+            StartNode(policy => ArteryTlsSettings.ServerOnly(fixture.Source, policy));
         }
 
-        [Theory(DisplayName = "Should_Fail_At_Startup_With_A_Configuration_Exception_That_Carries_The_Message_When_The_Callback_Throws")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void Should_fail_at_startup_with_a_configuration_exception_that_carries_the_message_when_the_callback_throws(bool directOutbound)
+        [Fact(DisplayName = "Should_Fail_At_Startup_With_A_Configuration_Exception_That_Carries_The_Message_When_The_Callback_Throws")]
+        public void Should_fail_at_startup_with_a_configuration_exception_that_carries_the_message_when_the_callback_throws()
         {
             // Not an InvalidOperationException: any failure of the source stops the node at startup.
             var source = TlsCertificateSource.FromCallback(() => throw new ArgumentException("the callback broke"));
 
-            Assert.Throws<ConfigurationException>(() => StartNode(policy => ArteryTlsSettings.Mutual(source, policy), directOutbound: directOutbound))
+            Assert.Throws<ConfigurationException>(() => StartNode(policy => ArteryTlsSettings.Mutual(source, policy)))
                 .Message.Should().Be("the callback broke");
         }
 
         [Theory(DisplayName = "Should_Keep_Serving_With_The_Previous_Certificate_When_The_Only_Certificate_Is_Lost")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_keep_serving_with_the_previous_certificate_when_the_only_certificate_is_lost(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_keep_serving_with_the_previous_certificate_when_the_only_certificate_is_lost(string kind)
         {
             var fixture = Open(kind);
             var leaf = Leaf(fixture, 60);
             fixture.Add(leaf);
-            var node = StartSourceNode(fixture, directOutbound: directOutbound);
-            var peer = StartFixedNode(directOutbound: directOutbound);
+            var node = StartSourceNode(fixture);
+            var peer = StartFixedNode();
             await ExchangeAsync(node, peer);
             var warnings = CreateTestProbe();
             node.Actors.EventStream.Subscribe(warnings, typeof(Warning));
@@ -450,9 +416,9 @@ namespace Akka.Remote.Tests.Artery
             await fixture.RefreshAsync();
 
             // Both directions still work, with the certificate the node had.
-            var outboundPeer = StartFixedNode(directOutbound: directOutbound);
+            var outboundPeer = StartFixedNode();
             await ExchangeAsync(node, outboundPeer);
-            var inboundPeer = StartFixedNode(directOutbound: directOutbound);
+            var inboundPeer = StartFixedNode();
             await ExchangeAsync(inboundPeer, node);
             outboundPeer.Seen.Distinct().Should().Equal(leaf.Thumbprint);
             inboundPeer.Seen.Distinct().Should().Equal(leaf.Thumbprint);
@@ -469,14 +435,14 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "Should_Fail_That_Connection_And_Stay_Up_When_The_Only_Certificate_Has_Expired")]
-        [MemberData(nameof(NetworkKinds))]
-        public async Task Should_fail_that_connection_and_stay_up_when_the_only_certificate_has_expired(string kind, bool directOutbound)
+        [MemberData(nameof(AllKinds))]
+        public async Task Should_fail_that_connection_and_stay_up_when_the_only_certificate_has_expired(string kind)
         {
             var fixture = Open(kind);
             var leaf = Leaf(fixture, 60);
             fixture.Add(leaf);
-            var node = StartSourceNode(fixture, directOutbound: directOutbound);
-            var peer = StartFixedNode(directOutbound: directOutbound);
+            var node = StartSourceNode(fixture);
+            var peer = StartFixedNode();
             await ExchangeAsync(node, peer);
             var errors = CreateTestProbe();
             node.Actors.EventStream.Subscribe(errors, typeof(Error));
@@ -485,7 +451,7 @@ namespace Akka.Remote.Tests.Artery
             fixture.Source.UtcNow = () => DateTime.UtcNow.AddHours(2);
 
             // Outbound: the node cannot build a connection to a fresh peer. The attempt fails with a clear error.
-            var outboundPeer = StartFixedNode(directOutbound: directOutbound);
+            var outboundPeer = StartFixedNode();
             await Assert.ThrowsAnyAsync<Exception>(() => ExchangeAsync(node, outboundPeer, timeout: TimeSpan.FromSeconds(3)));
             var outboundError = await errors.FishForMessageAsync<Error>(
                 e => e.Message.ToString()!.Contains("Cannot build a TLS connection to"), TimeSpan.FromSeconds(5));
@@ -505,17 +471,15 @@ namespace Akka.Remote.Tests.Artery
             // once a look-up has run, as a connection does not wait for one.
             fixture.Source.UtcNow = () => DateTime.UtcNow;
             await fixture.RefreshAsync();
-            await ExchangeAsync(StartFixedNode(directOutbound: directOutbound), node);
+            await ExchangeAsync(StartFixedNode(), node);
         }
 
-        [Theory(DisplayName = "Should_Log_The_No_Certificate_Error_At_Most_Once_A_Minute_For_Incoming_Connections")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_log_the_no_certificate_error_at_most_once_a_minute_for_incoming_connections(bool directOutbound)
+        [Fact(DisplayName = "Should_Log_The_No_Certificate_Error_At_Most_Once_A_Minute_For_Incoming_Connections")]
+        public async Task Should_log_the_no_certificate_error_at_most_once_a_minute_for_incoming_connections()
         {
             var fixture = Open("pkcs12-folder");
             fixture.Add(Leaf(fixture, 60));
-            var node = StartSourceNode(fixture, directOutbound: directOutbound);
+            var node = StartSourceNode(fixture);
             var errors = CreateTestProbe();
             node.Actors.EventStream.Subscribe(errors, typeof(Error));
             var warnings = CreateTestProbe();
@@ -543,16 +507,14 @@ namespace Akka.Remote.Tests.Artery
             AssertStaysUp(node);
         }
 
-        [Theory(DisplayName = "Should_Log_The_No_Certificate_Error_For_Each_Node_When_Two_Nodes_Share_One_Settings_Object")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_log_the_no_certificate_error_for_each_node_when_two_nodes_share_one_settings_object(bool directOutbound)
+        [Fact(DisplayName = "Should_Log_The_No_Certificate_Error_For_Each_Node_When_Two_Nodes_Share_One_Settings_Object")]
+        public async Task Should_log_the_no_certificate_error_for_each_node_when_two_nodes_share_one_settings_object()
         {
             var fixture = Open("pkcs12-folder");
             fixture.Add(Leaf(fixture, 60));
             var shared = ArteryTlsSettings.Mutual(fixture.Source, TlsPeerPolicy.CustomTrust((c, _, _, _, _) => c is not null && _ca.Trusts(c)));
-            var first = StartNode(_ => shared, directOutbound: directOutbound);
-            var second = StartNode(_ => shared, directOutbound: directOutbound);
+            var first = StartNode(_ => shared);
+            var second = StartNode(_ => shared);
             var firstErrors = CreateTestProbe();
             first.Actors.EventStream.Subscribe(firstErrors, typeof(Error));
             var secondErrors = CreateTestProbe();
@@ -573,14 +535,12 @@ namespace Akka.Remote.Tests.Artery
         }
 
         [Theory(DisplayName = "Should_RejectMissingOrUntrustedClientCredentials_And_KeepServingMutualTls")]
-        [InlineData(false, false)]
-        [InlineData(false, true)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
+        [InlineData(false)]
+        [InlineData(true)]
         public async Task Should_reject_missing_or_untrusted_client_credentials_and_keep_serving_mutual_tls(
-            bool directOutbound, bool untrustedClient)
+            bool untrustedClient)
         {
-            var server = StartFixedNode(directOutbound);
+            var server = StartFixedNode();
             Node client;
             X509Certificate2? rejected = null;
             using var foreignAuthority = TestCertificateAuthority.Create();
@@ -588,11 +548,11 @@ namespace Akka.Remote.Tests.Artery
             {
                 rejected = foreignAuthority.Issue("untrusted-client", -60, 60, Both);
                 _certificates.Add(rejected);
-                client = StartNode(policy => ArteryTlsSettings.Mutual(rejected, policy), directOutbound: directOutbound);
+                client = StartNode(policy => ArteryTlsSettings.Mutual(rejected, policy));
             }
             else
             {
-                client = StartServerOnlyFixedNode(directOutbound);
+                client = StartServerOnlyFixedNode();
             }
 
             await Assert.ThrowsAnyAsync<Exception>(() => ExchangeAsync(client, server, timeout: TimeSpan.FromSeconds(3)));
@@ -603,20 +563,20 @@ namespace Akka.Remote.Tests.Artery
             AssertStaysUp(client);
             await client.Actors.Terminate().WaitAsync(TimeSpan.FromSeconds(15));
             ((ArteryRemoting)RARP.For(client.Actors).Provider.Transport).DirectTcpConnectionCount.Should().Be(0);
-            await ExchangeAsync(StartFixedNode(directOutbound), server);
+            await ExchangeAsync(StartFixedNode(), server);
         }
 
         // ---- the once-a-minute poll ----
 
         [Theory(DisplayName = "Should_Look_For_A_Renewed_Certificate_Once_A_Minute_When_The_Node_Builds_No_Connection")]
-        [MemberData(nameof(PollingNetworkKinds))]
-        public async Task Should_look_for_a_renewed_certificate_once_a_minute_when_the_node_builds_no_connection(string kind, bool directOutbound)
+        [MemberData(nameof(SkippingKinds))]
+        public async Task Should_look_for_a_renewed_certificate_once_a_minute_when_the_node_builds_no_connection(string kind)
         {
             var fixture = Open(kind);
             var oldLeaf = Leaf(fixture, 60);
             var newLeaf = Leaf(fixture, 180);
             fixture.Add(oldLeaf);
-            var node = StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy), TestSchedulerHocon, directOutbound: directOutbound);
+            var node = StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy), TestSchedulerHocon);
             var scheduler = (TestScheduler)node.Actors.Scheduler;
             var source = fixture.Source;
             source.ScanCount.Should().Be(1, "the startup check read the folder");
@@ -641,7 +601,7 @@ namespace Akka.Remote.Tests.Artery
             node.Seen.Should().BeEmpty();
 
             // The scheduled refresh, without an explicit RefreshAsync, supplies both roles on new connections.
-            (await PresentedAsync(node, directOutbound).WaitAsync(TimeSpan.FromSeconds(15)))
+            (await PresentedAsync(node).WaitAsync(TimeSpan.FromSeconds(15)))
                 .Should().Be((newLeaf.Thumbprint, newLeaf.Thumbprint));
             var scansBeforeShutdown = source.ScanCount;
 
@@ -654,10 +614,8 @@ namespace Akka.Remote.Tests.Artery
             source.ScanCount.Should().Be(scansBeforeShutdown);
         }
 
-        [Theory(DisplayName = "Should_Not_Look_Up_On_A_Schedule_When_The_Certificate_Is_Fixed_Or_Comes_From_A_Callback")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_not_look_up_on_a_schedule_when_the_certificate_is_fixed_or_comes_from_a_callback(bool directOutbound)
+        [Fact(DisplayName = "Should_Not_Look_Up_On_A_Schedule_When_The_Certificate_Is_Fixed_Or_Comes_From_A_Callback")]
+        public async Task Should_not_look_up_on_a_schedule_when_the_certificate_is_fixed_or_comes_from_a_callback()
         {
             var leaf = _ca.Issue("fixed-node", -240, 60, Both);
             _certificates.Add(leaf);
@@ -671,7 +629,7 @@ namespace Akka.Remote.Tests.Artery
                 return leaf;
             });
             ArteryTlsSettings? callbackSettings = null;
-            var callbackNode = StartNode(policy => callbackSettings = ArteryTlsSettings.Mutual(source, policy), TestSchedulerHocon, directOutbound: directOutbound);
+            var callbackNode = StartNode(policy => callbackSettings = ArteryTlsSettings.Mutual(source, policy), TestSchedulerHocon);
             callbackSettings!.CertificateSource!.NeedsPolling.Should().BeFalse("a callback is called for connections only");
             var atStart = Volatile.Read(ref calls);
             atStart.Should().BeGreaterThan(0, "the startup check called it");
@@ -687,15 +645,13 @@ namespace Akka.Remote.Tests.Artery
                 .CertificateSource!.NeedsPolling.Should().BeTrue();
         }
 
-        [Theory(DisplayName = "Should_Not_Throw_From_The_Scheduled_Call_When_The_Source_Has_Nothing_To_Present")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_not_throw_from_the_scheduled_call_when_the_source_has_nothing_to_present(bool directOutbound)
+        [Fact(DisplayName = "Should_Not_Throw_From_The_Scheduled_Call_When_The_Source_Has_Nothing_To_Present")]
+        public async Task Should_not_throw_from_the_scheduled_call_when_the_source_has_nothing_to_present()
         {
             var fixture = Open("pkcs12-folder");
             var leaf = Leaf(fixture, 60);
             fixture.Add(leaf);
-            var node = StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy), TestSchedulerHocon, directOutbound: directOutbound);
+            var node = StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy), TestSchedulerHocon);
             var scheduler = (TestScheduler)node.Actors.Scheduler;
             var source = fixture.Source;
 
@@ -711,10 +667,8 @@ namespace Akka.Remote.Tests.Artery
             AssertStaysUp(node);
         }
 
-        [Theory(DisplayName = "Should_Not_Poll_The_Source_When_The_Bind_Fails")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_not_poll_the_source_when_the_bind_fails(bool directOutbound)
+        [Fact(DisplayName = "Should_Not_Poll_The_Source_When_The_Bind_Fails")]
+        public async Task Should_not_poll_the_source_when_the_bind_fails()
         {
             var fixture = Open("pkcs12-folder");
             fixture.Add(Leaf(fixture, 60));
@@ -725,7 +679,7 @@ namespace Akka.Remote.Tests.Artery
             var before = CapturingTestScheduler.Created.Count;
 
             Assert.ThrowsAny<Exception>(() => StartNode(policy => ArteryTlsSettings.Mutual(source, policy),
-                $"{CapturingTestSchedulerHocon}\nakka.remote.artery.canonical.port = {port}", directOutbound: directOutbound));
+                $"{CapturingTestSchedulerHocon}\nakka.remote.artery.canonical.port = {port}"));
 
             var scheduler = CapturingTestScheduler.Created.Skip(before).Single();
             var scans = source.ScanCount;
@@ -804,40 +758,40 @@ namespace Akka.Remote.Tests.Artery
         }
 
         // A node that listens on "localhost" and takes its certificate from the source.
-        private Node StartHostnameServer(SourceFixture fixture, bool directOutbound) =>
+        private Node StartHostnameServer(SourceFixture fixture) =>
             StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy),
-                $"akka.remote.artery.canonical.hostname = \"{DialledName}\"", directOutbound);
+                $"akka.remote.artery.canonical.hostname = \"{DialledName}\"");
 
         // A node that checks the name of the server it dials, as well as the chain.
-        private Node StartHostnameClient(bool directOutbound)
+        private Node StartHostnameClient()
         {
             var leaf = _ca.Issue("peer-" + Guid.NewGuid().ToString("N"), -60, 60, Both);
             _certificates.Add(leaf);
             return StartNode(policy => ArteryTlsSettings.Mutual(leaf, policy,
-                policy.And(TlsCertificateValidation.ValidateHostname())), directOutbound: directOutbound);
+                policy.And(TlsCertificateValidation.ValidateHostname())));
         }
 
-        private Node StartSourceNode(SourceFixture fixture, bool directOutbound) =>
-            StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy), directOutbound: directOutbound);
+        private Node StartSourceNode(SourceFixture fixture) =>
+            StartNode(policy => ArteryTlsSettings.Mutual(fixture.Source, policy));
 
         // A peer with one fixed certificate, the way every node was set up before sources existed.
-        private Node StartFixedNode(bool directOutbound)
+        private Node StartFixedNode()
         {
             var leaf = _ca.Issue("peer-" + Guid.NewGuid().ToString("N"), -60, 60, Both);
             _certificates.Add(leaf);
-            return StartNode(policy => ArteryTlsSettings.Mutual(leaf, policy), directOutbound: directOutbound);
+            return StartNode(policy => ArteryTlsSettings.Mutual(leaf, policy));
         }
 
-        private Node StartServerOnlyFixedNode(bool directOutbound)
+        private Node StartServerOnlyFixedNode()
         {
             var leaf = _ca.Issue("peer-" + Guid.NewGuid().ToString("N"), -60, 60, new[] { TlsTestCertificates.ServerAuth });
             _certificates.Add(leaf);
-            return StartNode(policy => ArteryTlsSettings.ServerOnly(leaf, policy), directOutbound: directOutbound);
+            return StartNode(policy => ArteryTlsSettings.ServerOnly(leaf, policy));
         }
 
         // Starts an Artery node with the TLS settings that tls builds from a peer policy. The policy records each
         // certificate a peer shows and trusts the test CA.
-        private Node StartNode(Func<TlsPeerPolicy, ArteryTlsSettings> tls, string hocon = "", bool directOutbound = false)
+        private Node StartNode(Func<TlsPeerPolicy, ArteryTlsSettings> tls, string hocon = "")
         {
             var node = new Node();
             var policy = TlsPeerPolicy.CustomTrust((certificate, _, _, _, _) =>
@@ -848,8 +802,7 @@ namespace Akka.Remote.Tests.Artery
                 return _ca.Trusts(certificate);
             });
 
-            var config = ConfigurationFactory.ParseString($"akka.remote.artery.advanced.tcp.direct-outbound = {directOutbound.ToString().ToLowerInvariant()}")
-                .WithFallback(ConfigurationFactory.ParseString(hocon)).WithFallback(ConfigurationFactory.ParseString(@"
+            var config = ConfigurationFactory.ParseString(hocon).WithFallback(ConfigurationFactory.ParseString(@"
                 akka {
                     loglevel = INFO
                     actor.provider = remote
@@ -873,19 +826,16 @@ namespace Akka.Remote.Tests.Artery
             var reply = await from.Actors.ActorSelection(to.Echo).Ask<string>(message, timeout ?? TimeSpan.FromSeconds(15));
             reply.Should().Be(message);
             var transport = (ArteryRemoting)RARP.For(from.Actors).Provider.Transport;
-            if (from.Actors.Settings.Config.GetBoolean("akka.remote.artery.advanced.tcp.direct-outbound"))
-                transport.DirectTcpConnectionCount.Should().BeGreaterThan(0);
-            else
-                transport.DirectTcpConnectionCount.Should().Be(0);
+            transport.DirectTcpConnectionCount.Should().BeGreaterThan(0);
         }
 
         // Connects one fresh peer to the node and has the node connect to another fresh peer. Returns the thumbprint
         // each peer saw: the node's server certificate, and its client certificate.
-        private async Task<(string Server, string Client)> PresentedAsync(Node node, bool directOutbound)
+        private async Task<(string Server, string Client)> PresentedAsync(Node node)
         {
-            var connectsIn = StartFixedNode(directOutbound);
+            var connectsIn = StartFixedNode();
             await ExchangeAsync(connectsIn, node);
-            var connectedTo = StartFixedNode(directOutbound);
+            var connectedTo = StartFixedNode();
             await ExchangeAsync(node, connectedTo);
             return (connectsIn.Seen.Distinct().Single(), connectedTo.Seen.Distinct().Single());
         }

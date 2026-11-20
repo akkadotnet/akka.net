@@ -221,9 +221,6 @@ namespace Akka.Remote.Artery
         /// </summary>
         public int TcpPipeBufferSize { get; }
 
-        /// <summary>Uses the opt-in outgoing TCP byte flow without an Akka.IO connection actor.</summary>
-        public bool DirectTcpOutbound { get; }
-
         /// <summary>
         /// Actor-path patterns (<c>akka.remote.artery.large-message-destinations</c>), each
         /// matched against a send's recipient <c>ActorPath.Elements</c> to decide whether a
@@ -385,7 +382,6 @@ namespace Akka.Remote.Artery
                 throw new ConfigurationException(
                     $"akka.remote.artery.advanced.tcp.pipe-buffer-size must be greater than 0, but was [{tcpPipeBufferSize}].");
             TcpPipeBufferSize = (int)tcpPipeBufferSize;
-            DirectTcpOutbound = arteryConfig.GetBoolean("advanced.tcp.direct-outbound", false);
 
             LargeMessageDestinations = ParseLargeMessageDestinations(arteryConfig);
             LargeMessageChannelEnabled = !LargeMessageDestinations.IsEmpty;

@@ -77,14 +77,6 @@ namespace Akka.Remote.Tests.Artery
             lifetimes.Count.Should().Be(0);
         }
 
-        [Fact(DisplayName = "Should_KeepDirectOutgoingDisabled_When_UsingDefaultSettings")]
-        public void Should_keep_direct_outgoing_disabled_when_using_default_settings()
-        {
-            new ArterySettings(ConfigurationFactory.ParseString("enabled = on")).DirectTcpOutbound.Should().BeFalse();
-            new ArterySettings(ConfigurationFactory.ParseString("enabled = on\nadvanced.tcp.direct-outbound = on"))
-                .DirectTcpOutbound.Should().BeTrue();
-        }
-
         [Fact(DisplayName = "Should_RejectNativeAdmission_When_ShutdownPrecedesMaterialization")]
         public async Task Should_reject_native_admission_when_shutdown_precedes_materialization()
         {
@@ -366,10 +358,10 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Theory(DisplayName = "Should_PreserveTheRequestedDnsEndpoint_When_MaterializingAnOutgoingByteFlow")]
+        [Theory(DisplayName = "Should_PreserveTheRequestedDnsEndpoint_For_NativeAndGenericTcpFlows")]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task Should_preserve_the_requested_dns_endpoint_when_materializing_an_outgoing_byte_flow(bool direct)
+        public async Task Should_preserve_the_requested_dns_endpoint_for_native_and_generic_tcp_flows(bool useNativeStage)
         {
             using var listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             listener.Bind(new IPEndPoint(IPAddress.Loopback, 0));
@@ -378,7 +370,7 @@ namespace Akka.Remote.Tests.Artery
             using var deadline = new CancellationTokenSource(Timeout);
             var lifetimes = new ArteryTcpOutgoingStage.Lifetimes(_log);
             var options = ArteryRemoting.BuildArterySocketOptions(new ArterySettings(ConfigurationFactory.ParseString("enabled = on")));
-            var flow = direct
+            var flow = useNativeStage
                 ? Flow.FromGraph(new ArteryTcpOutgoingStage(endpoint, TcpSettings.Create(Sys), options, null, _log, lifetimes))
                 : Sys.TcpStream().OutgoingConnection(endpoint, options: options, halfClose: false);
             var upstream = this.CreatePublisherProbe<ReadOnlySequence<byte>>();
@@ -394,7 +386,7 @@ namespace Akka.Remote.Tests.Artery
                 var addresses = await connected.WaitAsync(deadline.Token);
                 addresses.RemoteAddress.Should().BeOfType<DnsEndPoint>().Which.Should().Be(endpoint);
                 ((IPEndPoint)addresses.LocalAddress).Port.Should().BeGreaterThan(0);
-                lifetimes.Count.Should().Be(direct ? 1 : 0);
+                lifetimes.Count.Should().Be(useNativeStage ? 1 : 0);
 
                 using var stream = new NetworkStream(peer, ownsSocket: false);
                 var payload = new byte[] { 3, 1, 4, 1, 5 };
@@ -451,10 +443,10 @@ namespace Akka.Remote.Tests.Artery
             owner.Disposals.Should().Be(1);
         }
 
-        [Theory(DisplayName = "Should_RefreshClientCredentials_When_A_TlsByteFlowReconnectsToTheSameEndpoint")]
+        [Theory(DisplayName = "Should_RefreshClientCredentials_When_NativeOrGenericTlsFlowReconnectsToTheSameEndpoint")]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task Should_refresh_client_credentials_when_a_tls_byte_flow_reconnects_to_the_same_endpoint(bool direct)
+        public async Task Should_refresh_client_credentials_when_native_or_generic_tls_flow_reconnects_to_the_same_endpoint(bool useNativeStage)
         {
             using var serverCertificate = TlsTestCertificates.Create("reconnecting-server", -5, 60, false, TlsTestCertificates.ServerAuth);
             using var oldClient = TlsTestCertificates.Create("client-before-renewal", -5, 60, false, TlsTestCertificates.ClientAuth);
@@ -472,7 +464,7 @@ namespace Akka.Remote.Tests.Artery
             var attempts = CreateTestProbe();
             var restart = RestartFlow.OnFailuresWithBackoff(() =>
             {
-                var flow = direct
+                var flow = useNativeStage
                     ? Flow.FromGraph(new ArteryTcpOutgoingStage(listener.LocalEndPoint!, TcpSettings.Create(Sys), options, tls, _log, lifetimes))
                     : Sys.TcpStream().OutgoingConnectionTls(listener.LocalEndPoint!, tls, options: options, halfClose: false);
                 return flow.MapMaterializedValue(connected =>
@@ -513,7 +505,7 @@ namespace Akka.Remote.Tests.Artery
                 await AuthenticateAsync(firstStream, oldClient);
                 var firstConnection = await attempts.ExpectMsgAsync<Task<StreamTcp.OutgoingConnection>>(Timeout);
                 await firstConnection.WaitAsync(deadline.Token);
-                lifetimes.Count.Should().Be(direct ? 1 : 0);
+                lifetimes.Count.Should().Be(useNativeStage ? 1 : 0);
                 await firstStream.WriteAsync(new byte[] { 1 }, deadline.Token);
                 (await downstream.ExpectNextAsync(Timeout)).ToArray().Should().Equal(1);
 
@@ -528,7 +520,7 @@ namespace Akka.Remote.Tests.Artery
                 await secondConnection.WaitAsync(deadline.Token);
                 await secondStream.WriteAsync(new byte[] { 2 }, deadline.Token);
                 (await downstream.ExpectNextAsync(Timeout)).ToArray().Should().Equal(2);
-                await AwaitAssertAsync(() => lifetimes.Count.Should().Be(direct ? 1 : 0), Timeout);
+                await AwaitAssertAsync(() => lifetimes.Count.Should().Be(useNativeStage ? 1 : 0), Timeout);
             }
             finally
             {
@@ -633,12 +625,10 @@ namespace Akka.Remote.Tests.Artery
             transport.Disposals.Should().Be(1);
         }
 
-        [Theory(DisplayName = "Should_KeepProtocolAndLaneGraphsWorking_When_DirectOutgoingIsSelected")]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task Should_keep_protocol_and_lane_graphs_working_when_direct_outgoing_is_selected(bool direct)
+        [Fact(DisplayName = "Should_UseNativeOutgoingForEveryStream_When_UsingDefaultArterySettings")]
+        public async Task Should_use_native_outgoing_for_every_stream_when_using_default_artery_settings()
         {
-            static Config ConfigFor(bool enabled) => ConfigurationFactory.ParseString($"""
+            var config = ConfigurationFactory.ParseString("""
                 akka.actor.provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
                 akka.remote.artery.enabled = on
                 akka.remote.artery.canonical.hostname = "127.0.0.1"
@@ -646,10 +636,11 @@ namespace Akka.Remote.Tests.Artery
                 akka.remote.artery.advanced.outbound-lanes = 2
                 akka.remote.artery.advanced.inbound-lanes = 2
                 akka.remote.artery.large-message-destinations = ["/user/large"]
-                akka.remote.artery.advanced.tcp.direct-outbound = {(enabled ? "on" : "off")}
                 """);
-            var systemA = ActorSystem.Create("directOutgoingA", ConfigFor(direct));
-            var systemB = ActorSystem.Create("directOutgoingB", ConfigFor(false));
+            var systemA = ActorSystem.Create("directOutgoingA", config);
+            var systemB = ActorSystem.Create("directOutgoingB", config);
+            var transportA = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
+            var transportB = (ArteryRemoting)RARP.For(systemB).Provider.Transport;
             try
             {
                 systemB.ActorOf(Props.Create(() => new Echo()), "ordinary");
@@ -664,15 +655,15 @@ namespace Akka.Remote.Tests.Artery
                     foreach (var value in Enumerable.Range(0, 20))
                         await probe.ExpectMsgAsync($"{name}-{value}", Timeout);
                 }
-                var transportA = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
-                var transportB = (ArteryRemoting)RARP.For(systemB).Provider.Transport;
-                await AwaitAssertAsync(() => transportA.DirectTcpConnectionCount.Should().Be(direct ? 3 : 0), Timeout);
-                transportB.DirectTcpConnectionCount.Should().Be(0);
+                await AwaitAssertAsync(() => transportA.DirectTcpConnectionCount.Should().Be(3), Timeout);
+                await AwaitAssertAsync(() => transportB.DirectTcpConnectionCount.Should().Be(2), Timeout);
             }
             finally
             {
                 await Task.WhenAll(systemA.Terminate(), systemB.Terminate()).WaitAsync(TimeSpan.FromSeconds(25));
             }
+            await AwaitAssertAsync(() => transportA.DirectTcpConnectionCount.Should().Be(0), Timeout);
+            await AwaitAssertAsync(() => transportB.DirectTcpConnectionCount.Should().Be(0), Timeout);
         }
 
         private sealed class Echo : ReceiveActor
@@ -956,7 +947,6 @@ namespace Akka.Remote.Tests.Artery
                 akka.remote.artery.enabled = on
                 akka.remote.artery.canonical.hostname = "127.0.0.1"
                 akka.remote.artery.canonical.port = 0
-                akka.remote.artery.advanced.tcp.direct-outbound = on
                 akka.remote.artery.advanced.flush-wait-on-shutdown = 5s
                 """);
             var system = ActorSystem.Create("directTcpDrain", config);

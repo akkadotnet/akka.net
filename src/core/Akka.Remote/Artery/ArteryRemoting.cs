@@ -295,23 +295,16 @@ namespace Akka.Remote.Artery
         private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>>
             CreateOutgoingConnection(EndPoint remoteEndpoint)
         {
-            if (_directTcpLifetimes is { } lifetimes)
-                return Flow.FromGraph(new ArteryTcpOutgoingStage(remoteEndpoint, Akka.IO.TcpSettings.Create(System),
-                        _arterySocketOptions, _tlsSettings?.ClientSettings, _log, lifetimes))
-                    .Via(new Akka.Streams.Implementation.Fusing.Detacher<ReadOnlySequence<byte>>());
-
-            if (_tlsSettings is null)
-                return _tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false);
-
-            return _tcp!.OutgoingConnectionTls(remoteEndpoint, _tlsSettings.ClientSettings,
-                options: _arterySocketOptions, halfClose: false);
+            return Flow.FromGraph(new ArteryTcpOutgoingStage(remoteEndpoint, Akka.IO.TcpSettings.Create(System),
+                    _arterySocketOptions, _tlsSettings?.ClientSettings, _log, _directTcpLifetimes))
+                .Via(new Akka.Streams.Implementation.Fusing.Detacher<ReadOnlySequence<byte>>());
         }
 
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
-        private readonly ArteryTcpOutgoingStage.Lifetimes? _directTcpLifetimes;
+        private readonly ArteryTcpOutgoingStage.Lifetimes _directTcpLifetimes;
 
         /// <summary>Outgoing native flows, including opening and asynchronously retiring owners.</summary>
-        internal int DirectTcpConnectionCount => _directTcpLifetimes?.Count ?? 0;
+        internal int DirectTcpConnectionCount => _directTcpLifetimes.Count;
         private ArteryTlsSettings? _tlsSettings;
 
         // Runs the certificate source's poll every TlsCertificateRotation.PollInterval, the same as the DotNetty transport.
@@ -327,7 +320,7 @@ namespace Akka.Remote.Artery
         {
             _log = Logging.GetLogger(system, "artery");
             _settings = new ArterySettings(system.Settings.Config.GetConfig("akka.remote.artery"));
-            _directTcpLifetimes = _settings.DirectTcpOutbound ? new ArteryTcpOutgoingStage.Lifetimes(_log) : null;
+            _directTcpLifetimes = new ArteryTcpOutgoingStage.Lifetimes(_log);
             _arterySocketOptions = BuildArterySocketOptions(_settings);
             // Sized from THIS transport's own settings (fix for the 78x-undersized 256 default that
             // caused spurious quarantines under a mass-termination Unwatch burst) rather than the
@@ -687,10 +680,10 @@ namespace Akka.Remote.Artery
             // residual race around Run().
             // Existing byte-flow retries may still connect while accepted backlog drains.
             // Close native admission only at forced teardown, before its lifetime snapshot.
-            _directTcpLifetimes?.StopAdmission();
+            _directTcpLifetimes.StopAdmission();
             _materializer?.Shutdown();
-            if (flushDeadline is not null && _directTcpLifetimes is { } directTcpLifetimes)
-                await directTcpLifetimes.WaitAsync(flushDeadline.Token);
+            if (flushDeadline is not null)
+                await _directTcpLifetimes.WaitAsync(flushDeadline.Token);
             _log.Info("Artery TCP remoting shut down");
         }
 
