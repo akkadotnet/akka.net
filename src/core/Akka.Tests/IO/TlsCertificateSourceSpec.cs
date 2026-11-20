@@ -2761,6 +2761,60 @@ namespace Akka.Tests.IO
             log.Infos.Should().ContainSingle();
         }
 
+        [Fact(DisplayName = "Should_Warn_Once_When_Concurrent_Failed_Callbacks_Finish_In_Reverse_Order")]
+        public async Task Should_warn_once_when_concurrent_failed_callbacks_finish_in_reverse_order()
+        {
+            using var certificate = Create("callback", -60, 600, false, Both);
+            using var gate = new BlockingGate();
+            var failing = 0;
+            var stallNext = 1;
+            var clockTicks = DateTime.UtcNow.Ticks;
+            var source = TlsCertificateSource.FromCallback(() =>
+            {
+                if (Volatile.Read(ref failing) == 0)
+                    return certificate;
+                if (Interlocked.Exchange(ref stallNext, 0) == 1)
+                    gate.Block(0);
+                throw new InvalidOperationException("the callback failed");
+            });
+            source.UtcNow = () => new DateTime(Interlocked.Read(ref clockTicks), DateTimeKind.Utc);
+            var log = new RecordingLog();
+            source.GetCertificate(TlsCertificateRole.Server, log).Should().BeSameAs(certificate);
+
+            Volatile.Write(ref failing, 1);
+            var stalled = Task.Run(() => source.GetCertificate(TlsCertificateRole.Server, log));
+            await gate.EnteredAsync();
+            Interlocked.Add(ref clockTicks, TimeSpan.TicksPerSecond);
+            try
+            {
+                source.GetCertificate(TlsCertificateRole.Server, log).Should().BeSameAs(certificate);
+            }
+            finally
+            {
+                gate.Release();
+            }
+
+            (await stalled).Should().BeSameAs(certificate);
+            log.Warnings.Should().ContainSingle().Which.Should().Contain("previous certificate " + certificate.Thumbprint);
+        }
+
+        [Fact(DisplayName = "Should_Admit_A_Warning_Again_When_The_Clock_Goes_Backwards")]
+        public void Should_admit_a_warning_again_when_the_clock_goes_backwards()
+        {
+            var limiter = new TlsLogLimiter(TimeSpan.FromMinutes(5));
+            var now = DateTime.UtcNow;
+            limiter.Admit("warning", now).Should().Be(TlsLogLimiter.Verdict.Log);
+            limiter.Admit("warning", now).Should().Be(TlsLogLimiter.Verdict.Drop);
+            limiter.Admit("warning", now.AddSeconds(-1)).Should().Be(TlsLogLimiter.Verdict.Log);
+
+            var clock = now;
+            Func<DateTime> readClock = () => clock;
+            limiter.Admit("clock", readClock).Should().Be(TlsLogLimiter.Verdict.Log);
+            limiter.Admit("clock", readClock).Should().Be(TlsLogLimiter.Verdict.Drop);
+            clock = clock.AddSeconds(-1);
+            limiter.Admit("clock", readClock).Should().Be(TlsLogLimiter.Verdict.Log);
+        }
+
         private static void SkipIfNeeded(SourceFixture fixture)
         {
             if (fixture.SkipReason is not null)

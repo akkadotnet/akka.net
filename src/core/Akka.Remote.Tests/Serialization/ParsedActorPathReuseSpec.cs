@@ -86,7 +86,9 @@ public sealed class ParsedActorPathReuseSpec : AkkaSpec
         await WatchAsync(first);
         Sys.Stop(first);
         await ExpectTerminatedAsync(first);
-        var replacement = Sys.ActorOf(Props.Empty, "reused");
+        // Terminated can reach the test before /user frees the name, so retry until it is free.
+        IActorRef replacement = null!;
+        await AwaitAssertAsync(() => { replacement = Sys.ActorOf(Props.Empty, "reused"); });
         if (cacheReference)
         {
             // Awaiting termination can resume on another thread. Populate that thread's
