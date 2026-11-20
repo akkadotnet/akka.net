@@ -534,12 +534,45 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
+        [Theory(DisplayName = "Should_RejectMissingOrUntrustedClientCredentials_And_KeepServingMutualTls")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task Should_reject_missing_or_untrusted_client_credentials_and_keep_serving_mutual_tls(
+            bool untrustedClient)
+        {
+            var server = StartFixedNode();
+            Node client;
+            X509Certificate2? rejected = null;
+            using var foreignAuthority = TestCertificateAuthority.Create();
+            if (untrustedClient)
+            {
+                rejected = foreignAuthority.Issue("untrusted-client", -60, 60, Both);
+                _certificates.Add(rejected);
+                client = StartNode(policy => ArteryTlsSettings.Mutual(rejected, policy));
+            }
+            else
+            {
+                client = StartServerOnlyFixedNode();
+            }
+
+            await Assert.ThrowsAnyAsync<Exception>(() => ExchangeAsync(client, server, timeout: TimeSpan.FromSeconds(3)));
+            Volatile.Read(ref server.Echoed).Should().Be(0, "a rejected TLS session cannot deliver actor messages");
+            if (rejected is not null)
+                server.Seen.Should().Contain(rejected.Thumbprint, "the untrusted client reached peer validation");
+            AssertStaysUp(server);
+            AssertStaysUp(client);
+            await client.Actors.Terminate().WaitAsync(TimeSpan.FromSeconds(15));
+            ((ArteryRemoting)RARP.For(client.Actors).Provider.Transport).DirectTcpConnectionCount.Should().Be(0);
+            await ExchangeAsync(StartFixedNode(), server);
+        }
+
         // ---- the once-a-minute poll ----
 
-        [Fact(DisplayName = "Should_Look_For_A_Renewed_Certificate_Once_A_Minute_When_The_Node_Builds_No_Connection")]
-        public async Task Should_look_for_a_renewed_certificate_once_a_minute_when_the_node_builds_no_connection()
+        [Theory(DisplayName = "Should_Look_For_A_Renewed_Certificate_Once_A_Minute_When_The_Node_Builds_No_Connection")]
+        [MemberData(nameof(SkippingKinds))]
+        public async Task Should_look_for_a_renewed_certificate_once_a_minute_when_the_node_builds_no_connection(string kind)
         {
-            var fixture = Open("pkcs12-folder");
+            var fixture = Open(kind);
             var oldLeaf = Leaf(fixture, 60);
             var newLeaf = Leaf(fixture, 180);
             fixture.Add(oldLeaf);
@@ -567,13 +600,18 @@ namespace Akka.Remote.Tests.Artery
             source.GetCertificateWithoutLogging(TlsCertificateRole.ClientAndServer).Thumbprint.Should().Be(newLeaf.Thumbprint);
             node.Seen.Should().BeEmpty();
 
+            // The scheduled refresh, without an explicit RefreshAsync, supplies both roles on new connections.
+            (await PresentedAsync(node).WaitAsync(TimeSpan.FromSeconds(15)))
+                .Should().Be((newLeaf.Thumbprint, newLeaf.Thumbprint));
+            var scansBeforeShutdown = source.ScanCount;
+
             // The node stops looking when its transport shuts down.
             var terminated = node.Actors.Terminate();
             (await Task.WhenAny(terminated, Task.Delay(TimeSpan.FromSeconds(10)))).Should().BeSameAs(terminated);
             source.UtcNow = () => DateTime.UtcNow.AddSeconds(22);
             scheduler.Advance(TimeSpan.FromMinutes(1));
             await source.LastRefresh;
-            source.ScanCount.Should().Be(2);
+            source.ScanCount.Should().Be(scansBeforeShutdown);
         }
 
         [Fact(DisplayName = "Should_Not_Look_Up_On_A_Schedule_When_The_Certificate_Is_Fixed_Or_Comes_From_A_Callback")]
@@ -779,7 +817,7 @@ namespace Akka.Remote.Tests.Artery
                 BootstrapSetup.Create().WithConfig(config), new ArteryTlsSetup(tls(policy))));
             _systems.Add(node.Actors);
             InitializeLogger(node.Actors, $"[{name}] ");
-            node.Actors.ActorOf(Props.Create(() => new Echo()), "echo");
+            node.Actors.ActorOf(Props.Create(() => new Echo(node)), "echo");
             return node;
         }
 
@@ -787,6 +825,8 @@ namespace Akka.Remote.Tests.Artery
         {
             var reply = await from.Actors.ActorSelection(to.Echo).Ask<string>(message, timeout ?? TimeSpan.FromSeconds(15));
             reply.Should().Be(message);
+            var transport = (ArteryRemoting)RARP.For(from.Actors).Provider.Transport;
+            transport.DirectTcpConnectionCount.Should().BeGreaterThan(0);
         }
 
         // Connects one fresh peer to the node and has the node connect to another fresh peer. Returns the thumbprint
@@ -816,6 +856,8 @@ namespace Akka.Remote.Tests.Artery
         {
             public ActorSystem Actors { get; set; } = null!;
 
+            public int Echoed;
+
             /// <summary>Thumbprints of the certificates peers presented to this node, one per validation.</summary>
             public ConcurrentQueue<string> Seen { get; } = new ConcurrentQueue<string>();
 
@@ -824,7 +866,11 @@ namespace Akka.Remote.Tests.Artery
 
         private sealed class Echo : ReceiveActor
         {
-            public Echo() => ReceiveAny(message => Sender.Tell(message));
+            public Echo(Node node) => ReceiveAny(message =>
+            {
+                Interlocked.Increment(ref node.Echoed);
+                Sender.Tell(message);
+            });
         }
     }
 

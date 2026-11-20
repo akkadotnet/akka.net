@@ -279,6 +279,11 @@ namespace Akka.Remote.Artery
                 _handshakeStateChangedCallback = GetAsyncCallback(OnHandshakeStateChanged);
                 _stage.Context.SubscribeHandshakeStateChanged(this, _handshakeStateChangedCallback);
                 RefreshCompletionFromContext();
+
+                // The side channel does not need this socket's demand. Fast failed connection
+                // attempts can otherwise restart this stage before its first retry timer fires.
+                if (!_stage.IsControlStream)
+                    TryInjectReq();
             }
 
             public override void PostStop()
