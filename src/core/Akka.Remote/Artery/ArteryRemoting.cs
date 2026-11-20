@@ -1371,7 +1371,7 @@ namespace Akka.Remote.Artery
                     _log.Warning(
                         "This system has been quarantined by [{0}] (uid [{1}]).",
                         quarantined.From.Address, quarantined.QuarantinedUid);
-                    System.EventStream.Publish(new ThisActorSystemQuarantinedEvent(DefaultAddress, quarantined.From.Address));
+                    System.EventStream.Publish(new ThisActorSystemQuarantinedEvent(DefaultAddress, quarantined.From.Address, quarantined.From.Uid));
                     break;
 
                 case ArteryHeartbeat:

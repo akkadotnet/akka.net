@@ -355,9 +355,21 @@ namespace Akka.Remote
         /// <param name="localAddress">The address of this actor system.</param>
         /// <param name="remoteAddress">The address of the remote system that quarantined it.</param>
         public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress)
+            : this(localAddress, remoteAddress, null)
+        {
+        }
+
+        /// <summary>
+        /// Creates an event describing this actor system being quarantined by a remote system.
+        /// </summary>
+        /// <param name="localAddress">The address of this actor system.</param>
+        /// <param name="remoteAddress">The address of the remote system that quarantined it.</param>
+        /// <param name="remoteUid">The UID of the remote system that quarantined it, when known.</param>
+        public ThisActorSystemQuarantinedEvent(Address localAddress, Address remoteAddress, long? remoteUid)
         {
             LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
+            RemoteUid = remoteUid;
         }
 
         /// <summary>
@@ -369,6 +381,12 @@ namespace Akka.Remote
         /// Gets the address of the remote system that quarantined this system.
         /// </summary>
         public Address RemoteAddress { get; private set; }
+
+        /// <summary>
+        /// Gets the UID of the remote system that quarantined this system, or <c>null</c> if it isn't known.
+        /// Use it to tell which incarnation of the remote system quarantined this one.
+        /// </summary>
+        public long? RemoteUid { get; private set; }
 
         /// <summary>
         /// Gets the log level used when this system is quarantined by a remote system.
@@ -385,7 +403,9 @@ namespace Akka.Remote
         /// <returns>A string describing the quarantine.</returns>
         public override string ToString()
         {
-            return string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
+            return RemoteUid.HasValue
+                ? string.Format("The remote system {0} (UID [{1}]) has quarantined this system {2}.", RemoteAddress, RemoteUid.Value, LocalAddress)
+                : string.Format("The remote system {0} has quarantined this system {1}.", RemoteAddress, LocalAddress);
         }
     }
 
