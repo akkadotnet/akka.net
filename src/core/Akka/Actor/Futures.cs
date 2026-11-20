@@ -151,18 +151,24 @@ namespace Akka.Actor
             var future = provider.CreateFutureRef(result);
             var path = future.Path;
 
-            //The future actor needs to be unregistered in the temp container
-            _ = result.Task.ContinueWith(_ =>
+            try
             {
-                provider.UnregisterTempActor(path);
+                // Register before attaching cleanup: a pre-canceled task can run it immediately.
+                provider.RegisterTempActor(future, path);
+            }
+            finally
+            {
+                // Keep cleanup attached even if temporary registration throws.
+                _ = result.Task.ContinueWith(_ =>
+                {
+                    provider.UnregisterTempActor(path);
 
-                ctr1?.Dispose();
-                ctr2?.Dispose();
-                timeoutCancellation?.Dispose();
-            }, TaskContinuationOptions.ExecuteSynchronously);
+                    ctr1?.Dispose();
+                    ctr2?.Dispose();
+                    timeoutCancellation?.Dispose();
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            }
 
-            //The future actor needs to be registered in the temp container
-            provider.RegisterTempActor(future, path);
             var message = messageFactory(future);
             future.DeliverAsk(message, self);
 
