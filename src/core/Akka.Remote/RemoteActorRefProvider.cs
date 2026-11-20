@@ -570,6 +570,9 @@ namespace Akka.Remote
             if (path == string.Empty)
                 return ActorRefs.NoSender;
 
+            if (path != null && _actorPathThreadLocalCache != null && _actorPathThreadLocalCache.Cache.TryGet(path, out var cachedPath))
+                return ResolveActorRef(cachedPath);
+
             if (ActorPath.TryParse(path, out var actorPath))
                 return ResolveActorRef(actorPath);
 
