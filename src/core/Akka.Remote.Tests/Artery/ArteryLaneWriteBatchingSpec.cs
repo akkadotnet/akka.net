@@ -15,6 +15,7 @@ using Akka.IO;
 using Akka.Remote.Artery;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Akka.Streams.Stage;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
@@ -75,6 +76,87 @@ namespace Akka.Remote.Tests.Artery
         {
             var owner = new TrackingOwner(bytes);
             return (OwnedSequenceSegment.Create(owner, bytes.Length), owner);
+        }
+
+        [Fact(DisplayName = "Should_RefillTheNextBatch_When_DownstreamPullConsumesABatchWithAParkedFrame")]
+        public async Task Should_RefillTheNextBatch_When_DownstreamPullConsumesABatchWithAParkedFrame()
+        {
+            var thirdFrame = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var fourthFrame = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var frames = Enumerable.Range(1, 4)
+                .Select(value => EncodeStageStyleFrame(Pattern(4, (byte)value))).ToArray();
+            var sink = Source.FromGraph(new FourFrameSource(frames.Select(frame => frame.Frame).ToArray(), thirdFrame, fourthFrame))
+                .Via(new LaneWriteBatchStage(8))
+                .RunWith(this.SinkProbe<ReadOnlySequence<byte>>(), Sys.Materializer());
+
+            try
+            {
+                // With no downstream demand, two frames fill the batch and the third is parked.
+                await thirdFrame.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                sink.Request(1);
+                var first = await sink.ExpectNextAsync();
+                try { first.ToArray().Should().Equal(Pattern(4, 1).Concat(Pattern(4, 2))); }
+                finally { first.DisposeOwnedSegments(); }
+
+                // Keep the second downstream request withheld. The parked frame must become the
+                // next batch's seed and upstream must be pulled again while the first write is busy.
+                await fourthFrame.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                sink.Request(1);
+                var second = await sink.ExpectNextAsync();
+                try { second.ToArray().Should().Equal(Pattern(4, 3).Concat(Pattern(4, 4))); }
+                finally { second.DisposeOwnedSegments(); }
+                await sink.ExpectCompleteAsync();
+
+                frames.Should().OnlyContain(frame => frame.Owner.DisposeCount == 1);
+            }
+            finally { sink.Cancel(); }
+        }
+
+        private sealed class FourFrameSource(ReadOnlySequence<byte>[] frames,
+            TaskCompletionSource<bool> thirdFrame, TaskCompletionSource<bool> fourthFrame)
+            : GraphStage<SourceShape<ReadOnlySequence<byte>>>
+        {
+            private readonly Outlet<ReadOnlySequence<byte>> _out = new("fourFrames.out");
+            public override SourceShape<ReadOnlySequence<byte>> Shape => new(_out);
+            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+                => new Logic(this, frames, thirdFrame, fourthFrame);
+
+            private sealed class Logic : OutGraphStageLogic
+            {
+                private readonly FourFrameSource _stage;
+                private readonly ReadOnlySequence<byte>[] _frames;
+                private readonly TaskCompletionSource<bool> _thirdFrame;
+                private readonly TaskCompletionSource<bool> _fourthFrame;
+                private int _next;
+
+                public Logic(FourFrameSource stage, ReadOnlySequence<byte>[] frames,
+                    TaskCompletionSource<bool> thirdFrame, TaskCompletionSource<bool> fourthFrame) : base(stage.Shape)
+                {
+                    _stage = stage;
+                    _frames = frames;
+                    _thirdFrame = thirdFrame;
+                    _fourthFrame = fourthFrame;
+                    SetHandler(stage._out, this);
+                }
+
+                public override void OnPull()
+                {
+                    if (_next == _frames.Length)
+                    {
+                        CompleteStage();
+                        return;
+                    }
+                    Push(_stage._out, _frames[_next++]);
+                    if (_next == 3) _thirdFrame.TrySetResult(true);
+                    if (_next == 4) _fourthFrame.TrySetResult(true);
+                }
+
+                public override void PostStop()
+                {
+                    for (var i = _next; i < _frames.Length; i++)
+                        _frames[i].DisposeOwnedSegments();
+                }
+            }
         }
 
         [Fact(DisplayName = "Should_PreserveBytesAndDisposeEachOwnerExactlyOnce_When_BatchingSingleSegmentFrames")]
