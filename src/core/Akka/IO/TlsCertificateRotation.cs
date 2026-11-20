@@ -89,7 +89,7 @@ namespace Akka.IO
             var cause = TlsCertificateSource.OwnFailureKey(exception) is { } key
                 ? "message|" + key
                 : "type|" + exception.GetType().FullName;
-            var verdict = _connectionErrors.Admit(direction + "|" + cause, DateTime.UtcNow);
+            var verdict = _connectionErrors.Admit(direction + "|" + cause);
             if (verdict == TlsLogLimiter.Verdict.LogSummary)
                 log.Error("Some \"Cannot build a TLS connection\" errors were not logged: more than 100 different causes came within a minute.");
             return verdict == TlsLogLimiter.Verdict.Log;
