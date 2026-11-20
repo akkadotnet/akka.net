@@ -43,28 +43,43 @@ namespace Akka.IO
         {
             lock (_loggedAt)
             {
-                if (_loggedAt.TryGetValue(key, out var loggedAt))
-                {
-                    if (IsRecent(loggedAt, now))
-                        return Verdict.Drop;
-                }
-                else if (_loggedAt.Count >= Capacity)
-                {
-                    foreach (var due in _loggedAt.Where(e => !IsRecent(e.Value, now)).Select(e => e.Key).ToList())
-                        _loggedAt.Remove(due);
-
-                    if (_loggedAt.Count >= Capacity)
-                    {
-                        if (_summaryAt is { } summaryAt && IsRecent(summaryAt, now))
-                            return Verdict.Drop;
-                        _summaryAt = now;
-                        return Verdict.LogSummary;
-                    }
-                }
-
-                _loggedAt[key] = now;
-                return Verdict.Log;
+                return AdmitUnderLock(key, now);
             }
+        }
+
+        // Concurrent callers may reach the limiter in a different order than they started. Read the clock only
+        // after admission is serialized, so an older call does not look like the clock went backwards.
+        public Verdict Admit(string key, Func<DateTime> clock)
+        {
+            lock (_loggedAt)
+            {
+                return AdmitUnderLock(key, clock());
+            }
+        }
+
+        private Verdict AdmitUnderLock(string key, DateTime now)
+        {
+            if (_loggedAt.TryGetValue(key, out var loggedAt))
+            {
+                if (IsRecent(loggedAt, now))
+                    return Verdict.Drop;
+            }
+            else if (_loggedAt.Count >= Capacity)
+            {
+                foreach (var due in _loggedAt.Where(e => !IsRecent(e.Value, now)).Select(e => e.Key).ToList())
+                    _loggedAt.Remove(due);
+
+                if (_loggedAt.Count >= Capacity)
+                {
+                    if (_summaryAt is { } summaryAt && IsRecent(summaryAt, now))
+                        return Verdict.Drop;
+                    _summaryAt = now;
+                    return Verdict.LogSummary;
+                }
+            }
+
+            _loggedAt[key] = now;
+            return Verdict.Log;
         }
 
         // A clock that went back counts as due.

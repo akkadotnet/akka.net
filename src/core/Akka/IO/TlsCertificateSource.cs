@@ -315,7 +315,7 @@ namespace Akka.IO
             var latest = await AwaitAsync(refresh!, role).ConfigureAwait(false);
             var now = UtcNow();
             if (log is not null)
-                Report(latest, role, log, now);
+                Report(latest, role, log);
             var outcome = latest.For(role);
             return outcome.Pick is not null && outcome.Pick.IsUsable(now) ? Hand(role, outcome.Pick, log) : throw outcome.Fail();
         }
@@ -351,7 +351,7 @@ namespace Akka.IO
                 catch (Exception e) when (!IsFatal(e))
                 {
                     // Nothing to present, which no connection may be there to report: say so at the limiter's pace.
-                    Warn(log, ("poll|" + e.Message, e.Message), UtcNow(), error: true);
+                    Warn(log, ("poll|" + e.Message, e.Message), error: true);
                 }
 
                 return asked;
@@ -414,7 +414,7 @@ namespace Akka.IO
                     !ReferenceEquals(Interlocked.CompareExchange(ref slot, last with { FallingBackSince = since }, last), last))
                     continue;
                 if (log is not null)
-                    Warn(log, FallBack(role, last.Pick, failure.Message, since), now);
+                    Warn(log, FallBack(role, last.Pick, failure.Message, since));
                 return last.Pick.Certificate;
             }
 
@@ -450,8 +450,8 @@ namespace Akka.IO
                     // The warning about a look-up that does not finish goes first, so warnings about files never crowd it out.
                     if (refresh is not null && now - refresh.StartedAt > RefreshTimeout)
                         Warn(log, Note($"TLS certificate look-up in {Where()} has been running since {FormatTime(refresh.StartedAt)} and has not finished, " +
-                                       $"so the node keeps using the certificates it has and does not look again until it finishes.{Hint()}"), now);
-                    Report(snapshot, role, log, now);
+                                       $"so the node keeps using the certificates it has and does not look again until it finishes.{Hint()}"));
+                    Report(snapshot, role, log);
                 }
 
                 if (outcome.Pick is not null && outcome.Pick.IsUsable(now))
@@ -1031,7 +1031,7 @@ namespace Akka.IO
         // Logs the warnings of a snapshot once per role, by the first caller with a logger that sees it. The role's
         // warnings (the fall-back, then the skipped certificates) go before the warnings about files, so the limiter
         // admits them first when there are many.
-        private void Report(Snapshot snapshot, TlsCertificateRole role, ILoggingAdapter log, DateTime now)
+        private void Report(Snapshot snapshot, TlsCertificateRole role, ILoggingAdapter log)
         {
             ref var slot = ref _reported[(int)role];
             var last = Volatile.Read(ref slot);
@@ -1039,12 +1039,12 @@ namespace Akka.IO
                 return;
 
             foreach (var message in snapshot.For(role).Messages.Concat(snapshot.Messages))
-                Warn(log, message, now);
+                Warn(log, message);
         }
 
-        private void Warn(ILoggingAdapter log, Message message, DateTime now, bool error = false)
+        private void Warn(ILoggingAdapter log, Message message, bool error = false)
         {
-            var verdict = _warnings.Admit(message.Item1, now);
+            var verdict = _warnings.Admit(message.Item1, UtcNow);
             if (verdict == TlsLogLimiter.Verdict.Log && error)
                 log.Error("{0}", message.Item2);
             else if (verdict == TlsLogLimiter.Verdict.Log)
