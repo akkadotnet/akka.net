@@ -56,6 +56,8 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class ArteryEncodeStage : GraphStage<FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>>
     {
+        private readonly Func<Akka.Serialization.Serialization> _serializationProvider;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryEncodeStage"/> class.
         /// </summary>
@@ -69,14 +71,32 @@ namespace Akka.Remote.Artery
         /// suite -- turning a lifetime-safety bug into a loud, deterministic assertion failure.
         /// </param>
         public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid, ArrayPool<byte>? pool = null)
+            : this(
+                serialization is null
+                    ? throw new ArgumentNullException(nameof(serialization))
+                    : () => serialization,
+                originUid,
+                pool)
         {
-            Serialization = serialization ?? throw new ArgumentNullException(nameof(serialization));
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ArteryEncodeStage"/> class using a
+        /// dynamic <see cref="Akka.Serialization.Serialization"/> provider so config-injection
+        /// reloads (<c>Settings.InjectTopLevelFallback</c>) are observed by already-open streams.
+        /// </summary>
+        public ArteryEncodeStage(
+            Func<Akka.Serialization.Serialization> serializationProvider,
+            long originUid,
+            ArrayPool<byte>? pool = null)
+        {
+            _serializationProvider = serializationProvider ?? throw new ArgumentNullException(nameof(serializationProvider));
             OriginUid = originUid;
             Pool = pool;
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 
-        public Akka.Serialization.Serialization Serialization { get; }
+        public Akka.Serialization.Serialization Serialization => _serializationProvider();
         public long OriginUid { get; }
         public ArrayPool<byte>? Pool { get; }
 
