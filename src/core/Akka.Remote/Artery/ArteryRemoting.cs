@@ -295,6 +295,11 @@ namespace Akka.Remote.Artery
         private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>>
             CreateOutgoingConnection(EndPoint remoteEndpoint)
         {
+            if (_directTcpLifetimes is { } lifetimes)
+                return Flow.FromGraph(new ArteryTcpOutgoingStage(remoteEndpoint, Akka.IO.TcpSettings.Create(System),
+                        _arterySocketOptions, _tlsSettings?.ClientSettings, _log, lifetimes))
+                    .Via(new Akka.Streams.Implementation.Fusing.Detacher<ReadOnlySequence<byte>>());
+
             if (_tlsSettings is null)
                 return _tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions, halfClose: false);
 
@@ -303,6 +308,10 @@ namespace Akka.Remote.Artery
         }
 
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
+        private readonly ArteryTcpOutgoingStage.Lifetimes? _directTcpLifetimes;
+
+        /// <summary>Outgoing native flows, including opening and asynchronously retiring owners.</summary>
+        internal int DirectTcpConnectionCount => _directTcpLifetimes?.Count ?? 0;
         private ArteryTlsSettings? _tlsSettings;
 
         // Runs the certificate source's poll every TlsCertificateRotation.PollInterval, the same as the DotNetty transport.
@@ -318,6 +327,7 @@ namespace Akka.Remote.Artery
         {
             _log = Logging.GetLogger(system, "artery");
             _settings = new ArterySettings(system.Settings.Config.GetConfig("akka.remote.artery"));
+            _directTcpLifetimes = _settings.DirectTcpOutbound ? new ArteryTcpOutgoingStage.Lifetimes(_log) : null;
             _arterySocketOptions = BuildArterySocketOptions(_settings);
             // Sized from THIS transport's own settings (fix for the 78x-undersized 256 default that
             // caused spurious quarantines under a mass-termination Unwatch burst) rather than the
@@ -675,7 +685,12 @@ namespace Akka.Remote.Artery
             // motivated removing it, because _isShutdown was set FIRST (above) and
             // MaterializeOutboundStream both guards on _materializer.IsShutdown and catches the
             // residual race around Run().
+            // Existing byte-flow retries may still connect while accepted backlog drains.
+            // Close native admission only at forced teardown, before its lifetime snapshot.
+            _directTcpLifetimes?.StopAdmission();
             _materializer?.Shutdown();
+            if (flushDeadline is not null && _directTcpLifetimes is { } directTcpLifetimes)
+                await directTcpLifetimes.WaitAsync(flushDeadline.Token);
             _log.Info("Artery TCP remoting shut down");
         }
 
