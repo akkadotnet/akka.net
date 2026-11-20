@@ -113,6 +113,33 @@ With the switch off, the base `Serializer.FromBinary(byte[], string)` throws a `
 for a manifest it has not already cached (#8697). Persistence's `PersistentFSM.PersistentFSMSnapshot<>`
 stays on that base fallback today, because it is generic.
 
+## Registering Protobuf Messages
+
+`Akka.Remote.Serialization.ProtobufSerializer` uses generated parsers for messages registered through
+`ProtobufSerializerSetup`. Register each message type the actor system receives, using its generated
+descriptor:
+
+```csharp
+var setup = ProtobufSerializerSetup.Create(OrderPlaced.Descriptor, OrderShipped.Descriptor);
+var system = ActorSystem.Create("orders", BootstrapSetup.Create().And(setup));
+```
+
+With Akka.Remote.Hosting, add the same descriptors to the builder:
+
+```csharp
+builder.WithRemoting()
+    .WithProtobufSerializer(OrderPlaced.Descriptor, OrderShipped.Descriptor);
+```
+
+Registration applies to that actor system and does not automatically register other messages from the
+same `.proto` file. With `Akka.DynamicTypeLoading` off, an unregistered message fails with a
+`SerializationException` pointing to `ProtobufSerializerSetup`. With the switch on, unregistered
+messages keep the existing reflection fallback. Serializer ID 2 and CLR type manifests stay unchanged.
+
+This removes reflection from registered message deserialization; transport support under Native AOT
+is a separate requirement described below. The registration path can also be tested on the JIT by
+turning dynamic type loading off.
+
 ## Akka.Streams Under Native AOT
 
 The Streams DSL works with the switch off: sources, flows and sinks, `.Async()` island boundaries,
