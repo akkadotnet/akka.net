@@ -1089,6 +1089,14 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes
 
+        // Preserve value elements without boxing them into OnNext.Element.
+        internal sealed class TypedOnNext : IActorSubscriberMessage
+        {
+            public readonly T Element;
+
+            public TypedOnNext(T element) => Element = element;
+        }
+
         private sealed class Logic : InGraphStageLogic
         {
             private readonly SubSink<T> _stage;
@@ -1100,7 +1108,13 @@ namespace Akka.Streams.Implementation.Fusing
                 SetHandler(stage._in, this);
             }
 
-            public override void OnPush() => _stage._externalCallback(new OnNext(Grab(_stage._in)));
+            public override void OnPush()
+            {
+                var element = Grab(_stage._in);
+                _stage._externalCallback(typeof(T).IsValueType
+                    ? new TypedOnNext(element)
+                    : new OnNext(element));
+            }
 
             public override void OnUpstreamFinish() => _stage._externalCallback(OnComplete.Instance);
 

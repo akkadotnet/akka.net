@@ -2392,6 +2392,12 @@ namespace Akka.Streams.Stage
                             _pulled = false;
                             _handler!.OnPush();
                         }
+                        else if (msg is SubSink<T>.TypedOnNext typed)
+                        {
+                            _elem = typed.Element;
+                            _pulled = false;
+                            _handler!.OnPush();
+                        }
                         else if (msg is OnComplete)
                         {
                             _closed = true;
