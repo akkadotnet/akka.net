@@ -139,7 +139,10 @@ namespace Akka.Remote.Artery
             public void OnPull()
             {
                 if (_hasBatch)
+                {
                     PushBatch();
+                    PullIfNeeded();
+                }
                 else if (_upstreamFinished)
                     CompleteStage();
                 else
