@@ -48,11 +48,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 # single false unreachable instantly and permanently downed a joining node with zero
                 # grace, and the 'wait for N members Up' assertions in form_a_cluster would fail.
                 # This spec removes nodes only via explicit Cluster.Down(...) (see the oldest-node
-                # phase), so it never relied on auto-down to reap a genuinely-crashed node; a small
-                # auto-down grace is therefore safe and keeps transient blips from being fatal.
+                # phase), so it does not need an automatic downing provider.
                 akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s
-                akka.cluster.auto-down-unreachable-after = 5s
-                akka.cluster.testkit.auto-down-unreachable-after = 5s
                 test-lease {
                     lease-class = ""Akka.TestKit.TestLeaseActorClient, Akka.Tests.Shared.Internals.Xunit3""
                     heartbeat-interval = 1s
