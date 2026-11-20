@@ -31,6 +31,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
         public Config EnableMetricsExtension => ConfigurationFactory.ParseString(@"
             akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
             akka.cluster.metrics.collector.enabled = on
+            # Sample and gossip every second, not every 3s, so all nodes see each other's
+            # metrics sooner and closer together.
+            akka.cluster.metrics.collector.sample-interval = 1s
+            akka.cluster.metrics.collector.gossip-interval = 1s
         ");
         
         public Config DisableMetricsExtension => ConfigurationFactory.ParseString(@"
@@ -92,12 +96,10 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
 
         private async Task Should_collect_and_publish_metrics_and_gossip_them_around_the_node_ring()
         {
-            await AwaitAssertAsync(() =>
-            {
-                AwaitClusterUp(Roles.ToArray());
-            }, TimeSpan.FromSeconds(30));
+            // AwaitClusterUpAsync enters barriers, so it must not be retried inside AwaitAssertAsync.
+            await AwaitClusterUpAsync(Roles.ToArray());
                 
-            EnterBarrier("cluster_started");
+            await EnterBarrierAsync("cluster_started");
             await AwaitAssertAsync(() =>
             {
                 Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(Roles.Count);
@@ -108,12 +110,15 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 MetricsView.ClusterMetrics.Count.Should().Be(Roles.Count);
             }, TimeSpan.FromSeconds(30));
             
-            await WithinAsync(10.Seconds(), () => {
-                var collector = new MetricsCollectorBuilder().Build(Cluster.System);
+            using (var collector = new MetricsCollectorBuilder().Build(Cluster.System))
+            {
                 collector.Sample().Metrics.Count.Should().BeGreaterThan(3);
-                EnterBarrier("after");
-                return Task.CompletedTask;
-            });
+            }
+
+            // Not inside a Within block: there the barrier would time out 10s after the
+            // fastest node got here, and gossip can make one node see all metrics much later
+            // than the others.
+            await EnterBarrierAsync("after");
         }
 
         private async Task Should_reflect_the_correct_number_or_node_metrics_in_cluster_view()
