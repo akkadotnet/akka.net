@@ -39,7 +39,9 @@ public sealed class ReminderFaultSpecs(ITestOutputHelper output)
     private Task SampleAsync(IModelStorageFactory storage, long iterations, bool trouble = true)
     {
         // CsCheck owns argument/sequence shrinking and seed replay; the callback runs the input.
-        var cases = SettingsGen.Select(Commands(trouble).Array);
+        // The ack group is drawn after the commands, so a seed still generates the settings and commands it did before.
+        var cases = Gen.Select(SettingsGen, Commands(trouble).Array, AckGroupGen,
+            (settings, commands, ackGroup) => (settings with { AckGroup = ackGroup }, commands));
         var iter = Environment.GetEnvironmentVariable("CsCheck_Iter") is null &&
                    Environment.GetEnvironmentVariable("CsCheck_Time") is null ? iterations : -1;
         return cases.SampleAsync((settings, commands) => RunAsync(settings, storage, commands),
@@ -232,6 +234,9 @@ public sealed class ReminderFaultSpecs(ITestOutputHelper output)
             (1, Gen.Int[15_000, 120_000]))
         from fire in Gen.Bool
         select new InjectFault(call, kind, count, kind == FaultKind.Slow ? delay : 0, fire);
+
+    // How many acks of one round go to the scheduler together: the whole round, one by one, or in pairs.
+    private static Gen<int> AckGroupGen => Gen.Frequency((2, Gen.Const(0)), (1, Gen.Const(1)), (1, Gen.Const(2)));
 
     private static Gen<ModelSettings> SettingsGen =>
         from slip in Gen.OneOfConst(0, 1, 500, 1_000, 5_000)
