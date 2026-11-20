@@ -323,9 +323,6 @@ When the rest of the cluster downs and removes a node, the other members quarant
 
 To prevent that, a node downs itself as soon as a current cluster member quarantines it. It does this right away, without waiting for `stable-after`, and it works with every strategy. A node only learns it was quarantined when it tries to talk to the member that quarantined it, which a woken node does within seconds.
 
-> [!NOTE]
-> With classic remoting, the woken node learns about the quarantine within seconds. With the experimental Artery transport, a node that was cut off when the others quarantined it may never be told: it only sends heartbeats while it sees every other member as unreachable, and Artery doesn't answer a quarantined node's heartbeats with a quarantine notice. A quarantine that happens while the link is up works on both transports.
-
 Quarantines from addresses that are not cluster members are ignored, and so are quarantines from members that are leaving, exiting, or already down, so one node that is shutting down can't take others down with it.
 
 This is on by default. To turn it off:

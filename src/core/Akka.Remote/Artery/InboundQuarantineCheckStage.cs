@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InboundQuarantineCheckStage.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -36,7 +36,8 @@ namespace Akka.Remote.Artery
     /// </description></item>
     /// <item><description>
     /// The stage then sends a new <see cref="ArteryQuarantined"/> notice to the origin.
-    /// <see cref="ShouldNotifyOrigin"/> gives the two conditions when it does not send this notice.
+    /// <see cref="ShouldNotifyOrigin"/> says when it sends this notice: never in reply to a notice
+    /// from the peer, and at most once per second in reply to heartbeats.
     /// </description></item>
     /// </list>
     ///
@@ -88,15 +89,21 @@ namespace Akka.Remote.Artery
         /// <see cref="ArteryQuarantined"/> notice to the origin. The caller has already found that
         /// the message comes from a quarantined uid.
         ///
-        /// <para>The result is <see langword="false"/> for two types of message:</para>
         /// <list type="bullet">
         /// <item><description>
-        /// An <see cref="ArteryQuarantined"/> notice from the peer. A reply to this notice would
-        /// cause the two systems to send notices to each other continuously.
+        /// An <see cref="ArteryQuarantined"/> notice from the peer never causes a notice. A reply
+        /// to this notice would cause the two systems to send notices to each other continuously.
         /// </description></item>
         /// <item><description>
-        /// A heartbeat message. A reply to a heartbeat would start an outbound stream for routine
-        /// traffic.
+        /// A heartbeat causes a notice at most once per <see cref="HeartbeatNoticeInterval"/> per
+        /// association (<see cref="IInboundContext.TryClaimHeartbeatQuarantineNotice"/>). A node
+        /// that sees every other member as unreachable sends only heartbeats. Without this, a node
+        /// that missed the one-time notice from <see cref="ArteryRemoting.Quarantine"/> (for
+        /// example, because the link was down) would never learn that it was quarantined. The rate
+        /// limit keeps the outbound traffic to a quarantined peer small. See #9010.
+        /// </description></item>
+        /// <item><description>
+        /// Any other message always causes a notice.
         /// </description></item>
         /// </list>
         ///
@@ -110,8 +117,22 @@ namespace Akka.Remote.Artery
         /// same method so that they stay in agreement.
         /// </para>
         /// </summary>
-        internal static bool ShouldNotifyOrigin(object message) =>
-            message is not ArteryQuarantined && !IsHeartbeat(message);
+        /// <param name="message">The discarded message.</param>
+        /// <param name="context">The inbound context, which owns the heartbeat rate limit.</param>
+        /// <param name="originUid">The quarantined uid that sent <paramref name="message"/>.</param>
+        internal static bool ShouldNotifyOrigin(object message, IInboundContext context, long originUid)
+        {
+            if (message is ArteryQuarantined)
+                return false;
+
+            return !IsHeartbeat(message) || context.TryClaimHeartbeatQuarantineNotice(originUid);
+        }
+
+        /// <summary>
+        /// The minimum time between two quarantine notices that heartbeats from the same
+        /// quarantined peer trigger. See <see cref="ShouldNotifyOrigin"/>.
+        /// </summary>
+        internal static readonly TimeSpan HeartbeatNoticeInterval = TimeSpan.FromSeconds(1);
 
         /// <summary>
         /// Tells the caller if <paramref name="message"/> is a heartbeat. Three groups of
@@ -170,7 +191,7 @@ namespace Akka.Remote.Artery
                 // Reactive re-notification, per the SHARED skip set (see ShouldNotifyOrigin's
                 // remarks -- applies ONLY to whether we react, never to whether we drop: every
                 // message from a quarantined uid is dropped either way, just below).
-                if (ShouldNotifyOrigin(envelope.Message))
+                if (ShouldNotifyOrigin(envelope.Message, _stage.Context, envelope.OriginUid))
                 {
                     var origin = _stage.Context.TryResolveOriginAddress(envelope.OriginUid);
                     if (origin is not null)

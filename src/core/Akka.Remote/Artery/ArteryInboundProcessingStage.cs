@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ArteryInboundProcessingStage.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -866,7 +866,7 @@ namespace Akka.Remote.Artery
                         "Dropping message [{0}] from [{1}#{2}] because the system is quarantined",
                         quarantinedMessage.GetType(), quarantinedOrigin, decoded.Header.OriginUid);
 
-                    if (InboundQuarantineCheckStage.ShouldNotifyOrigin(quarantinedMessage) && quarantinedOrigin is not null)
+                    if (quarantinedOrigin is not null && InboundQuarantineCheckStage.ShouldNotifyOrigin(quarantinedMessage, _stage.InboundContext!, decoded.Header.OriginUid))
                     {
                         _stage.InboundContext!.SendControl(
                             quarantinedOrigin,

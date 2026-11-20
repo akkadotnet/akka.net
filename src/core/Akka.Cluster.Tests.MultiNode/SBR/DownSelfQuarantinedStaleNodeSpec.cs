@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DownSelfQuarantinedStaleNodeSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -48,12 +48,6 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     # sockets closed by the OS, so it reconnects as soon as it wakes.
                     remote.transport-failure-detector.heartbeat-interval = 1s
                     remote.transport-failure-detector.acceptable-heartbeat-pause = 3s
-
-                    # Classic only for now. On Artery the stale node is never told it was quarantined:
-                    # the single ArteryQuarantined notice is sent while the link is still cut and is lost,
-                    # and a quarantined node's heartbeats (all it sends while it sees everyone as
-                    # unreachable) never trigger a new notice. See #9002.
-                    remote.artery.enabled = off
 
                     actor.provider = cluster
                     test.filter-leeway = 10s
