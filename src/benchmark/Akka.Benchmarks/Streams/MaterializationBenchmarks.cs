@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 #nullable enable
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
@@ -22,6 +23,7 @@ namespace Akka.Benchmarks.Streams
         private ActorMaterializer _materializer = null!;
 
         private IRunnableGraph<Task> _simpleGraph = null!;
+        private IRunnableGraph<Task<int>> _restartGraph = null!;
 
         [GlobalSetup]
         public void Setup()
@@ -32,6 +34,12 @@ namespace Akka.Benchmarks.Streams
             _simpleGraph = Source.Single(1)
                 .Select(x => x + 1)
                 .ToMaterialized(Sink.ForEach<int>(_ => { }), Keep.Right);
+
+            _restartGraph = Source.Single(1)
+                .Via(RestartFlow.OnFailuresWithBackoff(
+                    static () => Flow.Create<int>().Select(static value => value),
+                    RestartSettings.Create(TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(1), 0)))
+                .ToMaterialized(Sink.First<int>(), Keep.Right);
         }
 
         [GlobalCleanup]
@@ -39,6 +47,13 @@ namespace Akka.Benchmarks.Streams
         {
             _materializer.Dispose();
             await _system.Terminate();
+        }
+
+        [Benchmark]
+        public async Task Actor_materializer_run_restart_flow_graph()
+        {
+            if (await _restartGraph.Run(_materializer) != 1)
+                throw new InvalidOperationException("RestartFlow did not deliver its one element.");
         }
 
         [Benchmark]
