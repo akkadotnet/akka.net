@@ -23,6 +23,7 @@
   </PropertyGroup>
 
   <PropertyGroup Label="AotSettings">
+    <DefineConstants Condition="'$(PublishAot)' == 'true'">$(DefineConstants);NATIVE_AOT</DefineConstants>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
