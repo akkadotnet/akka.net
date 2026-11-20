@@ -417,12 +417,15 @@ jobs:
   # on PRs that do not touch src/contrib/reminders. Running it separately also keeps
   # container startup and teardown out of the main unit lanes, where a container
   # flake would otherwise look like a core Akka failure.
+  #
+  # This lane takes mini hang dumps, not full ones. The SQL Server and Postgres
+  # images already use part of the agent's disk, and a full dump can be several GB.
   - template: azure-pipeline.template.yaml
     parameters:
       name: "net_tests_reminders_linux"
       displayName: ".NET Unit Tests (Reminders, Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/remindersOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type full"
+      command: "dotnet incrementalist run --config .incrementalist/remindersOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini"
       outputDirectory: "TestResults"
       artifactName: "net_tests_reminders_linux-$(Build.BuildId)"
       timeoutInMinutes: 60
