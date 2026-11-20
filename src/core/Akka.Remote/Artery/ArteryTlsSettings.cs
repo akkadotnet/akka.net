@@ -11,7 +11,10 @@ using System.Linq;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Akka.Actor.Setup;
+using Akka.Configuration;
+using Akka.Event;
 using Akka.IO;
 
 namespace Akka.Remote.Artery
@@ -25,11 +28,14 @@ namespace Akka.Remote.Artery
 
         private readonly TlsClientSettings _clientSettings;
         private readonly TlsServerSettings _serverSettings;
+        private readonly ArteryCertificateSource? _certificateSource;
 
-        private ArteryTlsSettings(TlsClientSettings clientSettings, TlsServerSettings serverSettings)
+        private ArteryTlsSettings(TlsClientSettings clientSettings, TlsServerSettings serverSettings,
+            ArteryCertificateSource? certificateSource = null)
         {
             _clientSettings = clientSettings ?? throw new ArgumentNullException(nameof(clientSettings));
             _serverSettings = serverSettings ?? throw new ArgumentNullException(nameof(serverSettings));
+            _certificateSource = certificateSource;
         }
 
         /// <summary>Gets the maximum time allowed for each channel's TLS handshake.</summary>
@@ -77,17 +83,109 @@ namespace Akka.Remote.Artery
                 TlsServerSettings.ServerOnly(serverCertificate));
         }
 
+        /// <summary>
+        /// Creates a mutual TLS profile whose certificate comes from a source, using one peer policy in both
+        /// directions. Each new connection asks the source for the current certificate, so a renewed certificate is
+        /// used with no restart, while open connections keep theirs.
+        /// </summary>
+        /// <remarks>
+        /// The node presents one certificate in both directions, so the source picks only a certificate that permits
+        /// both client and server authentication. The node does not start unless the source has a usable
+        /// certificate. A folder or store source is also checked once a minute.
+        /// </remarks>
+        /// <param name="certificateSource">The source of the certificate presented in both directions.</param>
+        /// <param name="peerPolicy">The policy used to validate remote Artery nodes in both directions.</param>
+        public static ArteryTlsSettings Mutual(TlsCertificateSource certificateSource, TlsPeerPolicy peerPolicy)
+        {
+            ArgumentNullException.ThrowIfNull(peerPolicy);
+            return Mutual(certificateSource, peerPolicy, peerPolicy);
+        }
+
+        /// <summary>
+        /// Creates a mutual TLS profile whose certificate comes from a source, with independent inbound and outbound
+        /// peer policies. Each new connection asks the source for the current certificate, so a renewed certificate
+        /// is used with no restart, while open connections keep theirs.
+        /// </summary>
+        /// <remarks>
+        /// The node presents one certificate in both directions, so the source picks only a certificate that permits
+        /// both client and server authentication. The node does not start unless the source has a usable
+        /// certificate. A folder or store source is also checked once a minute.
+        /// </remarks>
+        /// <param name="certificateSource">The source of the certificate presented in both directions.</param>
+        /// <param name="inboundClientPolicy">The policy used to validate connecting Artery nodes.</param>
+        /// <param name="outboundServerPolicy">The policy used to validate remote Artery nodes.</param>
+        public static ArteryTlsSettings Mutual(TlsCertificateSource certificateSource,
+            TlsPeerPolicy inboundClientPolicy, TlsPeerPolicy outboundServerPolicy)
+        {
+            ArgumentNullException.ThrowIfNull(certificateSource);
+            ArgumentNullException.ThrowIfNull(inboundClientPolicy);
+            ArgumentNullException.ThrowIfNull(outboundServerPolicy);
+
+            var source = new ArteryCertificateSource(certificateSource, TlsCertificateRole.ClientAndServer);
+            return new ArteryTlsSettings(
+                TlsClientSettings.Mutual(source.Present, outboundServerPolicy),
+                TlsServerSettings.FromProvider(source.Present, inboundClientPolicy),
+                source);
+        }
+
+        /// <summary>
+        /// Creates a TLS profile whose server certificate comes from a source; it accepts anonymous inbound clients
+        /// and validates remote servers. Each new inbound connection asks the source for the current certificate, so
+        /// a renewed certificate is used with no restart, while open connections keep theirs.
+        /// </summary>
+        /// <remarks>
+        /// The node presents a certificate only as a server, so the source picks a certificate that permits server
+        /// authentication. The node does not start unless the source has a usable certificate. A folder or store
+        /// source is also checked once a minute.
+        /// </remarks>
+        /// <param name="certificateSource">The source of the certificate presented to connecting nodes.</param>
+        /// <param name="outboundServerPolicy">The policy used to validate remote Artery nodes.</param>
+        public static ArteryTlsSettings ServerOnly(TlsCertificateSource certificateSource,
+            TlsPeerPolicy outboundServerPolicy)
+        {
+            ArgumentNullException.ThrowIfNull(certificateSource);
+            ArgumentNullException.ThrowIfNull(outboundServerPolicy);
+
+            var source = new ArteryCertificateSource(certificateSource, TlsCertificateRole.Server);
+            return new ArteryTlsSettings(
+                TlsClientSettings.ServerOnly(outboundServerPolicy),
+                TlsServerSettings.FromProvider(source.Present, clientValidation: null),
+                source);
+        }
+
         /// <summary>Returns a copy with a different handshake timeout.</summary>
         public ArteryTlsSettings WithHandshakeTimeout(TimeSpan value) =>
-            new(_clientSettings.WithHandshakeTimeout(value), _serverSettings.WithHandshakeTimeout(value));
+            new(_clientSettings.WithHandshakeTimeout(value), _serverSettings.WithHandshakeTimeout(value),
+                _certificateSource);
 
         /// <summary>Returns a copy with different TLS protocols.</summary>
         public ArteryTlsSettings WithProtocols(SslProtocols value) =>
-            new(_clientSettings.WithProtocols(value), _serverSettings.WithProtocols(value));
+            new(_clientSettings.WithProtocols(value), _serverSettings.WithProtocols(value), _certificateSource);
+
+        /// <summary>
+        /// INTERNAL API. A copy for one Artery transport. It keeps the same <see cref="TlsCertificateSource"/>, which
+        /// holds the picks and look-ups, and gets its own error limiter, so two nodes that share one settings object
+        /// do not hide each other's errors. A fixed-certificate profile has no limiter and returns itself.
+        /// </summary>
+        internal ArteryTlsSettings ForTransport()
+        {
+            if (_certificateSource is null)
+                return this;
+
+            var source = new ArteryCertificateSource(_certificateSource.Source, _certificateSource.Role);
+            // Only a mutual profile presents a certificate when it opens a connection.
+            var client = _certificateSource.Role == TlsCertificateRole.ClientAndServer
+                ? _clientSettings.WithCertificateProvider(source.Present)
+                : _clientSettings;
+            return new ArteryTlsSettings(client, _serverSettings.WithCertificateProvider(source.Present), source);
+        }
 
         internal TlsClientSettings ClientSettings => _clientSettings;
 
         internal TlsServerSettings ServerSettings => _serverSettings;
+
+        // The source this node asks, or null for a fixed certificate.
+        internal ArteryCertificateSource? CertificateSource => _certificateSource;
 
         private static void ValidateCertificateRole(X509Certificate2 certificate, string requiredEku,
             string parameterName)
@@ -102,6 +200,61 @@ namespace Akka.Remote.Artery
                 throw new ArgumentException("The TLS certificate does not permit the required authentication role.",
                     parameterName);
         }
+    }
+
+    /// <summary>
+    /// INTERNAL API. The certificate source of one Artery TLS profile, with the role the node presents its certificate
+    /// in: client and server under mutual TLS, server otherwise, as the DotNetty transport does. The transport asks it
+    /// each time it builds a connection, once at startup, and once a minute for a folder or a store. It logs and fails
+    /// the way the DotNetty transport does, with the same text.
+    /// </summary>
+    internal sealed class ArteryCertificateSource
+    {
+        // This transport's own error limiter: one per transport, so one node never hides another's errors.
+        private readonly TlsCertificateRotation _rotation = new TlsCertificateRotation();
+
+        public ArteryCertificateSource(TlsCertificateSource source, TlsCertificateRole role)
+        {
+            Source = source;
+            Role = role;
+        }
+
+        public TlsCertificateSource Source { get; }
+
+        public TlsCertificateRole Role { get; }
+
+        // True when the transport should ask the source by itself, once a minute: a folder or a store source, which
+        // looks in the background. False for a callback.
+        public bool NeedsPolling => Source.LooksUp;
+
+        // Asked once per connection, when Akka.IO builds the connection's TLS options. Never waits for a look-up. A
+        // throw fails this connection only; the node stays up.
+        public X509Certificate2 Present(TlsConnectionDirection direction, string remotePeer, ILoggingAdapter log)
+        {
+            try
+            {
+                return Source.GetCertificate(Role, log);
+            }
+            catch (Exception ex)
+            {
+                // Akka.IO fails this connection with the exception, so say why here, as DotNetty does.
+                if (direction == TlsConnectionDirection.Outbound)
+                    _rotation.ReportOutboundFailure(ex, remotePeer, log);
+                else
+                    _rotation.ReportInboundFailure(ex, remotePeer, log);
+
+                // Akka.IO fails the connection with this exception. Its type says the failure was reported, so Akka.IO
+                // does not log it again at Warning for every connection. It wraps the original, with the same message.
+                throw new TlsCertificateUnavailableException(ex);
+            }
+        }
+
+        // The startup check: waits for the source's first look-up without blocking a thread. Whatever the source
+        // throws stops the node.
+        public Task CheckAtStartupAsync(ILoggingAdapter log) => TlsCertificateRotation.CheckAtStartupAsync(Source, Role, log);
+
+        // What the transport's timer runs: starts a look-up of the source when one is due and logs what it found.
+        public void Poll(ILoggingAdapter log) => TlsCertificateRotation.Poll(() => Source.Poll(Role, log), log);
     }
 
     /// <summary>Actor-system setup that enables TLS for all Artery TCP channels.</summary>

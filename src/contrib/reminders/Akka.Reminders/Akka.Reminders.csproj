@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Description>Durable, re-entrant reminders system for Akka.Cluster.Sharding.</Description>
+        <PackageTags>$(AkkaPackageTags);cluster;sharding;reminders;scheduling</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsAotCompatible>true</IsAotCompatible>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="Akka.Reminders.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Using Include="Akka.Event" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Ship this module's README instead of the repo-root one that
+           Directory.Build.props packs into every package. -->
+      <None Remove="$([System.IO.Path]::GetDirectoryName($(DirectoryBuildPropsPath)))/README.md" />
+      <None Update="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\hosting\Akka.Cluster.Hosting\Akka.Cluster.Hosting.csproj" />
+    </ItemGroup>
+
+</Project>

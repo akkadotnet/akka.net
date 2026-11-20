@@ -1,9 +1,12 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="MultiNodeSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+// Preserve existing public nullability annotations; new startup code is checked below.
+#nullable enable warnings
 
 using System;
 using System.Collections.Generic;
@@ -772,10 +775,34 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
                 .ParseString(sb.ToString())
                 .WithFallback(Sys.Settings.Config);
 
-        var system = ActorSystem.Create(Sys.Name, config);
-        InjectDeployments(system, Myself);
-        await AttachConductorAsync(new TestConductor(system), cancellationToken);
-        return system;
+        return await InitializeRestartedSystemAsync(ActorSystem.Create(Sys.Name, config), async system =>
+        {
+            InjectDeployments(system, Myself);
+            await AttachConductorAsync(new TestConductor(system), cancellationToken);
+        }, ShutdownTimeout);
+    }
+
+    internal static async Task<ActorSystem> InitializeRestartedSystemAsync(ActorSystem system,
+        Func<ActorSystem, Task> initialize, TimeSpan shutdownTimeout)
+    {
+        try
+        {
+            await initialize(system).ConfigureAwait(false);
+            return system;
+        }
+        catch (Exception initializationFailure)
+        {
+            try
+            {
+                await system.Terminate().WaitAsync(shutdownTimeout).ConfigureAwait(false);
+            }
+            catch (Exception cleanupFailure)
+            {
+                throw new AggregateException("Restarted multi-node system failed to initialize and terminate.",
+                    initializationFailure, cleanupFailure);
+            }
+            throw;
+        }
     }
         
     public void Dispose()

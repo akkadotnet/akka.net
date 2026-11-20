@@ -8,6 +8,8 @@
 #nullable enable
 
 using System;
+using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -68,27 +70,47 @@ namespace Akka.Remote.Tests.Artery
         /// the whole test. Only SysAck/SysNack are best-effort (design.md invariant 6); the actual
         /// <see cref="SystemMessageEnvelope"/> traffic (Watch/DeathWatchNotification) is untouched,
         /// so this proves delivery does not depend on any SysAck/SysNack ever arriving -- AND, since the
-        /// sender's resend timer will keep resending the never-acked envelope forever, it also
-        /// exercises the inbound acker's DEDUP (exactly one Terminated must be delivered, not one
-        /// per resend).
+        /// sender's resend timer keeps retrying unacknowledged traffic, it also checks exactly one
+        /// actor-observable Terminated under those retries. ActorCell can suppress duplicate
+        /// DeathWatch notifications too; direct acker deduplication is covered by
+        /// <see cref="SystemMessageAckerStageSpec"/>.
         /// </summary>
-        private static bool DropAcksAndNacks(object message) => message is SysAck or SysNack;
+        private sealed class AckLoss
+        {
+            private readonly ConcurrentDictionary<(long Uid, long Sequence), int> _drops = new();
+            internal int RepeatedAckDrops => _drops.Values.DefaultIfEmpty().Max();
+            internal long HighestAckSequence => _drops.Keys.Select(key => key.Sequence).DefaultIfEmpty().Max();
+            internal int RepeatedAckDropsAfter(long sequence) => _drops.Where(pair => pair.Key.Sequence > sequence)
+                .Select(pair => pair.Value).DefaultIfEmpty().Max();
+            internal bool Drop(object message)
+            {
+                if (message is SysAck ack)
+                    _drops.AddOrUpdate((ack.From.Uid, ack.SeqNo), 1, (_, count) => count + 1);
+                return message is SysAck or SysNack;
+            }
+        }
 
-        [Fact(DisplayName = "DeathWatch end-to-end under induced ack loss: Terminated still arrives exactly once, despite every SysAck/SysNack reply being silently dropped")]
+        [Fact(DisplayName = "DeathWatch delivers Terminated once after witnessed same-UID system-message retries under ACK loss")]
         public async Task Should_Deliver_Terminated_Exactly_Once_Despite_Induced_Ack_Loss()
         {
             var resendInterval = TimeSpan.FromMilliseconds(150);
-            var setup = ActorSystemSetup.Create(
-                BootstrapSetup.Create().WithConfig(ArteryConfig(resendInterval: resendInterval)),
-                new ArteryTransportSetup(dropOutboundControlMessage: DropAcksAndNacks));
+            var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(ArteryConfig(resendInterval: resendInterval)));
+            var lossA = new AckLoss();
+            var lossB = new AckLoss();
 
-            var systemA = ActorSystem.Create("ArteryDeathWatchLossA", setup);
-            var systemB = ActorSystem.Create("ArteryDeathWatchLossB", setup);
+            var systemA = ActorSystem.Create("ArteryDeathWatchLossA", setup.WithSetup(new ArteryTransportSetup(dropOutboundControlMessage: lossA.Drop)));
+            var systemB = ActorSystem.Create("ArteryDeathWatchLossB", setup.WithSetup(new ArteryTransportSetup(dropOutboundControlMessage: lossB.Drop)));
             try
             {
                 var targetOnB = systemB.ActorOf(Props.Create(() => new Echo()), "target");
 
                 var targetFromA = await systemA.ActorSelection(SelectionPath(systemB, "target")).ResolveOne(TimeSpan.FromSeconds(10));
+                var transportA = (ArteryRemoting)RARP.For(systemA).Provider.Transport;
+                var transportB = (ArteryRemoting)RARP.For(systemB).Provider.Transport;
+                var peerA = transportA.Registry.AssociationFor(RARP.For(systemB).Provider.DefaultAddress).CurrentState.UniqueRemoteAddress;
+                var peerB = transportB.Registry.AssociationFor(RARP.For(systemA).Provider.DefaultAddress).CurrentState.UniqueRemoteAddress;
+                peerA.Should().NotBeNull();
+                peerB.Should().NotBeNull();
                 var terminatedProbe = CreateTestProbe(systemA);
                 // The probe itself watches the target directly (TestProbe.WatchAsync) -- Terminated
                 // is an AutoReceiveMessage (design.md is not involved here, this is a general Akka.NET
@@ -98,19 +120,24 @@ namespace Akka.Remote.Tests.Artery
                 // RECEIVING actor itself performed the Watch, so the probe must watch directly.
                 await terminatedProbe.WatchAsync(targetFromA);
 
-                // Give the Watch (A -> B, reliable system message) a moment to actually land before
-                // killing the target -- otherwise this is racing the Watch's own resend/delivery.
-                await Task.Delay(resendInterval + resendInterval);
+                // Witness the same cumulative ACK more than once. This proves real repeated
+                // system-message processing under loss rather than assuming a timer fired.
+                await AwaitAssertAsync(() => lossB.RepeatedAckDrops.Should().BeGreaterThan(2), TimeSpan.FromSeconds(10));
 
+                var reverseAckBoundary = lossA.HighestAckSequence;
                 targetOnB.Tell(PoisonPill.Instance);
 
                 var terminated = await terminatedProbe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(10));
                 terminated.ActorRef.Path.ToStringWithoutAddress().Should().Be(targetFromA.Path.ToStringWithoutAddress());
+                await AwaitAssertAsync(() => lossA.RepeatedAckDropsAfter(reverseAckBoundary).Should().BeGreaterThan(2),
+                    TimeSpan.FromSeconds(10));
+                transportA.Registry.AssociationFor(RARP.For(systemB).Provider.DefaultAddress).CurrentState.UniqueRemoteAddress.Should().Be(peerA);
+                transportB.Registry.AssociationFor(RARP.For(systemA).Provider.DefaultAddress).CurrentState.UniqueRemoteAddress.Should().Be(peerB);
 
                 // Sustained loss keeps the sender's resend timer firing forever (nothing is ever
                 // acked) -- wait several more resend intervals and prove NO duplicate Terminated
-                // shows up, i.e. the inbound acker correctly deduplicates every resent
-                // DeathWatchNotification.
+                // shows up at the actor boundary. This does not by itself isolate the acker
+                // from ActorCell's own DeathWatch duplicate suppression.
                 await terminatedProbe.ExpectNoMsgAsync(resendInterval * 6);
             }
             finally

@@ -58,7 +58,7 @@ TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It p
 **What TLS Does NOT Protect Against:**
 
 * Misconfigured certificates (see startup validation below)
-* Compromised private keys (rotate certificates regularly)
+* Compromised private keys (rotate certificates regularly, see [Rotating TLS Certificates](xref:tls-certificate-rotation))
 * Application-level authorization (implement this separately)
 
 ## Certificate Validation: Independent Control
@@ -94,11 +94,11 @@ When `suppress-validation = false` (the default when SSL is enabled):
 
 * Certificate chain against system trusted root CAs
 * Certificate expiration dates
-* Certificate hasn't been revoked (if CRL/OCSP configured)
 
 **Does NOT validate:**
 
 * Hostname matching (see Hostname Validation section below)
+* Certificate revocation. Akka.Remote does not check certificate revocation lists (CRL) or OCSP, so a revoked certificate still passes chain validation.
 
 **When to use:** Always in production and any networked environment.
 
@@ -267,6 +267,17 @@ akka.remote.dot-netty.tcp.ssl {
 
 ## Certificate Configuration
 
+Four options tell a node where to find its certificate. They differ in one way that matters when a certificate expires: whether the node can use a renewed certificate without a restart.
+
+| Option | Where the certificate comes from | Picks up a renewed certificate without a restart |
+|--------|----------------------------------|--------------------------------------------------|
+| 1 | A single file (`path`) | No, loaded once at startup |
+| 2 | A store, by thumbprint | No, loaded once at startup |
+| 3 | A folder of files (`path` names a folder) | Yes (v1.6+) |
+| 4 | A store, by common name (`common-name`) | Yes (v1.6+) |
+
+A certificate you pass in code with `DotNettySslSetup` also loads once, unless you build the setup from a certificate source with `DotNettySslSetup.FromSource`. See [Rotating TLS Certificates](xref:tls-certificate-rotation) for how rotation works and how to set it up, in Akka.Hosting, HOCON and code.
+
 ### Option 1: Certificate File (Recommended for Development)
 
 ```hocon
@@ -296,6 +307,9 @@ akka.remote.dot-netty.tcp {
 
 * Certificate files can be copied if filesystem is compromised
 * Requires file system access for certificate deployment
+* The node loads the file once, so a renewed certificate needs a restart (or use Option 3)
+
+`path` can also name a folder. See Option 3.
 
 ### Option 2: Windows Certificate Store (Recommended for Production)
 
@@ -328,6 +342,7 @@ akka.remote.dot-netty.tcp {
 * Windows-specific (not portable to Linux)
 * Requires administrative access for certificate installation
 * More complex initial setup
+* A thumbprint names one certificate, so a renewed certificate needs a config change and a restart (or use Option 4)
 
 **Finding Your Thumbprint:**
 
@@ -337,6 +352,67 @@ akka.remote.dot-netty.tcp {
 4. Go to Details tab
 5. Scroll to Thumbprint field
 6. Copy the value (remove spaces)
+
+### Option 3: Folder of Certificate Files (v1.6+)
+
+```hocon
+akka.remote.dot-netty.tcp {
+  enable-ssl = true
+  ssl {
+    suppress-validation = false
+    certificate {
+      path = "/etc/akka/tls"   # a folder, not a file
+      password = "certificate-password"   # only if the files are protected
+    }
+  }
+}
+```
+
+**When to use:** Any platform, and containers where a secret mounts as files. Use it when you want to rotate certificates without a restart.
+
+The folder may hold PKCS#12 files, PEM files, or both. The node reads the folder in the background, at most once every 10 seconds, and presents the usable certificate that was issued most recently (the latest start date). To rotate, add the renewed certificate to the folder beside the old one. The node uses it within about 10 seconds plus the time of one look-up, on a connection after the one that starts the look-up. The node also looks once a minute by itself, so it logs the change within about a minute even if it builds no connection. The node reads the first 100 files by name, and skips a file larger than 256 KB. `path` counts as a folder only if the folder exists when the node starts. Keep the folder for this node's certificates only: the node does not check who issued a certificate it finds.
+
+**Pros:**
+
+* Rotates without a restart or a config change
+* Works the same on Windows and Linux
+* Works with secrets mounted into containers
+
+**Cons:**
+
+* Certificate files can be copied if filesystem is compromised
+* The node's account needs read access to the files in the folder
+
+### Option 4: Certificate Store Lookup by Common Name (v1.6+)
+
+```hocon
+akka.remote.dot-netty.tcp {
+  enable-ssl = true
+  ssl {
+    suppress-validation = false
+    certificate {
+      common-name = "akka-node.contoso.com"
+      store-name = "My"
+      store-location = "local-machine"  # or "current-user"
+    }
+  }
+}
+```
+
+**When to use:** Production environments with a certificate store, when you want to rotate certificates without a restart.
+
+The common name must match in full, ignoring case. The node looks in the store in the background, at most once every 10 seconds, and presents the usable certificate with that name that was issued most recently (the latest start date). A renewed certificate is in use within about 10 seconds plus the time of one look-up, on a connection after the one that starts the look-up. The node also looks once a minute by itself, so it logs the change within about a minute even if it builds no connection. Keep the name for this node's certificates only: a stray self-signed certificate with the same name is picked if it was issued most recently. An empty `store-name` means `My`. When `common-name` is set, the node ignores `thumbprint`, `use-thumbprint-over-file` and `path`.
+
+**Pros:**
+
+* Rotates without a restart or a config change
+* Keeps the Windows ACL protection of the private key
+* Integrates with enterprise PKI infrastructure
+
+**Cons:**
+
+* The renewed certificate needs the same common name
+* The node's account needs read access to the renewed certificate's private key
 
 ## Programmatic Certificate Validation (v1.5.55+)
 
@@ -365,6 +441,8 @@ The `CertificateValidation` static class provides 7 helper methods for common va
 Accept only certificates with specific thumbprints. Prevents man-in-the-middle attacks if CA is compromised:
 
 [!code-csharp[CertificatePinningExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=CertificatePinningExample)]
+
+A fixed pin list cannot follow a renewed certificate. See [By a Fixed List](xref:tls-certificate-rotation#by-a-fixed-list) for how to rotate with pins.
 
 #### Custom Validation Logic with ChainPlusThen
 
@@ -426,6 +504,16 @@ The startup validation verifies:
 * Private key is accessible for both RSA and ECDSA algorithms
 
 Better to catch a bad certificate at startup than mid-handshake on a live connection.
+
+### Checks When a Node Picks a Certificate Later (v1.6+)
+
+A node that uses a certificate source (a folder, a lookup by common name, or a callback) runs the same checks each time it picks a certificate for a new connection, not only at startup. It also checks that the certificate is in date and allowed for its job, as set by its enhanced key usage and its key usage. A folder or a store is read in the background, at most once every 10 seconds when connections ask, and once a minute by itself, so the checks run at that pace. A callback runs every time.
+
+* A certificate that fails a check is skipped, and the node uses the best certificate that passes.
+* The node logs a warning that names the skipped certificate and gives the reason, when the skipped certificate would have been the pick. It does not warn about a certificate that has expired or is not valid yet.
+* Only node startup waits for a look-up, for at most 30 seconds. A node with no usable certificate at startup does not start. After startup, a connection never waits. If the look-up finds nothing usable and the last certificate the node used is still in date, the node keeps using it and logs a warning, and repeats the warning every 5 minutes while look-ups fail. Only when it has nothing usable to present does it fail that connection attempt, log an error with the reason the last look-up gave, and stay up. That happens when it has no earlier certificate, or the earlier one has expired or was disposed, or its first look-up has not finished.
+
+See [Rotating TLS Certificates](xref:tls-certificate-rotation) for the log lines and for how a node picks its certificate.
 
 ### Common Private Key Permission Issues
 
@@ -758,6 +846,31 @@ sudo cp ca.crt /usr/local/share/ca-certificates/
 sudo update-ca-certificates
 ```
 
+### The Node Still Presents the Old Certificate
+
+**Cause:** One of these:
+
+* The node loads its certificate once at startup. A thumbprint, a single file `path` and a certificate passed in code do this. Only a folder, a `common-name` lookup or a callback can rotate. See [Certificate Configuration](#certificate-configuration).
+* The connection is older than the new certificate. Open connections keep the certificate they started with.
+* The node has not looked yet. It reads a folder or a store in the background, at most once every 10 seconds when connections ask, and once a minute by itself. The connection that starts a look-up still uses the old certificate, and connections built after the look-up finishes use the new one.
+* Another certificate was issued after the new one. A node presents the usable certificate with the latest start date, whatever the end dates are.
+* The look-up failed, and the node keeps its last certificate.
+* The node skipped the new certificate: its name does not match, its start date is still ahead, its enhanced key usage or key usage does not allow the job, or the node cannot read its private key.
+
+**Fix:** Look for a warning in the node's log that names the skipped certificate and says why. A name mismatch, or a start date still ahead, logs nothing, so check the certificate in the store or folder too. [Rotating TLS Certificates](xref:tls-certificate-rotation#the-node-still-presents-the-old-certificate) walks through each case.
+
+### A Node Shuts Down With Exit Code 79
+
+**Cause:** This node dialed a peer, and the TLS handshake failed. The peer's certificate may be untrusted, expired or rejected by your custom validator, or its name may not match. The node logs `TLS handshake failed on channel` at the error level, then runs `CoordinatedShutdown` with a reason whose exit code is 79, and logs `Exiting with [ExitCode:79]`. The process keeps running unless `akka.coordinated-shutdown.exit-clr = on`, which is off by default. With `exit-clr = on` and the default `terminate-actor-system = on`, the process exits with code 0, or with 79 if the actor system takes longer than the `actor-system-terminate` phase timeout to stop. Look for the 79 in the log.
+
+A failed handshake on an incoming connection does not shut the node down. The node logs the `TLS handshake failed on channel` error and a warning, then closes that connection.
+
+**Fix:**
+
+* Read the detailed error above the shutdown. It names the failure and the certificate.
+* Make this node trust the peer's certificate, then start it again.
+* If nodes pin thumbprints, deploy the new thumbprint to every node before you install a renewed certificate. See [Rotating TLS Certificates](xref:tls-certificate-rotation#by-a-fixed-list).
+
 ### Understanding TLS Error Messages (v1.5.52+)
 
 Since v1.5.52, TLS handshake failures provide detailed diagnostic information including:
@@ -807,5 +920,6 @@ Recommendations:
 **Related:**
 
 * [Akka.Remote Configuration](xref:akka-remote-configuration)
+* [Rotating TLS Certificates](xref:tls-certificate-rotation) - Using a renewed certificate without a restart
 * [DotNetty Transport](https://github.com/Azure/DotNetty)
 * [Serialization Security](xref:serialization#serialization-security) - Controlling which types can be serialized/deserialized over the wire

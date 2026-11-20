@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -21,8 +22,15 @@ namespace Akka.TestKit
     /// </summary>
     public class TestScheduler : IScheduler, IAdvancedScheduler
     {
-        private DateTimeOffset _now;
-        private readonly ConcurrentDictionary<long, ConcurrentQueue<ScheduledItem>>  _scheduledWork; 
+        // UTC ticks of the virtual clock. Written only while holding _gate; read without a lock via Interlocked.Read
+        private long _nowTicks;
+        private readonly ConcurrentDictionary<long, ConcurrentQueue<ScheduledItem>>  _scheduledWork;
+
+        // Serializes Advance and scheduling. Monitor is reentrant, so a scheduled action may call Advance or schedule
+        // more work on the same thread.
+        private readonly object _gate = new();
+
+        private DateTimeOffset _now => new(Interlocked.Read(ref _nowTicks), TimeSpan.Zero);
 
         /// <summary>
         /// Creates a test scheduler initialized to the current UTC time. The configuration and logger parameters are not used.
@@ -31,7 +39,7 @@ namespace Akka.TestKit
         /// <param name="log">The logger required by <see cref="IScheduler"/>.</param>
         public TestScheduler(Config schedulerConfig, ILoggingAdapter log)
         {
-            _now = DateTimeOffset.UtcNow;
+            _nowTicks = DateTimeOffset.UtcNow.UtcTicks;
             _scheduledWork = new ConcurrentDictionary<long, ConcurrentQueue<ScheduledItem>>();
         }
 
@@ -39,32 +47,46 @@ namespace Akka.TestKit
         /// Advances virtual time and processes the due-time buckets selected for this advance, in due-time order. Callback exceptions propagate and interrupt processing.
         /// </summary>
         /// <param name="offset">The amount of time to add to the scheduler's current time.</param>
+        /// <remarks>
+        /// Safe to call from several threads at once, and from inside a scheduled action. Each due item runs
+        /// exactly once. Scheduled actions and <c>Tell</c> calls run while an internal lock is held, so an action
+        /// must not block on another thread that is calling <see cref="Advance"/> or scheduling work. If an action
+        /// throws, the exception propagates and the remaining items in that due-time bucket do not run.
+        /// </remarks>
         public void Advance(TimeSpan offset)
         {
-            _now = _now.Add(offset);
-
-            var tickItems = _scheduledWork.Where(s => s.Key <= _now.Ticks).OrderBy(s => s.Key).ToList();
-
-            foreach (var t in tickItems)
+            lock (_gate)
             {
-                foreach (var si in t.Value.Where(i => i.Cancelable == null || !i.Cancelable.IsCancellationRequested))
+                var now = _now.Add(offset);
+                Interlocked.Exchange(ref _nowTicks, now.UtcTicks);
+
+                var dueKeys = _scheduledWork.Keys.Where(k => k <= now.UtcTicks).OrderBy(k => k).ToList();
+
+                foreach (var key in dueKeys)
                 {
-                    if (si.Type == ScheduledItem.ScheduledItemType.Message)
-                        si.Receiver.Tell(si.Message, si.Sender);
-                    else
-                        si.Action();
+                    // Claim the slot before running it. A nested Advance can't see it again, and a slot already
+                    // claimed by a nested call is skipped.
+                    if (!_scheduledWork.TryRemove(key, out var queue))
+                        continue;
 
-                    si.DeliveryCount++;
-                }
+                    var items = queue.ToArray();
 
-                _scheduledWork.TryRemove(t.Key, out var removed);
+                    foreach (var si in items.Where(i => i.Cancelable == null || !i.Cancelable.IsCancellationRequested))
+                    {
+                        if (si.Type == ScheduledItem.ScheduledItemType.Message)
+                            si.Receiver.Tell(si.Message, si.Sender);
+                        else
+                            si.Action();
 
-                foreach (var i in removed.Where(r => r.Repeating && (r.Cancelable == null || !r.Cancelable.IsCancellationRequested)))
-                {
-                    InternalSchedule(null, i.Delay, i.Receiver, i.Message, i.Action, i.Sender, i.Cancelable, i.DeliveryCount);
+                        si.DeliveryCount++;
+                    }
+
+                    foreach (var i in items.Where(r => r.Repeating && (r.Cancelable == null || !r.Cancelable.IsCancellationRequested)))
+                    {
+                        InternalSchedule(null, i.Delay, i.Receiver, i.Message, i.Action, i.Sender, i.Cancelable, i.DeliveryCount);
+                    }
                 }
             }
-            
         }
 
         /// <summary>
@@ -76,31 +98,30 @@ namespace Akka.TestKit
         /// </exception>
         public void AdvanceTo(DateTimeOffset when)
         {
-            if (when < _now)
-                throw new InvalidOperationException("You can't reverse time...");
+            lock (_gate)
+            {
+                if (when < _now)
+                    throw new InvalidOperationException("You can't reverse time...");
 
-            Advance(when.Subtract(_now));
+                Advance(when.Subtract(_now));
+            }
         }
 
         private void  InternalSchedule(TimeSpan? initialDelay, TimeSpan delay, ICanTell receiver, object message, Action action,
             IActorRef sender, ICancelable cancelable, int deliveryCount = 0)
         {
-            var scheduledTime = _now.Add(initialDelay ?? delay).UtcTicks;
-
-            ConcurrentQueue<ScheduledItem> tickItems;
-            while (!_scheduledWork.TryGetValue(scheduledTime, out tickItems))
-            {
-                tickItems = new ConcurrentQueue<ScheduledItem>();
-                if (_scheduledWork.TryAdd(scheduledTime, tickItems))
-                {
-                    break;
-                }
-            }
-            
             var type = message == null ? ScheduledItem.ScheduledItemType.Action : ScheduledItem.ScheduledItemType.Message;
 
-            tickItems.Enqueue(new ScheduledItem(initialDelay ?? delay, delay, type, message, action,
-                initialDelay.HasValue || deliveryCount > 0, receiver, sender, cancelable));
+            // Hold the lock so we can't enqueue into a slot that Advance has just claimed and removed.
+            lock (_gate)
+            {
+                var scheduledTime = _now.Add(initialDelay ?? delay).UtcTicks;
+
+                var tickItems = _scheduledWork.GetOrAdd(scheduledTime, _ => new ConcurrentQueue<ScheduledItem>());
+
+                tickItems.Enqueue(new ScheduledItem(initialDelay ?? delay, delay, type, message, action,
+                    initialDelay.HasValue || deliveryCount > 0, receiver, sender, cancelable));
+            }
         }
 
         /// <summary>

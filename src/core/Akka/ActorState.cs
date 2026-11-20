@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System.Collections.Generic;
 using Akka.Util;
 
@@ -134,7 +135,7 @@ namespace Akka.Actor
         /// Returns the top level receive behavior from the behavior stack.
         /// </summary>
         /// <returns>The current receive behavior.</returns>
-        Receive GetCurrentBehavior();
+        Receive? GetCurrentBehavior();
     }
 
     /// <summary>
@@ -145,8 +146,8 @@ namespace Akka.Actor
     /// </summary>
     internal class DefaultActorState : IActorState
     {
-        private IActorRef _watchedBy;
-        private Receive _receive;
+        private IActorRef? _watchedBy;
+        private Receive? _receive;
 
         /// <summary>
         /// Removes the provided <see cref="IActorRef"/> from the `Watching` set.
@@ -165,6 +166,8 @@ namespace Akka.Actor
         /// <returns>The updated actor state.</returns>
         public IActorState RemoveWatchedBy(IActorRef actor)
         {
+            if (_watchedBy is not null && _watchedBy.Equals(actor))
+                _watchedBy = null;
             return this;
         }
 
@@ -387,7 +390,7 @@ namespace Akka.Actor
         /// Returns the top level receive behavior from the behavior stack.
         /// </summary>
         /// <returns>The current receive behavior.</returns>
-        public Receive GetCurrentBehavior()
+        public Receive? GetCurrentBehavior()
         {
             //TODO: throw if null?
             return _receive;

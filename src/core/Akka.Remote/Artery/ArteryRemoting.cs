@@ -29,6 +29,7 @@ using Akka.Util;
 using Inet = Akka.IO.Inet;
 using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
 using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
+using TlsCertificateRotation = Akka.IO.TlsCertificateRotation;
 
 namespace Akka.Remote.Artery
 {
@@ -304,6 +305,9 @@ namespace Akka.Remote.Artery
         private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
         private ArteryTlsSettings? _tlsSettings;
 
+        // Runs the certificate source's poll every TlsCertificateRotation.PollInterval, the same as the DotNetty transport.
+        private ICancelable? _certificateSourcePoll;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
         /// </summary>
@@ -381,7 +385,15 @@ namespace Akka.Remote.Artery
             _materializer = CreateSystemMaterializer();
             _tcp = System.TcpStream();
             var tlsSetup = System.Settings.Setup.Get<ArteryTlsSetup>();
-            _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings : null;
+            // Each transport gets its own error limiter; two nodes that share one settings object share the source only.
+            _tlsSettings = tlsSetup.HasValue ? tlsSetup.Value.Settings.ForTransport() : null;
+
+            // A certificate source may need its first look-up before the node can present a certificate. Check it
+            // before binding, as the DotNetty transport does, so a node with nothing to present never listens. The
+            // check waits at most 30 seconds after the look-up started; it throws a ConfigurationException when
+            // nothing is usable. Blocking here is forced by the synchronous Start contract (see the bind wait below).
+            _tlsSettings?.CertificateSource?.CheckAtStartupAsync(_log).GetAwaiter().GetResult();
+
             var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
             // Default the encode pool to a transport-scoped ArrayPool<byte>.Create() instance rather
             // than ArrayPool<byte>.Shared (which is what a null value resolves to downstream). Shared is
@@ -446,6 +458,12 @@ namespace Akka.Remote.Artery
                     $"within {Provider.RemoteSettings.StartupTimeout}.");
 
             _binding = bindingTask.GetAwaiter().GetResult();
+
+            // Scheduled only once the bind worked, so a failed bind leaves nothing to cancel; Shutdown cancels it.
+            if (_tlsSettings?.CertificateSource is { NeedsPolling: true })
+                _certificateSourcePoll = System.Scheduler.Advanced.ScheduleRepeatedlyCancelable(
+                    TlsCertificateRotation.PollInterval, TlsCertificateRotation.PollInterval, PollCertificateSource);
+
             var boundPort = ((IPEndPoint)_binding.Value.LocalAddress).Port;
             var address = new Address("akka", System.Name, _settings.CanonicalHostname, boundPort);
 
@@ -525,6 +543,9 @@ namespace Akka.Remote.Artery
                 flowNames: EnumerableActorName.Create("remote"));
         }
 
+        // Runs on the scheduler: it must never throw. Poll logs, and does not rethrow, what the source throws.
+        private void PollCertificateSource() => _tlsSettings?.CertificateSource?.Poll(_log);
+
         /// <inheritdoc/>
         public override async Task Shutdown()
         {
@@ -532,6 +553,7 @@ namespace Akka.Remote.Artery
             // shutdown()): from here on MaterializeOutboundStream refuses to start new streams, so a
             // late system message racing termination can no longer trigger a materialization.
             _isShutdown = true;
+            _certificateSourcePoll?.Cancel();
             _log.Info("Shutting down Artery TCP remoting on [{0}]", _defaultAddress);
 
             // Snapshot the associations ONCE: the flush below awaits between the complete pass and

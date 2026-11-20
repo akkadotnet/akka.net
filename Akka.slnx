@@ -18,6 +18,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/benchmark/RemotePingPong.Tests/RemotePingPong.Tests.csproj" />
     <Project Path="src/benchmark/RemotePingPong/RemotePingPong.csproj" />
     <Project Path="src/benchmark/SerializationBenchmarks/SerializationBenchmarks.csproj" />
     <Project Path="src/benchmark/SpawnBenchmark/SpawnBenchmark.csproj" />
@@ -74,6 +75,16 @@
   <Folder Name="/Contrib/DependencyInjection/">
     <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/Akka.DependencyInjection.Tests.csproj" />
     <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection/Akka.DependencyInjection.csproj" />
+  </Folder>
+  <Folder Name="/Contrib/Reminders/">
+    <Project Path="src/contrib/reminders/Akka.Reminders.Benchmarks/Akka.Reminders.Benchmarks.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Migration.Tests/Akka.Reminders.Migration.Tests.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.PostgreSql/Akka.Reminders.PostgreSql.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Sql/Akka.Reminders.Sql.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.SqlServer/Akka.Reminders.SqlServer.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Sqlite/Akka.Reminders.Sqlite.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders.Tests/Akka.Reminders.Tests.csproj" />
+    <Project Path="src/contrib/reminders/Akka.Reminders/Akka.Reminders.csproj" />
   </Folder>
   <Folder Name="/Contrib/Hosting/">
     <Project Path="src/contrib/hosting/Akka.Cluster.Hosting.Tests/Akka.Cluster.Hosting.Tests.csproj" />
