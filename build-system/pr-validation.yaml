@@ -369,6 +369,148 @@ jobs:
           contents: '*.log'
           artifactName: 'aot_canary_logs-$(Build.BuildId)'
 
+  # .NET MAUI Native AOT canary (src/aot/Akka.Maui.AOT.App): a real MAUI app hosted with
+  # Akka.Hosting.Maui, where an actor drives updates to the screen. Its README says what it proves.
+  #
+  # Mac Catalyst on purpose. It is the only MAUI target where Native AOT is supported AND a hosted
+  # agent can run the app from a shell: the .app's executable takes an environment variable, prints to
+  # stdout and exits on its own. iOS needs a simulator, Android's Native AOT is experimental in .NET 10
+  # and needs an emulator, and MAUI on Windows does not support Native AOT yet (dotnet/maui#31227).
+  #
+  # Its own job, not more steps in AotCanary: it needs a macOS agent, Xcode and the maui-maccatalyst
+  # workload, none of which the Linux canaries need. Gating like the other canaries.
+  - job: MauiAotCanary
+    displayName: "AOT canary: .NET MAUI (Mac Catalyst)"
+    timeoutInMinutes: 60
+    pool:
+      vmImage: macos-latest
+    variables:
+      # Must match the maccatalyst target platform version in Akka.Maui.AOT.App.csproj.
+      MauiCatalystTpv: '26.0'
+      MauiCanaryLogs: '$(Agent.TempDirectory)/maui-aot-logs'
+    steps:
+      - checkout: self
+        clean: false
+        submodules: recursive
+
+      - task: UseDotNet@2
+        displayName: 'Use .NET'
+        inputs:
+          packageType: 'sdk'
+          useGlobalJson: true
+
+      # Each .NET for Mac Catalyst pack builds with exactly one Xcode major.minor and fails the build on
+      # any other. The canary targets net10.0-maccatalyst$(MauiCatalystTpv) (see its csproj), which picks
+      # the pack for that version whatever workload the SDK installs, so select the matching Xcode.
+      - bash: |
+          set -e
+          ls -d /Applications/Xcode*.app || true
+          xcode=$(ls -d /Applications/Xcode_$(MauiCatalystTpv)*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$xcode" ]; then
+            echo "##vso[task.logissue type=error]No Xcode $(MauiCatalystTpv) on this image; net10.0-maccatalyst$(MauiCatalystTpv) needs exactly that version."
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode/Contents/Developer"
+          xcodebuild -version
+          echo "uname -m: $(uname -m)"
+        displayName: 'Select Xcode'
+
+      - bash: |
+          set -e
+          dotnet workload install maui-maccatalyst
+          dotnet workload list
+        displayName: 'Install the maui-maccatalyst workload'
+
+      - bash: |
+          rm -rf src/aot/Akka.Maui.AOT.App/bin src/aot/Akka.Maui.AOT.App/obj
+          mkdir -p "$(MauiCanaryLogs)"
+        displayName: 'Clean the MAUI canary intermediate output'
+
+      # One publish serves the run and the warning check, as in the Hosting canary. The RID follows
+      # the agent's CPU so the app can run here.
+      - bash: |
+          set -o pipefail
+          case "$(uname -m)" in
+            arm64) rid=maccatalyst-arm64 ;;
+            *) rid=maccatalyst-x64 ;;
+          esac
+          dotnet publish src/aot/Akka.Maui.AOT.App -f "net10.0-maccatalyst$(MauiCatalystTpv)" -r "$rid" -c Release \
+            2>&1 | tee "$(MauiCanaryLogs)/maui-aot-publish.log"
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The publish of the MAUI AOT canary failed with exit code $rc."
+            exit 1
+          fi
+          # From .NET 10 a Mac Catalyst bundle is named after ApplicationTitle, not the assembly, so find
+          # the bundle by extension and read the executable's name from its Info.plist.
+          app=$(find src/aot/Akka.Maui.AOT.App/bin -name '*.app' -type d -prune | head -1)
+          exe=""
+          if [ -n "$app" ]; then
+            exe="$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
+          fi
+          if [ -z "$app" ] || [ ! -f "$exe" ] || [ ! -x "$exe" ]; then
+            find src/aot/Akka.Maui.AOT.App/bin -maxdepth 6 | head -200
+            echo "##vso[task.logissue type=error]The publish did not produce a runnable .app bundle (app: '$app', executable: '$exe')."
+            exit 1
+          fi
+          echo "app: $app"
+          echo "executable: $exe"
+          du -sh "$app"
+          echo "##vso[task.setvariable variable=MauiCanaryExe]$exe"
+        displayName: 'Publish the MAUI AOT canary'
+
+      # Same rule as the other canaries: exit 0 alone is not proof, the OK line is. The app has its own
+      # 3-minute timeout; the loop here only guards against a hang the app cannot see (no window
+      # server, a stuck launch). macOS has no coreutils `timeout`.
+      - bash: |
+          log="$(MauiCanaryLogs)/maui-aot-run.log"
+          AKKA_CANARY_SELFTEST=1 "$(MauiCanaryExe)" > "$log" 2>&1 &
+          pid=$!
+          for _ in $(seq 1 300); do
+            kill -0 "$pid" 2>/dev/null || break
+            sleep 1
+          done
+          if kill -0 "$pid" 2>/dev/null; then
+            kill -9 "$pid"
+            cat "$log"
+            echo "##vso[task.logissue type=error]The MAUI AOT canary did not exit within 300s."
+            exit 1
+          fi
+          wait "$pid"
+          rc=$?
+          cat "$log"
+          if [ "$rc" -ne 0 ]; then
+            echo "##vso[task.logissue type=error]The MAUI AOT canary exited with code $rc."
+            exit 1
+          fi
+          if ! grep -qF '[canary-maui] OK' "$log"; then
+            echo "##vso[task.logissue type=error]The MAUI AOT canary exited 0 but never printed '[canary-maui] OK'."
+            exit 1
+          fi
+          echo "MAUI AOT canary: exit code 0 and '[canary-maui] OK' on stdout."
+        displayName: 'Run the MAUI AOT canary (self-test)'
+
+      # Fails on any IL2xxx/IL3xxx warning from Akka.NET code (src/core/, src/contrib/) that is not in
+      # the canary's baseline (empty: a MAUI app must get no warnings from Akka.NET). --unlocated-scope
+      # also fails on a warning from an Akka.* member that arrives without a source file, which happens
+      # when the platform build hands ILC assemblies without their PDBs.
+      - bash: |
+          dotnet run scripts/CheckAotWarnings.cs -- \
+            --log "$(MauiCanaryLogs)/maui-aot-publish.log" \
+            --baseline src/aot/Akka.Maui.AOT.App/aot-warnings.baseline.txt \
+            --scope "src/core/,src/contrib/" \
+            --unlocated-scope "Akka." \
+            --repo-root "$(Build.SourcesDirectory)"
+        displayName: 'Compare MAUI AOT warnings against the baseline'
+
+      # PublishBuildArtifacts has no file filter: it uploads the whole directory, so the logs get their own.
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish the MAUI AOT logs'
+        condition: always()
+        inputs:
+          pathtoPublish: '$(MauiCanaryLogs)'
+          artifactName: 'maui_aot_canary_logs-$(Build.BuildId)'
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "docfx_test"

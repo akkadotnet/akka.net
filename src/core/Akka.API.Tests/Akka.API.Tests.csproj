@@ -24,6 +24,7 @@
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting\Akka.Hosting.csproj" />
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting.Maui\Akka.Hosting.Maui.csproj" />
     <ProjectReference Include="..\..\contrib\hosting\Akka.Remote.Hosting\Akka.Remote.Hosting.csproj" />
     <ProjectReference Include="..\..\contrib\hosting\Akka.Cluster.Hosting\Akka.Cluster.Hosting.csproj" />
     <ProjectReference Include="..\..\contrib\hosting\Akka.Persistence.Hosting\Akka.Persistence.Hosting.csproj" />

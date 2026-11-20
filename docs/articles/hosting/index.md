@@ -20,6 +20,7 @@ See the ["Introduction to Akka.Hosting - HOCON-less, "Pit of Success" Akka.NET R
 * `Akka.Persistence.Hosting` - used for adding persistence functionality, including local database-less testing.
 * `Akka.Hosting.TestKit` - a `Microsoft.Extensions.Hosting`-based TestKit for writing tests against `AkkaConfigurationBuilder`-configured `ActorSystem`s.
 * `Akka.Hosting.TestKit.Xunit2` - xUnit 2 bindings for `Akka.Hosting.TestKit`.
+* `Akka.Hosting.Maui` - starts the `ActorSystem` in .NET MAUI apps, which do not run `IHostedService`. See [.NET MAUI](#net-maui).
 
 ## Getting Started
 
@@ -76,6 +77,36 @@ To learn more, see:
 * [Microsoft.Extensions.Logging Integration](xref:hosting-logging)
 * [OpenTelemetry Trace Correlation](xref:hosting-opentelemetry)
 * [Microsoft.Extensions.Diagnostics.HealthChecks Integration](xref:hosting-health-checks)
+
+## .NET MAUI
+
+`AddAkka` starts the `ActorSystem` from an `IHostedService`, and .NET MAUI never starts those ([dotnet/maui#2244](https://github.com/dotnet/maui/issues/2244)). Inside a MAUI app `AddAkka` therefore throws a `PlatformNotSupportedException`. Install `Akka.Hosting.Maui` and call `AddAkkaMaui` instead. It takes the same configuration delegate and starts the `ActorSystem` while `MauiAppBuilder.Build()` runs, so every `WithActors` callback has run before the first page is created:
+
+```csharp
+using Akka.Hosting;
+using Akka.Hosting.Maui;
+
+public static class MauiProgram
+{
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+        builder.UseMauiApp<App>();
+
+        builder.Services.AddAkkaMaui("MyActorSystem", configurationBuilder =>
+        {
+            configurationBuilder.WithActors((system, registry) =>
+            {
+                registry.Register<MyActor>(system.ActorOf(Props.Create(() => new MyActor()), "my-actor"));
+            });
+        });
+
+        return builder.Build();
+    }
+}
+```
+
+Disposing the `MauiApp` terminates the `ActorSystem`, and `CoordinatedShutdown` also runs on process exit by default. Mobile platforms can kill an app without either, so run `CoordinatedShutdown` from your app's lifecycle events if you need a clean stop. `src/aot/Akka.Maui.AOT.App` in the Akka.NET repository is a complete app that uses `AddAkkaMaui` under Native AOT.
 
 ## Supported Packages
 
