@@ -1007,11 +1007,11 @@ namespace Akka.Remote.Artery
             // every Control/Large connection, still flows through them completely unchanged.
             var processingStage = _settings.InboundLanes > 1
                 ? new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
+                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, () => System.Serialization, System.Scheduler,
                     _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
                     _onInboundLanesInitialized, _testState)
                 : new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler);
+                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, () => System.Serialization, System.Scheduler);
 
             var decoded = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
@@ -1997,7 +1997,7 @@ namespace Akka.Remote.Artery
                         timeProvider: System.Scheduler);
 
                     var encodeStage = new ArteryEncodeStage(
-                        System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i]);
+                        () => System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i]);
 
                     // RecoverWithRetries sits AFTER WatchTermination -- the ordering is load-bearing:
                     // the termination task (upstream of the recovery) must still observe the lane's
@@ -2251,7 +2251,7 @@ namespace Akka.Remote.Artery
             // Large-message stream (task 10.2) rents from its OWN dedicated, large-sized pool --
             // see _largeEncodeBufferPool's remarks.
             var encodeStage = new ArteryEncodeStage(
-                System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
+                () => System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
 
             var source = ChannelSource.FromReader(reader);
 

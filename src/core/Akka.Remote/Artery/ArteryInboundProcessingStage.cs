@@ -116,6 +116,7 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>>
     {
+        private readonly Func<Akka.Serialization.Serialization> _serializationProvider;
         /// <param name="maxFrameLength">
         /// Frame-size limit for connections whose preamble declares <see cref="ArteryStreamId.Ordinary"/>
         /// or <see cref="ArteryStreamId.Control"/> (they share one limit, matching Pekko's
@@ -190,6 +191,39 @@ namespace Akka.Remote.Artery
             Action<object, string?, string>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
             SharedTestState? testState = null)
+            : this(
+                maxFrameLength,
+                maxLargeFrameLength,
+                serialization is null
+                    ? throw new ArgumentNullException(nameof(serialization))
+                    : () => serialization,
+                timeProvider,
+                inboundLanes,
+                inboundLaneBufferSize,
+                inboundContext,
+                dispatchOrdinary,
+                onLanesInitialized,
+                testState)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ArteryInboundProcessingStage"/> class
+        /// using a dynamic <see cref="Akka.Serialization.Serialization"/> provider so
+        /// config-injection reloads (<c>Settings.InjectTopLevelFallback</c>) are observed by
+        /// already-open streams.
+        /// </summary>
+        public ArteryInboundProcessingStage(
+            int maxFrameLength,
+            int maxLargeFrameLength,
+            Func<Akka.Serialization.Serialization> serializationProvider,
+            ITimeProvider? timeProvider = null,
+            int inboundLanes = 1,
+            int inboundLaneBufferSize = 0,
+            IInboundContext? inboundContext = null,
+            Action<object, string?, string>? dispatchOrdinary = null,
+            Action<int>? onLanesInitialized = null,
+            SharedTestState? testState = null)
         {
             if (inboundLanes < 1)
                 throw new ArgumentOutOfRangeException(nameof(inboundLanes), inboundLanes, "Must be >= 1.");
@@ -197,9 +231,9 @@ namespace Akka.Remote.Artery
                 throw new ArgumentException(
                     $"{nameof(inboundContext)} and {nameof(dispatchOrdinary)} are required when {nameof(inboundLanes)} > 1.");
 
+            _serializationProvider = serializationProvider ?? throw new ArgumentNullException(nameof(serializationProvider));
             MaxFrameLength = maxFrameLength;
             MaxLargeFrameLength = maxLargeFrameLength;
-            Serialization = serialization;
             TimeProvider = timeProvider;
             InboundLanes = inboundLanes;
             InboundLaneBufferSize = inboundLaneBufferSize;
@@ -229,6 +263,7 @@ namespace Akka.Remote.Artery
             // non-lane path does for the affected type.
             if (inboundLanes > 1)
             {
+                var serialization = _serializationProvider();
                 ControlMessageSerializerId = serialization.FindSerializerForType(typeof(HandshakeReq))?.Identifier ?? int.MinValue;
                 SelectionMessageSerializerId = serialization.FindSerializerForType(typeof(ActorSelectionMessage))?.Identifier ?? int.MinValue;
             }
@@ -246,7 +281,7 @@ namespace Akka.Remote.Artery
         /// <summary>Frame-size limit applied ONLY to a connection whose preamble declares <see cref="ArteryStreamId.Large"/> (task 10.2).</summary>
         public int MaxLargeFrameLength { get; }
 
-        public Akka.Serialization.Serialization Serialization { get; }
+        public Akka.Serialization.Serialization Serialization => _serializationProvider();
 
         /// <summary>
         /// Clock for the lane path's unknown-origin drop-warning rate limit, or
@@ -696,9 +731,9 @@ namespace Akka.Remote.Artery
 
                     var reader = channel.Reader;
                     var log = _laneLog;
-                    var serialization = _stage.Serialization;
+                    var serializationProvider = _stage._serializationProvider;
                     var dispatch = _stage.DispatchOrdinary!;
-                    _ = Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log));
+                    _ = Task.Run(() => RunLaneConsumer(reader, serializationProvider, dispatch, log));
                 }
 
                 _lanes = lanes;
@@ -723,7 +758,7 @@ namespace Akka.Remote.Artery
             /// </summary>
             private static async Task RunLaneConsumer(
                 ChannelReader<LaneWorkItem> reader,
-                Akka.Serialization.Serialization serialization,
+                Func<Akka.Serialization.Serialization> serializationProvider,
                 Action<object, string?, string> dispatch,
                 ILoggingAdapter log)
             {
@@ -735,7 +770,7 @@ namespace Akka.Remote.Artery
                         {
                             try
                             {
-                                var message = serialization.Deserialize(item.Payload, item.SerializerId, item.Manifest);
+                                var message = serializationProvider().Deserialize(item.Payload, item.SerializerId, item.Manifest);
                                 dispatch(message, item.SenderPath, item.RecipientPath);
                             }
                             catch (Exception ex)
