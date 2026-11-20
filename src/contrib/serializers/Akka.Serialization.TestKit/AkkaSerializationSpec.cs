@@ -38,7 +38,7 @@ namespace Akka.Tests.Serialization
             };
         }
     }
-    public abstract class AkkaSerializationSpec : TestKit.Xunit.TestKit
+    public abstract class AkkaSerializationSpec : XTestKit
     {
         protected AkkaSerializationSpec(Type serializerType):base(GetConfig(serializerType))
         {
