@@ -64,15 +64,60 @@ public sealed class ShortCircuitCallbackSpec : AkkaSpec
         }
     }
 
+    [Fact(DisplayName = "Should_UseSuppliedCallback_When_PublicShellInitAdapterQueuesStageActorInput")]
+    public void Should_use_supplied_callback_when_public_shell_init_adapter_queues_stage_actor_input()
+    {
+        using var materializer = ActorMaterializer.Create(Sys);
+        var extendedMaterializer = (ExtendedActorMaterializer)materializer;
+        var stage = new AdapterStage();
+        var assembly = new GraphAssembly(
+            new IGraphStageWithMaterializedValue<Shape, object>[] { stage }, new[] { Attributes.None },
+            Array.Empty<Inlet>(), Array.Empty<int>(), Array.Empty<Outlet>(), Array.Empty<int>());
+        var (connections, logics) = assembly.Materialize(Attributes.None,
+            assembly.Stages.Select(value => value.Module).ToArray(), new Dictionary<IModule, object>(), _ => { });
+        var shell = new GraphInterpreterShell(assembly, connections, logics, stage.Shape,
+            ActorMaterializerSettings.Create(Sys), extendedMaterializer);
+        var probe = CreateTestProbe();
+        var queued = new Queue<object>();
+        var payload = new object();
+        object? received = null;
+        IActorRef? sender = null;
+        var previousActivity = Activity.Current;
+        try
+        {
+            Activity.Current = null;
+            shell.Init(probe.Ref, new SubFusingActorMaterializerImpl(extendedMaterializer, _ => probe.Ref), queued.Enqueue, 1000);
+            shell.Receive(new ActorGraphInterpreter.AsyncInput(shell, logics[0], 0, GraphStageLogic.NoPromise,
+                _ => ((AdapterStage.Logic)logics[0]).CreateActor(pair =>
+                {
+                    sender = pair.Item1;
+                    received = pair.Item2;
+                }).Tell(payload, TestActor)), 1000);
+
+            received.Should().BeNull();
+            queued.Should().ContainSingle();
+            var input = queued.Dequeue().Should().BeOfType<ActorGraphInterpreter.AsyncInput>().Subject;
+            shell.Receive(input, 1000);
+            received.Should().BeSameAs(payload);
+            sender.Should().BeSameAs(TestActor);
+        }
+        finally
+        {
+            Activity.Current = previousActivity;
+            shell.Interpreter.Finish();
+        }
+    }
+
     private sealed class AdapterStage : GraphStage<ClosedShape>
     {
         public override ClosedShape Shape => ClosedShape.Instance;
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic();
 
-        private sealed class Logic : GraphStageLogic
+        internal sealed class Logic : GraphStageLogic
         {
             public Logic() : base(ClosedShape.Instance) { }
             public override void PreStart() => SetKeepGoing(true);
+            internal IActorRef CreateActor(Action<(IActorRef, object)> handler) => GetStageActor(handler.Invoke).Ref;
         }
     }
 
