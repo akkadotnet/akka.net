@@ -130,7 +130,7 @@ namespace Akka.IO
         private readonly Snapshot?[] _reported = new Snapshot?[3];
         private readonly Candidate?[] _announced = new Candidate?[3];
         private readonly Outcome?[] _callbackPicks = new Outcome?[3];
-        private readonly TlsLogLimiter _warnings = new TlsLogLimiter(TimeSpan.FromMinutes(5));
+        private readonly TlsLogLimiter _warnings;
         private long _callbackCalls;
         private Refresh? _followed; // the last look-up a poll attached a follow-up to
 
@@ -199,6 +199,8 @@ namespace Akka.IO
             _folder = folder;
             _password = password;
             _keyStorageFlags = keyStorageFlags;
+            // Reads UtcNow on each call, not once here: tests replace it after the source is built.
+            _warnings = new TlsLogLimiter(TimeSpan.FromMinutes(5), () => UtcNow());
         }
 
         /// <summary>
@@ -1044,7 +1046,7 @@ namespace Akka.IO
 
         private void Warn(ILoggingAdapter log, Message message, bool error = false)
         {
-            var verdict = _warnings.Admit(message.Item1, UtcNow);
+            var verdict = _warnings.Admit(message.Item1);
             if (verdict == TlsLogLimiter.Verdict.Log && error)
                 log.Error("{0}", message.Item2);
             else if (verdict == TlsLogLimiter.Verdict.Log)

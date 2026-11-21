@@ -126,7 +126,7 @@ namespace Akka.Remote.Tests.MultiNode
                 var firstAddress = Node(_config.First).Address;
                 Sys.EventStream.Subscribe(TestActor, typeof (ThisActorSystemQuarantinedEvent));
 
-                var actorRef = (await _identifyWithUid(_config.First, "subject")).Item2;
+                var (firstUid, actorRef) = await _identifyWithUid(_config.First, "subject");
 
                 // See the matching barrier comment in `first`'s block.
                 await EnterBarrierAsync("before-quarantined");
@@ -146,9 +146,10 @@ namespace Akka.Remote.Tests.MultiNode
                 // peer. The peer publishes ThisActorSystemQuarantinedEvent when the message
                 // arrives. No send from the test is necessary, and there is no equivalent warning
                 // to look for.
+                ThisActorSystemQuarantinedEvent quarantined;
                 if (Sys.Settings.Config.GetBoolean("akka.remote.artery.enabled", false))
                 {
-                    await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                    quarantined = await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
                 }
                 else
                 {
@@ -161,8 +162,12 @@ namespace Akka.Remote.Tests.MultiNode
                         });
                     });
 
-                    await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                    quarantined = await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
                 }
+
+                // the event identifies which incarnation of the remote system quarantined us (#9002)
+                quarantined.RemoteAddress.Should().Be(firstAddress);
+                quarantined.RemoteUid.Should().Be(firstUid);
 
                 await EnterBarrierAsync("still-quarantined");
 

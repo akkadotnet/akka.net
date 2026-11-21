@@ -138,6 +138,44 @@ namespace Akka.Cluster.SBR
         }
     }
 
+    /// <summary>
+    ///     Down this node because a current cluster member has quarantined it. That member will never talk
+    ///     to this incarnation again, so this node must leave instead of carrying on alone.
+    /// </summary>
+    internal sealed class DownSelfQuarantinedByRemote : IDecision, IEquatable<DownSelfQuarantinedByRemote>
+    {
+        public DownSelfQuarantinedByRemote(UniqueAddress self)
+        {
+            Self = self;
+        }
+
+        public UniqueAddress Self { get; }
+
+        public bool IsIndirectlyConnected => false;
+
+        public bool Equals(DownSelfQuarantinedByRemote other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Self.Equals(other.Self);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is DownSelfQuarantinedByRemote other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Self.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return "DownSelfQuarantinedByRemote";
+        }
+    }
+
     internal abstract class DowningStrategy
     {
         protected DowningStrategy()
@@ -459,6 +497,11 @@ namespace Akka.Cluster.SBR
                 case ReverseDownIndirectlyConnected _:
                     // indirectly connected + all reachable
                     return downable.Intersect(IndirectlyConnected).Union(downable.Except(Unreachable));
+
+                case DownSelfQuarantinedByRemote d:
+                    return downable.Contains(d.Self)
+                        ? ImmutableHashSet.Create(d.Self)
+                        : ImmutableHashSet<UniqueAddress>.Empty;
             }
 
             throw new InvalidOperationException();

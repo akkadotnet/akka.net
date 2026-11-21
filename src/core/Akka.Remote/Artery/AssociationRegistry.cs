@@ -380,6 +380,31 @@ namespace Akka.Remote.Artery
         private readonly TimeSpan _quarantineNotificationTimeout;
         private readonly Func<TimeSpan> _monotonicClock;
 
+        // Monotonic ticks of the last heartbeat-triggered quarantine notice; long.MinValue = never.
+        private long _lastHeartbeatQuarantineNoticeTicks = long.MinValue;
+
+        /// <summary>
+        /// Rate limit for the quarantine notices that heartbeats from a quarantined peer trigger
+        /// (see <see cref="InboundQuarantineCheckStage.ShouldNotifyOrigin"/>). Returns
+        /// <see langword="true"/> at most once per <paramref name="interval"/>, across every inbound
+        /// stream and lane of this association. See #9010.
+        /// </summary>
+        /// <param name="interval">The minimum time between two heartbeat-triggered notices.</param>
+        /// <returns><see langword="true"/> if the caller may send a notice now.</returns>
+        public bool TryClaimHeartbeatQuarantineNotice(TimeSpan interval)
+        {
+            var now = _monotonicClock().Ticks;
+            while (true)
+            {
+                var last = Volatile.Read(ref _lastHeartbeatQuarantineNoticeTicks);
+                if (last != long.MinValue && now - last < interval.Ticks)
+                    return false;
+
+                if (Interlocked.CompareExchange(ref _lastHeartbeatQuarantineNoticeTicks, now, last) == last)
+                    return true;
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Association"/> class.
         /// </summary>

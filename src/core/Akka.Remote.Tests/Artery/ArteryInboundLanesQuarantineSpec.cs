@@ -58,6 +58,10 @@ namespace Akka.Remote.Tests.Artery
             akka.remote.artery.canonical.hostname = "127.0.0.1"
             akka.remote.artery.canonical.port = 0
             akka.remote.artery.advanced.inbound-lanes = {{inboundLanes}}
+            # Heartbeats from a quarantined peer also trigger a notice (#9010), and they go through
+            # the sink path. Keep control heartbeats out of the test window, so the only traffic that
+            # can produce the reactive notice below is the lane-routed messages.
+            akka.remote.artery.advanced.control-heartbeat-interval = 1h
             """);
 
         private static int BoundPort(ActorSystem system) => RARP.For(system).Provider.DefaultAddress.Port!.Value;

@@ -103,6 +103,14 @@ namespace Akka.Remote.Artery
         /// </para>
         /// </summary>
         bool IsQuarantined(long originUid);
+
+        /// <summary>
+        /// Claims the right to send one heartbeat-triggered <see cref="ArteryQuarantined"/> notice
+        /// to the quarantined <paramref name="originUid"/>. Returns <see langword="true"/> at most
+        /// once per <see cref="InboundQuarantineCheckStage.HeartbeatNoticeInterval"/> per
+        /// association, and <see langword="false"/> for an unknown uid. See #9010.
+        /// </summary>
+        bool TryClaimHeartbeatQuarantineNotice(long originUid);
     }
 
     /// <summary>
@@ -152,5 +160,9 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public bool IsQuarantined(long originUid) => _registry.TryGetByUid(originUid)?.IsQuarantined(originUid) ?? false;
+
+        /// <inheritdoc/>
+        public bool TryClaimHeartbeatQuarantineNotice(long originUid) =>
+            _registry.TryGetByUid(originUid)?.TryClaimHeartbeatQuarantineNotice(InboundQuarantineCheckStage.HeartbeatNoticeInterval) ?? false;
     }
 }
