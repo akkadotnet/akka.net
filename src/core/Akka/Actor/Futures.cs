@@ -102,7 +102,9 @@ namespace Akka.Actor
         /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            return AskCore<T>(self, message, null, AskMessageMode.Direct, timeout, cancellationToken);
+            var future = BeginAsk<T>(self, timeout, cancellationToken, out var result);
+            future.DeliverAsk(message, self);
+            return result;
         }
 
         /// <summary>
@@ -119,19 +121,15 @@ namespace Akka.Actor
         /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            return AskCore<T>(self, null, messageFactory, AskMessageMode.Factory, timeout, cancellationToken);
+            var future = BeginAsk<T>(self, timeout, cancellationToken, out var result);
+            var message = messageFactory(future);
+            future.DeliverAsk(message, self);
+            return result;
         }
 
 #nullable enable
-        private enum AskMessageMode
-        {
-            Direct,
-            Factory
-        }
-
-        private static Task<T> AskCore<T>(ICanTell self, object? directMessage,
-            Func<IActorRef, object>? messageFactory, AskMessageMode mode,
-            TimeSpan? timeout, CancellationToken cancellationToken)
+        private static FutureActorRef<T> BeginAsk<T>(ICanTell self, TimeSpan? timeout,
+            CancellationToken cancellationToken, out Task<T> resultTask)
         {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
@@ -183,10 +181,8 @@ namespace Akka.Actor
                 }, TaskContinuationOptions.ExecuteSynchronously);
             }
 
-            var message = mode == AskMessageMode.Factory ? messageFactory!(future) : directMessage;
-            future.DeliverAsk(message!, self);
-
-            return result.Task;
+            resultTask = result.Task;
+            return future;
         }
 #nullable restore
 
