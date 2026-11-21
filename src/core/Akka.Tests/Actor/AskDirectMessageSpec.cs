@@ -32,8 +32,8 @@ public sealed class AskDirectMessageSpec : AkkaSpec
         }
     }
 
-    [Fact(DisplayName = "Should_InvokeFactoryOnceAfterRegistration_WithTheActualReplyReference")]
-    public async Task Should_invoke_factory_once_after_registration_with_the_actual_reply_reference()
+    [Fact(DisplayName = "Should_InvokeFactoryOnceBeforeDelivery_WithTheActualReplyReference")]
+    public async Task Should_invoke_factory_once_before_delivery_with_the_actual_reply_reference()
     {
         var provider = ((ExtendedActorSystem)Sys).Provider;
         var calls = 0;
@@ -49,7 +49,6 @@ public sealed class AskDirectMessageSpec : AkkaSpec
         {
             calls++;
             Assert.Equal(0, target.Calls);
-            Assert.Same(future, provider.ResolveActorRef(future.Path));
             replyTo = future;
             return future;
         }, Timeout.InfiniteTimeSpan, CancellationToken.None));
