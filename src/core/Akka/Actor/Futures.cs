@@ -102,7 +102,7 @@ namespace Akka.Actor
         /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            return Ask<T>(self, _ => message, timeout, cancellationToken);
+            return AskCore<T>(self, message, null, AskMessageMode.Direct, timeout, cancellationToken);
         }
 
         /// <summary>
@@ -119,13 +119,27 @@ namespace Akka.Actor
         /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
+            return AskCore<T>(self, null, messageFactory, AskMessageMode.Factory, timeout, cancellationToken);
+        }
+
+#nullable enable
+        private enum AskMessageMode
+        {
+            Direct,
+            Factory
+        }
+
+        private static Task<T> AskCore<T>(ICanTell self, object? directMessage,
+            Func<IActorRef, object>? messageFactory, AskMessageMode mode,
+            TimeSpan? timeout, CancellationToken cancellationToken)
+        {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
             var result = TaskEx.NonBlockingTaskCompletionSource<T>();
 
-            CancellationTokenSource timeoutCancellation = null;
+            CancellationTokenSource? timeoutCancellation = null;
             timeout ??= provider.Settings.AskTimeout;
 
             CancellationTokenRegistration? ctr1 = null;
@@ -169,11 +183,12 @@ namespace Akka.Actor
                 }, TaskContinuationOptions.ExecuteSynchronously);
             }
 
-            var message = messageFactory(future);
-            future.DeliverAsk(message, self);
+            var message = mode == AskMessageMode.Factory ? messageFactory!(future) : directMessage;
+            future.DeliverAsk(message!, self);
 
             return result.Task;
         }
+#nullable restore
 
         /// <summary>
         /// Resolves <see cref="IActorRefProvider"/> for Ask pattern
