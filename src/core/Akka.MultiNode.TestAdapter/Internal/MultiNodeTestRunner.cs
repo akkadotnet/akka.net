@@ -295,9 +295,12 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 if (eventArgs?.Data != null)
                 {
                     var data = eventArgs.Data;
+                    // stdout and stderr callbacks run on separate threads, and both write to the
+                    // same output buffer and exception lists.
                     lock (_outputLock)
                     {
                         _outputBuilder.AppendLine(data);
+                        ExtractExceptionData(data);
                     }
                     _messageBus.QueueMessage(new TestOutput
                     {
@@ -311,7 +314,6 @@ namespace Akka.MultiNode.TestAdapter.Internal
                     });
                     _timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, data));
 
-                    ExtractExceptionData(data);
                     ExtractConductorPort(data);
                 }
             }

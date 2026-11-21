@@ -22,6 +22,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Akka.MultiNode.SampleMultiNodeTests\Akka.MultiNode.SampleMultiNodeTests.csproj" />
       <ProjectReference Include="..\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
+      <ProjectReference Include="..\Akka.MultiNode.RemoteHost\Akka.MultiNode.RemoteHost.csproj" />
     </ItemGroup>
 
 </Project>
