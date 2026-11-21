@@ -39,7 +39,7 @@ namespace Akka.MultiNode.RemoteHost
                 throw;
             }
             
-            var tcs = new TaskCompletionSource<bool>();
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (token != default)
             {
                 token.Register(() =>
@@ -51,24 +51,40 @@ namespace Akka.MultiNode.RemoteHost
                 });
             }
 
-            process.EnableRaisingEvents = true;
-            process.Exited += (_1, _2) =>
-            {
-                options.OnExit(process);
+            // Exited fires when the process ends, which can be before the async readers have
+            // delivered its last lines of redirected output. Each reader signals end of stream with
+            // a null Data line. Wait for those before reporting the exit and disposing the process,
+            // or the node's last lines (often its failure record) are lost.
+            var streamsClosed = new List<Task>(2);
 
-                tcs.SetResult(true);
-                process.Dispose();
-            };
+            process.EnableRaisingEvents = true;
+            process.Exited += (_1, _2) => _ = CompleteAfterOutputDrainedAsync();
+
+            async Task CompleteAfterOutputDrainedAsync()
+            {
+                try
+                {
+                    // Bounded: a child process that inherits the pipes can keep them open after
+                    // the node itself has exited.
+                    await Task.WhenAny(Task.WhenAll(streamsClosed), Task.Delay(OutputDrainTimeout)).ConfigureAwait(false);
+                    options.OnExit?.Invoke(process);
+                }
+                finally
+                {
+                    tcs.TrySetResult(true);
+                    process.Dispose();
+                }
+            }
 
             if (options.OutputDataReceived != null)
             {
-                process.OutputDataReceived += options.OutputDataReceived;
+                process.OutputDataReceived += ForwardUntilClosed(options.OutputDataReceived, streamsClosed);
                 options.StartInfo.RedirectStandardOutput = true;
             }
 
             if (options.ErrorDataReceived != null)
             {
-                process.ErrorDataReceived += options.ErrorDataReceived;
+                process.ErrorDataReceived += ForwardUntilClosed(options.ErrorDataReceived, streamsClosed);
                 options.StartInfo.RedirectStandardError = true;
             }
 
@@ -84,7 +100,34 @@ namespace Akka.MultiNode.RemoteHost
                 process.BeginErrorReadLine();
             }
 
-            return (process, tcs.Task);            
+            return (process, tcs.Task);
+        }
+
+        /// <summary>
+        /// How long to wait, after the process exits, for its redirected output to reach end of stream.
+        /// </summary>
+        internal static readonly TimeSpan OutputDrainTimeout = TimeSpan.FromSeconds(10);
+
+        /// <summary>
+        /// Wraps <paramref name="handler"/> so that it still gets every line, and adds a task to
+        /// <paramref name="streamsClosed"/> that completes when the stream reaches end of stream.
+        /// </summary>
+        private static DataReceivedEventHandler ForwardUntilClosed(DataReceivedEventHandler handler, List<Task> streamsClosed)
+        {
+            var closed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            streamsClosed.Add(closed.Task);
+            return (sender, e) =>
+            {
+                try
+                {
+                    handler(sender, e);
+                }
+                finally
+                {
+                    if (e.Data == null)
+                        closed.TrySetResult(true);
+                }
+            };
         }
 
         private static void ConfigureProcessStartInfoForMethodInvocation(
