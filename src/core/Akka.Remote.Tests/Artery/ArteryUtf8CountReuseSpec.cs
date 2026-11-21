@@ -152,18 +152,13 @@ public sealed class ArteryUtf8CountReuseSpec : AkkaSpec
     }
 
     [Fact]
-    public void Should_use_captured_string_snapshots_when_serializer_changes_later_getter_values()
+    public void Should_use_manifest_captured_once_before_size_hint_changes_serializer_state()
     {
         var events = new List<string>();
         var serializer = Install(events, "old-manifest-Ω");
         var sender = "old-sender-送";
         var recipient = "old-recipient-😀";
-        serializer.OnHint = () =>
-        {
-            sender = "changed-sender";
-            recipient = "changed-recipient";
-            serializer.ManifestValue = "changed-manifest";
-        };
+        serializer.OnHint = () => serializer.ManifestValue = "changed-manifest";
         using var writer = ArteryEnvelopeCodec.Encode(Sys.Serialization, 42, sender, recipient, new Payload());
         var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(writer.WrittenMemory.Slice(4)));
         Assert.True(decoded.TryGetSenderPath(out var actualSender));
@@ -172,6 +167,7 @@ public sealed class ArteryUtf8CountReuseSpec : AkkaSpec
         Assert.Equal("old-sender-送", actualSender);
         Assert.Equal("old-recipient-😀", actualRecipient);
         Assert.Equal("old-manifest-Ω", actualManifest);
+        Assert.Equal("changed-manifest", serializer.ManifestValue);
         Assert.Equal(1, serializer.ManifestCalls);
         Assert.Equal(new[] { "manifest", "hint", "serialize" }, events);
     }
