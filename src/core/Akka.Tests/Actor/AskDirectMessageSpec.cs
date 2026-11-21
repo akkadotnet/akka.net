@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------
+//  <copyright file="AskDirectMessageSpec.cs" company="Akka.NET Project">
+//      Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
+//      Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//  </copyright>
+// -----------------------------------------------------------------------
+
 #nullable enable
 
 using System;
@@ -116,6 +123,7 @@ public sealed class AskDirectMessageSpec : AkkaSpec
         await Removed(target.LastSender!);
     }
 
+    // Characterize existing failure timing for this refactor; a separate cleanup fix may change it.
     [Theory(DisplayName = "Should_KeepNullFactoryDistinctFromDirectNull_AfterRegistration")]
     [InlineData(false)]
     [InlineData(true)]
@@ -124,7 +132,8 @@ public sealed class AskDirectMessageSpec : AkkaSpec
         using var cancellation = new CancellationTokenSource();
         if (canceled) cancellation.Cancel();
         var target = new InlineTarget(Provider, (_, _) => throw new InvalidOperationException("Unexpected delivery"));
-        Assert.Empty(TempRefs());
+        // Logger startup also uses Ask; its temporary-ref cleanup can finish after initialization.
+        await AwaitAssertAsync(() => Assert.Empty(TempRefs()));
         Assert.Throws<NullReferenceException>(() =>
         {
             _ = target.Ask<string>((Func<IActorRef, object>)null!, Timeout.InfiniteTimeSpan, cancellation.Token);
@@ -186,6 +195,7 @@ public sealed class AskDirectMessageSpec : AkkaSpec
         await Removed(target.LastSender!);
     }
 
+    // Preserve current synchronous failure/cleanup timing here rather than changing it during a refactor.
     [Theory(DisplayName = "Should_PreserveSynchronousDeliveryExceptionAndPendingCleanup")]
     [InlineData(false)]
     [InlineData(true)]
@@ -203,6 +213,7 @@ public sealed class AskDirectMessageSpec : AkkaSpec
         await Removed(future);
     }
 
+    // This characterizes current behavior, not a requirement to keep a pending ref after future fixes.
     [Fact(DisplayName = "Should_PreserveSynchronousFactoryExceptionAndPendingCleanup")]
     public async Task Should_preserve_synchronous_factory_exception_and_pending_cleanup()
     {
