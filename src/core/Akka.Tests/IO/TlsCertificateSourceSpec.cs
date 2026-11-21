@@ -2801,18 +2801,12 @@ namespace Akka.Tests.IO
         [Fact(DisplayName = "Should_Admit_A_Warning_Again_When_The_Clock_Goes_Backwards")]
         public void Should_admit_a_warning_again_when_the_clock_goes_backwards()
         {
-            var limiter = new TlsLogLimiter(TimeSpan.FromMinutes(5));
-            var now = DateTime.UtcNow;
-            limiter.Admit("warning", now).Should().Be(TlsLogLimiter.Verdict.Log);
-            limiter.Admit("warning", now).Should().Be(TlsLogLimiter.Verdict.Drop);
-            limiter.Admit("warning", now.AddSeconds(-1)).Should().Be(TlsLogLimiter.Verdict.Log);
-
-            var clock = now;
-            Func<DateTime> readClock = () => clock;
-            limiter.Admit("clock", readClock).Should().Be(TlsLogLimiter.Verdict.Log);
-            limiter.Admit("clock", readClock).Should().Be(TlsLogLimiter.Verdict.Drop);
+            var clock = DateTime.UtcNow;
+            var limiter = new TlsLogLimiter(TimeSpan.FromMinutes(5), () => clock);
+            limiter.Admit("warning").Should().Be(TlsLogLimiter.Verdict.Log);
+            limiter.Admit("warning").Should().Be(TlsLogLimiter.Verdict.Drop);
             clock = clock.AddSeconds(-1);
-            limiter.Admit("clock", readClock).Should().Be(TlsLogLimiter.Verdict.Log);
+            limiter.Admit("warning").Should().Be(TlsLogLimiter.Verdict.Log);
         }
 
         private static void SkipIfNeeded(SourceFixture fixture)
