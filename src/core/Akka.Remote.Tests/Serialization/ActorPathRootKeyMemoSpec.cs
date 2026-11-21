@@ -94,16 +94,20 @@ public sealed class ActorPathRootKeyMemoSpec
     public void Should_rebuild_evicted_root_when_only_its_string_memo_survives()
     {
         var cache = new ActorPathCache(4, 0);
-        cache.GetOrCompute(Root + "user/first");
-        cache.TryGet(Root, out var original).Should().BeTrue();
+        var original = cache.GetOrCompute(Root + "user/first").Root;
+        cache.TrySet(Root, original).Should().BeTrue();
+        cache.TryGet(Root, out var established).Should().BeTrue();
+        established.Should().BeSameAs(original);
         var key = Key(cache);
         var other = new RootActorPath(new Address("akka", "other"));
         for (var i = 0; i < 64 && cache.TryGet(Root, out _); i++)
             cache.TrySet("pressure-" + i, other);
         cache.TryGet(Root, out _).Should().BeFalse();
         Key(cache).Should().BeSameAs(key);
-        cache.GetOrCompute(Root + "user/after#3").Uid.Should().Be(3);
-        cache.TryGet(Root, out var rebuilt).Should().BeTrue();
+        var after = cache.GetOrCompute(Root + "user/after#3");
+        after.Uid.Should().Be(3);
+        after.ToSerializationFormat().Should().Be(Root + "user/after#3");
+        var rebuilt = after.Root;
         rebuilt.Should().NotBeSameAs(original);
         rebuilt.Address.Should().Be(original.Address);
         Key(cache).Should().BeSameAs(key);
