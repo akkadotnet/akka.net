@@ -47,7 +47,13 @@ namespace Akka.MultiNode.RemoteHost
                     try
                     {
                         process.Kill();
-                    } catch{}
+                    }
+                    catch (InvalidOperationException) // slopwatch-ignore: SW003 the process already exited or was disposed, so there is nothing to kill
+                    {
+                    }
+                    catch (System.ComponentModel.Win32Exception) // slopwatch-ignore: SW003 the process is already terminating; the Exited handler still completes the task
+                    {
+                    }
                 });
             }
 
