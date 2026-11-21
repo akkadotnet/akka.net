@@ -56,7 +56,7 @@ public sealed class ActorPathRootKeyMemoSpec
     public void Should_compare_exact_raw_root_when_addresses_alternate_or_alias()
     {
         var cache = new ActorPathCache();
-        foreach (var root in new[] { Root, "akka://other@127.0.0.1:2552/", "akka://system@localhost:2552/", Root })
+        foreach (var root in new[] { Root, "akka://system@127.0.0.1:2553/", Root, "akka://other@127.0.0.1:2552/", "akka://system@localhost:2552/", Root })
         {
             var input = root + "user/next#7";
             cache.GetOrCompute(input).ToSerializationFormat().Should().Be(ActorPath.Parse(input).ToSerializationFormat());
