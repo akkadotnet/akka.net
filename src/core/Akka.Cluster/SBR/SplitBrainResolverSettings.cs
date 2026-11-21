@@ -67,6 +67,8 @@ namespace Akka.Cluster.SBR
                 }
             }
 
+            DownSelfWhenQuarantinedByMember = cc.GetBoolean("down-self-when-quarantined-by-member", true);
+
             // the individual sub-configs below should only be called when the strategy has been selected
 
             Config StrategyConfig(string strategyName)
@@ -128,6 +130,11 @@ namespace Akka.Cluster.SBR
         public string DowningStrategy { get; }
 
         public TimeSpan DownAllWhenUnstable { get; }
+
+        /// <summary>
+        /// When <c>true</c>, this node downs itself as soon as a current cluster member quarantines it.
+        /// </summary>
+        public bool DownSelfWhenQuarantinedByMember { get; }
 
         public string KeepMajorityRole => _lazyKeepMajorityRole.Value;
 
