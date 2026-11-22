@@ -107,7 +107,7 @@ akka {
         public void Should_MatchChildByNameAndUid_When_UidDoesNotFitInInt(long uid)
         {
             var provider = (RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider;
-            var daemon = provider.RemoteDaemon;
+            var daemon = (RemoteSystemDaemon)provider.RemoteDaemon;
             var name = "wide" + uid;
             var child = new WideUidChild((daemon.Path / name).WithUid(uid), provider);
             daemon.AddChild(name, child);
