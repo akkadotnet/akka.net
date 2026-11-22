@@ -40,7 +40,7 @@ namespace Akka.Actor
         internal bool TryGetFunctionRef(string name, [NotNullWhen(true)]out FunctionRef? functionRef) =>
             FunctionRefs.TryGetValue(name, out functionRef);
 
-        internal bool TryGetFunctionRef(string name, int uid, [NotNullWhen(true)]out FunctionRef? functionRef) =>
+        internal bool TryGetFunctionRef(string name, long uid, [NotNullWhen(true)]out FunctionRef? functionRef) =>
             FunctionRefs.TryGetValue(name, out functionRef) && (uid == ActorCell.UndefinedUid || uid == functionRef.Path.Uid);
 
         internal FunctionRef AddFunctionRef(Action<IActorRef, object> tell, string suffix = "")

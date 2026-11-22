@@ -478,7 +478,7 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
                 if (fragLoc > -1)
                 {
                     var fragment = absoluteUri.Slice(fragLoc + 1);
-                    var fragValue = SpanHacks.Parse(fragment);
+                    var fragValue = SpanHacks.ParseInt64(fragment);
                     absoluteUri = absoluteUri.Slice(0, fragLoc);
                     actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), fragValue);
                 }

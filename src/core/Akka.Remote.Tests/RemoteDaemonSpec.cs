@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Remote.Tests
@@ -37,6 +38,18 @@ namespace Akka.Remote.Tests
             protected override void OnReceive(object message)
             {               
             }
+        }
+
+        private sealed class WideUidChild : MinimalActorRef
+        {
+            public WideUidChild(ActorPath path, IActorRefProvider provider)
+            {
+                Path = path;
+                Provider = provider;
+            }
+
+            public override ActorPath Path { get; }
+            public override IActorRefProvider Provider { get; }
         }
 
         private static string GetConfig()
@@ -84,6 +97,25 @@ akka {
             child.Tell("hello");
             //expect the child to forward the message to the eventstream
             await p.ExpectMsgAsync("hello");
+        }
+
+        [Theory(DisplayName = "Should_MatchChildByNameAndUid_When_UidDoesNotFitInInt")]
+        [InlineData(1L)]
+        [InlineData(int.MaxValue + 1L)]
+        [InlineData(1_000_000_000_000_000L)]
+        [InlineData(long.MaxValue)]
+        public void Should_MatchChildByNameAndUid_When_UidDoesNotFitInInt(long uid)
+        {
+            var provider = (RemoteActorRefProvider)((ActorSystemImpl)Sys).Provider;
+            var daemon = provider.RemoteDaemon;
+            var name = "wide" + uid;
+            var child = new WideUidChild((daemon.Path / name).WithUid(uid), provider);
+            daemon.AddChild(name, child);
+
+            daemon.GetChild(new[] { $"{name}#{uid}" }).Should().BeSameAs(child);
+            daemon.GetChild(new[] { name }).Should().BeSameAs(child);
+            daemon.GetChild(new[] { $"{name}#{(uid == long.MaxValue ? uid - 1 : uid + 1)}" }).Should().Be(ActorRefs.Nobody);
+            daemon.GetChild(new[] { $"{name}#{unchecked((int)uid) + 7}" }).Should().Be(ActorRefs.Nobody);
         }
     }
 }

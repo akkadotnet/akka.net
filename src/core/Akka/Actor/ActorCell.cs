@@ -542,13 +542,13 @@ namespace Akka.Actor
         /// INTERNAL API
         /// </summary>
         /// <param name="name">The full name of the actor, including the UID if known</param>
-        /// <returns>A new (string name, int uid) instance.</returns>
-        internal static (string name, int uid) GetNameAndUid(string name)
+        /// <returns>A new (string name, long uid) instance.</returns>
+        internal static (string name, long uid) GetNameAndUid(string name)
         {
             var i = name.IndexOf('#');
             return i < 0
                 ? (name, UndefinedUid)
-                : (name.Substring(0, i), SpanHacks.Parse(name.AsSpan(i + 1)));
+                : (name.Substring(0, i), SpanHacks.ParseInt64(name.AsSpan(i + 1)));
         }
 
         /// <summary>

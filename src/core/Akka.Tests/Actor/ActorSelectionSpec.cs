@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Reflection;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -700,6 +702,118 @@ namespace Akka.Tests.Actor
             public string Path { get; }
 
             public object Message { get; }
+        }
+
+        private const long WideUid = 5_000_000_000L; // does not fit in an int
+
+        private sealed class WideUidChild : MinimalActorRef
+        {
+            private readonly IInternalActorRef _parent;
+            private readonly IActorRef _sink;
+
+            public WideUidChild(ActorPath path, IActorRefProvider provider, IInternalActorRef parent, IActorRef sink)
+            {
+                Path = path;
+                Provider = provider;
+                _parent = parent;
+                _sink = sink;
+            }
+
+            public override ActorPath Path { get; }
+            public override IActorRefProvider Provider { get; }
+
+            protected override void TellInternal(object message, IActorRef sender) => _sink.Tell(message, sender);
+
+            // behave like a stopped child so that the parent can terminate cleanly
+            public override void Stop() => _parent.SendSystemMessage(new DeathWatchNotification(this, true, false));
+        }
+
+        private sealed class WideUidParent : ReceiveActor
+        {
+            public WideUidParent(long uid, IActorRef sink)
+            {
+                var cell = (ActorCell)Context;
+                var self = (IInternalActorRef)Self;
+                var provider = ((ExtendedActorSystem)Context.System).Provider;
+
+                // a regular child entry whose incarnation does not fit in an int
+                cell.ReserveChild("wide");
+                cell.InitChild(new WideUidChild((Self.Path / "wide").WithUid(uid), provider, self, sink));
+
+                // a function ref whose incarnation does not fit in an int
+                var fref = new FunctionRef((Self.Path / "wideFn").WithUid(uid), provider, Context.System.EventStream,
+                    (s, m) => sink.Tell(m, s));
+                typeof(ActorCell).GetField("_functionRefsDoNotCallMeDirectly", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .SetValue(cell, ImmutableDictionary<string, FunctionRef>.Empty.Add("wideFn", fref));
+
+                Receive<string>(name => Sender.Tell(cell.GetSingleChild(name)));
+                ReceiveAny(msg => Sender.Tell(msg));
+            }
+        }
+
+        private async Task<IActorRef> CreateWideUidParent(string name)
+        {
+            var parent = Sys.ActorOf(Props.Create(() => new WideUidParent(WideUid, TestActor)), name);
+            await parent.Ask<string>("wide"); // make sure the actor has started
+            return parent;
+        }
+
+        [Theory(DisplayName = "Should_FindChildByNameAndWideUid_When_UidDoesNotFitInInt")]
+        [InlineData("wide")]
+        [InlineData("wideFn")]
+        public async Task Should_FindChildByNameAndWideUid_When_UidDoesNotFitInInt(string name)
+        {
+            var parent = await CreateWideUidParent("wide-uid-lookup-" + name);
+            var cellParent = (IInternalActorRef)parent;
+
+            // RepointableActorRef.GetChild
+            var found = cellParent.GetChild(new[] { $"{name}#{WideUid}" });
+            found.Should().NotBe(ActorRefs.Nobody);
+            found.Path.Uid.Should().Be(WideUid);
+            found.Path.Name.Should().Be(name);
+
+            cellParent.GetChild(new[] { $"{name}#{WideUid + 1}" }).Should().Be(ActorRefs.Nobody);
+            // an incarnation that only matches in its low 32 bits is a different incarnation
+            cellParent.GetChild(new[] { $"{name}#{unchecked((int)WideUid)}" }).Should().Be(ActorRefs.Nobody);
+            // no uid at all still matches
+            cellParent.GetChild(new[] { name }).Should().NotBe(ActorRefs.Nobody);
+
+            // ActorCell.GetSingleChild
+            (await parent.Ask<IActorRef>($"{name}#{WideUid}")).Path.Uid.Should().Be(WideUid);
+            (await parent.Ask<IActorRef>($"{name}#{WideUid + 1}")).Should().Be(ActorRefs.Nobody);
+        }
+
+        [Fact(DisplayName = "Should_DeliverToChild_When_ActorSelectionTargetsNameAndWideUid")]
+        public async Task Should_DeliverToChild_When_ActorSelectionTargetsNameAndWideUid()
+        {
+            var parent = await CreateWideUidParent("wide-uid-selection");
+
+            Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wide#{WideUid}").Tell("hello");
+            await ExpectMsgAsync("hello");
+
+            Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wideFn#{WideUid}").Tell("hello-fn");
+            await ExpectMsgAsync("hello-fn");
+
+            await EventFilter.DeadLetter().ExpectAsync(1, () =>
+            {
+                Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wide#{WideUid + 1}").Tell("nobody-home");
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact(DisplayName = "Should_RoundTripActorRef_When_UidDoesNotFitInInt")]
+        public void Should_RoundTripActorRef_When_UidDoesNotFitInInt()
+        {
+            var wide = new WideUidChild(((ActorPath)(Root.Path / "user" / "wide-uid-ref")).WithUid(WideUid),
+                SystemImpl.Provider, User, TestActor);
+
+            var surrogate = (ActorPath.Surrogate)wide.Path.ToSurrogate(Sys);
+            ((ActorPath)surrogate.FromSurrogate(Sys)).Should().Be(wide.Path);
+            ((ActorPath)surrogate.FromSurrogate(Sys)).Uid.Should().Be(WideUid);
+
+            var serialized = Akka.Serialization.Serialization.SerializedActorPath(wide);
+            serialized.Should().EndWith($"#{WideUid}");
+            ActorPath.Parse(serialized).Uid.Should().Be(WideUid);
         }
 
         private static readonly Props Props = Props.Create<Node>();

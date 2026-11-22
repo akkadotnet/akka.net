@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+﻿﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPathSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -34,6 +34,73 @@ namespace Akka.Tests.Actor
             var path = new RootActorPath(new Address("akka.tcp", "mysys", "localhost", 9110)) / "user";
             var pathWithUid = path.WithUid(uid);
             ActorPathParse(pathWithUid.ToSerializationFormat()).ShouldBe(pathWithUid);
+        }
+
+        public static TheoryData<long> WideUids => new()
+        {
+            1L,
+            int.MaxValue,
+            int.MaxValue + 1L,
+            4_294_967_296L,
+            1_000_000_000_000_000L,
+            long.MaxValue
+        };
+
+        [Theory(DisplayName = "Should_RoundTripUid_When_SerializedAndParsed")]
+        [MemberData(nameof(WideUids))]
+        public void Should_RoundTripUid_When_SerializedAndParsed(long uid)
+        {
+            var path = new RootActorPath(new Address("akka.tcp", "mysys", "localhost", 9110)) / "user" / "child";
+            var pathWithUid = path.WithUid(uid);
+            var serialized = pathWithUid.ToSerializationFormat();
+            serialized.Should().EndWith("#" + uid);
+
+            var parsed = ActorPath.Parse(serialized);
+            parsed.Uid.Should().Be(uid);
+            parsed.Should().Be(pathWithUid);
+            parsed.ToSerializationFormat().Should().Be(serialized);
+
+            ActorPath.TryParse(serialized, out var tryParsed).Should().BeTrue();
+            tryParsed.Uid.Should().Be(uid);
+
+            ActorPath.TryParse(new RootActorPath(pathWithUid.Address), pathWithUid.ToStringWithoutAddress() + "#" + uid, out var relative)
+                .Should().BeTrue();
+            relative.Uid.Should().Be(uid);
+        }
+
+        [Theory(DisplayName = "Should_ParseUid_When_ChildElementWithUidIsAppendedWithSlashOperator")]
+        [MemberData(nameof(WideUids))]
+        public void Should_ParseUid_When_ChildElementWithUidIsAppendedWithSlashOperator(long uid)
+        {
+            var path = new RootActorPath(new Address("akka", "mysys")) / "user";
+            var child = path / $"child#{uid}";
+            child.Name.Should().Be("child");
+            child.Uid.Should().Be(uid);
+        }
+
+        [Theory(DisplayName = "Should_ThrowFormatException_When_UidFragmentIsMalformed")]
+        [InlineData("abc")]
+        [InlineData("")]
+        [InlineData("12x")]
+        [InlineData("1.5")]
+        [InlineData("9223372036854775808")] // long.MaxValue + 1
+        [InlineData("99999999999999999999")]
+        public void Should_ThrowFormatException_When_UidFragmentIsMalformed(string fragment)
+        {
+            var root = new RootActorPath(new Address("akka", "mysys"));
+            Action tryParse = () => ActorPath.TryParse("akka://mysys/user/child#" + fragment, out _);
+            tryParse.Should().Throw<FormatException>();
+
+            Action slash = () => { var _ = root / ("child#" + fragment); };
+            slash.Should().Throw<FormatException>();
+        }
+
+        [Fact(DisplayName = "Should_KeepSignedUid_When_UidFragmentHasLeadingMinus")]
+        public void Should_KeepSignedUid_When_UidFragmentHasLeadingMinus()
+        {
+            // a signed fragment has always been accepted by the parser; widening must not change that
+            ActorPath.TryParse("akka://mysys/user/child#-5", out var path).Should().BeTrue();
+            path.Uid.Should().Be(-5);
         }
 
         private ActorPath ActorPathParse(string path)

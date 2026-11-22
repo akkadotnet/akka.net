@@ -42,6 +42,31 @@ namespace Akka.Util
             throw new FormatException($"[{str.ToString()}] is not a valid numeric format");
         }
         
+        /// <summary>
+        /// Parses a 64-bit integer from a string, using the same rules as <see cref="Parse"/>.
+        /// </summary>
+        /// <param name="str">The span of input characters.</param>
+        /// <returns>A <see cref="long"/>.</returns>
+        /// <exception cref="FormatException">Thrown when <paramref name="str"/> is not a valid 64-bit integer.</exception>
+        public static long ParseInt64(ReadOnlySpan<char> str)
+        {
+            if (TryParseInt64(str, out var i))
+                return i;
+            throw new FormatException($"[{str.ToString()}] is not a valid numeric format");
+        }
+
+        /// <summary>
+        /// Attempts to parse a 64-bit integer from a string, using the same rules as <see cref="TryParse(ReadOnlySpan{char}, out int)"/>
+        /// but with the full <see cref="long"/> range.
+        /// </summary>
+        /// <param name="str">The span of input characters.</param>
+        /// <param name="returnValue">The parsed integer, if any.</param>
+        /// <returns><c>true</c> if <paramref name="str"/> was a valid 64-bit integer.</returns>
+        public static bool TryParseInt64(ReadOnlySpan<char> str, out long returnValue)
+        {
+            return long.TryParse(str, out returnValue);
+        }
+
         private const char Negative = '-';
         private static readonly char[] Numbers = { '0','1','2','3','4','5','6','7','8','9' };
 
@@ -132,7 +157,21 @@ namespace Akka.Util
                 case < 100_000_000_000:
                     return 11 + padding;
                 default:
-                    return (int)Math.Log10(i) + 1 + padding;
+                {
+                    // Math.Log10 is not exact for values just below a power of ten
+                    // (e.g. 999_999_999_999_999 yields 15.0), so compare against the powers instead.
+                    var digits = 12;
+                    long limit = 1_000_000_000_000; // 10^12
+                    while (i >= limit)
+                    {
+                        digits++;
+                        if (digits == 19)
+                            break; // long.MaxValue has 19 digits; 10^19 does not fit in a long
+                        limit *= 10;
+                    }
+
+                    return digits + padding;
+                }
             }
         }
 
