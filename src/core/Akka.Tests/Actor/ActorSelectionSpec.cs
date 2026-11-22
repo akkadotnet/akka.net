@@ -755,7 +755,7 @@ namespace Akka.Tests.Actor
         private async Task<IActorRef> CreateWideUidParent(string name)
         {
             var parent = Sys.ActorOf(Props.Create(() => new WideUidParent(WideUid, TestActor)), name);
-            await parent.Ask<string>("wide"); // make sure the actor has started
+            await parent.Ask<IActorRef>("wide"); // make sure the actor has started
             return parent;
         }
 
