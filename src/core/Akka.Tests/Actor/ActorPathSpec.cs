@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -36,15 +37,11 @@ namespace Akka.Tests.Actor
             ActorPathParse(pathWithUid.ToSerializationFormat()).ShouldBe(pathWithUid);
         }
 
-        public static TheoryData<long> WideUids => new()
+        public static IEnumerable<object[]> WideUids()
         {
-            1L,
-            int.MaxValue,
-            int.MaxValue + 1L,
-            4_294_967_296L,
-            1_000_000_000_000_000L,
-            long.MaxValue
-        };
+            foreach (var uid in new[] { 1L, int.MaxValue, int.MaxValue + 1L, 4_294_967_296L, 1_000_000_000_000_000L, long.MaxValue })
+                yield return new object[] { uid };
+        }
 
         [Theory(DisplayName = "Should_RoundTripUid_When_SerializedAndParsed")]
         [MemberData(nameof(WideUids))]

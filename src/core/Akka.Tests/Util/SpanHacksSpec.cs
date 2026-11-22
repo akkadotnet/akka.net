@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Akka.Util;
 using FluentAssertions;
@@ -15,24 +16,23 @@ namespace Akka.Tests.Util
 {
     public class SpanHacksSpec
     {
-        public static TheoryData<long> BoundaryValues
+        public static IEnumerable<object[]> BoundaryValues()
         {
-            get
+            var values = new List<long> { 0L, 9L, 10L, int.MaxValue, int.MaxValue + 1L, long.MaxValue };
+            long power = 1;
+            for (var k = 0; k <= 18; k++)
             {
-                var data = new TheoryData<long> { 0L, 9L, 10L, int.MaxValue, int.MaxValue + 1L, long.MaxValue };
-                long power = 1;
-                for (var k = 0; k <= 18; k++)
-                {
-                    data.Add(power);
-                    if (power > 1)
-                        data.Add(power - 1);
-                    if (power > 10)
-                        data.Add(power + 1);
-                    if (k < 18)
-                        power *= 10;
-                }
-                return data;
+                values.Add(power);
+                if (power > 1)
+                    values.Add(power - 1);
+                if (power > 10)
+                    values.Add(power + 1);
+                if (k < 18)
+                    power *= 10;
             }
+
+            foreach (var v in values)
+                yield return new object[] { v };
         }
 
         [Theory(DisplayName = "Should_ReportExactDigitCount_When_SizingInt64")]
