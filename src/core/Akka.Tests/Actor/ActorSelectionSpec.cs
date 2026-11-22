@@ -789,14 +789,14 @@ namespace Akka.Tests.Actor
         {
             var parent = await CreateWideUidParent("wide-uid-selection");
 
-            Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wide#{WideUid}").Tell("hello");
+            Sys.ActorSelection($"{parent.Path.ToStringWithoutAddress()}/wide#{WideUid}").Tell("hello");
             await ExpectMsgAsync("hello");
 
-            Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wideFn#{WideUid}").Tell("hello-fn");
+            Sys.ActorSelection($"{parent.Path.ToStringWithoutAddress()}/wideFn#{WideUid}").Tell("hello-fn");
             await ExpectMsgAsync("hello-fn");
 
             // a different incarnation must not receive the message
-            Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wide#{WideUid + 1}").Tell("nobody-home");
+            Sys.ActorSelection($"{parent.Path.ToStringWithoutAddress()}/wide#{WideUid + 1}").Tell("nobody-home");
             await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
         }
 
