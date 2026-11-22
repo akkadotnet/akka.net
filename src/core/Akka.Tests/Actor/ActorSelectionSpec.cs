@@ -795,11 +795,9 @@ namespace Akka.Tests.Actor
             Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wideFn#{WideUid}").Tell("hello-fn");
             await ExpectMsgAsync("hello-fn");
 
-            await EventFilter.DeadLetter().ExpectAsync(1, () =>
-            {
-                Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wide#{WideUid + 1}").Tell("nobody-home");
-                return Task.CompletedTask;
-            });
+            // a different incarnation must not receive the message
+            Sys.ActorSelection($"{parent.Path.ToStringWithAddress()}/wide#{WideUid + 1}").Tell("nobody-home");
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
         }
 
         [Fact(DisplayName = "Should_RoundTripActorRef_When_UidDoesNotFitInInt")]
