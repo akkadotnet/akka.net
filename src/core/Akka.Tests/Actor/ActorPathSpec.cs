@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -34,6 +35,77 @@ namespace Akka.Tests.Actor
             var path = new RootActorPath(new Address("akka.tcp", "mysys", "localhost", 9110)) / "user";
             var pathWithUid = path.WithUid(uid);
             ActorPathParse(pathWithUid.ToSerializationFormat()).ShouldBe(pathWithUid);
+        }
+
+        public static IEnumerable<object[]> WideUids()
+        {
+            foreach (var uid in new[] { int.MaxValue + 1L, 4_294_967_296L, 1_000_000_000_000_000L, long.MaxValue })
+                yield return new object[] { uid };
+        }
+
+        [Theory(DisplayName = "Should_RoundTripUid_When_UidDoesNotFitInInt")]
+        [MemberData(nameof(WideUids))]
+        public void Should_RoundTripUid_When_UidDoesNotFitInInt(long uid)
+        {
+            var path = new RootActorPath(new Address("akka.tcp", "mysys", "localhost", 9110)) / "user" / "child";
+            var pathWithUid = path.WithUid(uid);
+            var serialized = pathWithUid.ToSerializationFormat();
+            serialized.Should().EndWith("#" + uid);
+
+            ActorPath.Parse(serialized).Uid.Should().Be(uid);
+            ActorPath.Parse(serialized).Should().Be(pathWithUid);
+
+            ActorPath.TryParse(serialized, out var tryParsed).Should().BeTrue();
+            tryParsed.Uid.Should().Be(uid);
+
+            ActorPath.TryParse(new RootActorPath(pathWithUid.Address), pathWithUid.ToStringWithoutAddress() + "#" + uid, out var relative)
+                .Should().BeTrue();
+            relative.Uid.Should().Be(uid);
+        }
+
+        [Theory(DisplayName = "Should_ParseUid_When_ChildElementWithUidDoesNotFitInInt")]
+        [MemberData(nameof(WideUids))]
+        public void Should_ParseUid_When_ChildElementWithUidDoesNotFitInInt(long uid)
+        {
+            var child = new RootActorPath(new Address("akka", "mysys")) / $"child#{uid}";
+            child.Name.Should().Be("child");
+            child.Uid.Should().Be(uid);
+        }
+
+        [Theory(DisplayName = "Should_RejectUid_When_UidFragmentIsNegative")]
+        [InlineData("-1")]
+        [InlineData("-5")]
+        [InlineData("-0")]
+        [InlineData("-2147483648")]
+        [InlineData("-9223372036854775808")]
+        public void Should_RejectUid_When_UidFragmentIsNegative(string uid)
+        {
+            // a non-numeric fragment such as "#abc" throws on these code paths, so a negative one must too
+            var root = new RootActorPath(new Address("akka", "mysys"));
+            ((Action)(() => ActorPath.TryParse($"akka://mysys/user/child#{uid}", out _))).Should().Throw<Exception>();
+            ((Action)(() => ActorPath.Parse($"akka://mysys/user/child#{uid}"))).Should().Throw<Exception>();
+            ((Action)(() => ActorPath.TryParse(root, $"/user/child#{uid}", out _))).Should().Throw<Exception>();
+            ((Action)(() => { var _ = root / $"child#{uid}"; })).Should().Throw<Exception>();
+        }
+
+        [Theory(DisplayName = "Should_RejectUid_When_UidIsNegative")]
+        [InlineData(-1L)]
+        [InlineData(-5L)]
+        [InlineData(long.MinValue)]
+        public void Should_RejectUid_When_UidIsNegative(long uid)
+        {
+            var parent = new RootActorPath(new Address("akka", "mysys")) / "user";
+            foreach (var create in new Action[] { () => parent.WithUid(uid), () => parent.Root.WithUid(uid), () => _ = new ChildActorPath(parent, "child", uid) })
+                create.Should().Throw<ArgumentOutOfRangeException>().Which.ParamName.Should().Be("uid");
+        }
+
+        [Fact(DisplayName = "Should_AcceptUid_When_UidIsZeroOrMaxValue")]
+        public void Should_AcceptUid_When_UidIsZeroOrMaxValue()
+        {
+            var path = new RootActorPath(new Address("akka", "mysys")) / "user";
+            path.WithUid(0).Uid.Should().Be(0);
+            var wide = path.WithUid(long.MaxValue);
+            ActorPath.Parse(wide.ToSerializationFormat()).Should().Be(wide);
         }
 
         private ActorPath ActorPathParse(string path)
