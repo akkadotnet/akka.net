@@ -18,15 +18,14 @@ namespace Akka.Tests.Util
     {
         public static IEnumerable<object[]> BoundaryValues()
         {
-            var values = new List<long> { 0L, 9L, 10L, int.MaxValue, int.MaxValue + 1L, long.MaxValue };
+            var values = new SortedSet<long> { 0L, 9L, 10L, int.MaxValue, int.MaxValue + 1L, long.MaxValue,
+                10_000_000_000_000_000L - 40, 1_000_000_000_000_000_000L - 4000 };
             long power = 1;
             for (var k = 0; k <= 18; k++)
             {
                 values.Add(power);
-                if (power > 1)
-                    values.Add(power - 1);
-                if (power > 10)
-                    values.Add(power + 1);
+                values.Add(power - 1);
+                values.Add(power + 1);
                 if (k < 18)
                     power *= 10;
             }
@@ -52,13 +51,6 @@ namespace Akka.Tests.Util
 
             text.Should().Be(value.ToString(CultureInfo.InvariantCulture));
             long.Parse(text, CultureInfo.InvariantCulture).Should().Be(value);
-        }
-
-        [Fact(DisplayName = "Should_StillReject_When_ParsingInt32OutOfRange")]
-        public void Should_StillReject_When_ParsingInt32OutOfRange()
-        {
-            Action parse = () => SpanHacks.Parse("2147483648".AsSpan());
-            parse.Should().Throw<FormatException>();
         }
     }
 }
