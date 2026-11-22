@@ -548,7 +548,21 @@ namespace Akka.Actor
             var i = name.IndexOf('#');
             return i < 0
                 ? (name, UndefinedUid)
-                : (name.Substring(0, i), SpanHacks.ParseInt64(name.AsSpan(i + 1)));
+                : (name.Substring(0, i), ParseUidFragment(name.AsSpan(i + 1)));
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <param name="fragment">The text following the <c>#</c> in an actor path element.</param>
+        /// <returns>The parsed non-negative uid.</returns>
+        /// <exception cref="FormatException">Thrown when <paramref name="fragment"/> is not numeric or is negative.</exception>
+        internal static long ParseUidFragment(ReadOnlySpan<char> fragment)
+        {
+            var uid = SpanHacks.ParseInt64(fragment);
+            if (uid < 0 || fragment.TrimStart().StartsWith("-".AsSpan(), StringComparison.Ordinal))
+                throw new FormatException($"[{fragment.ToString()}] is not a valid numeric format");
+            return uid;
         }
 
         /// <summary>

@@ -72,6 +72,22 @@ namespace Akka.Tests.Actor
             child.Uid.Should().Be(uid);
         }
 
+        [Theory(DisplayName = "Should_RejectUid_When_UidFragmentIsNegative")]
+        [InlineData("-1")]
+        [InlineData("-5")]
+        [InlineData("-0")]
+        [InlineData("-2147483648")]
+        [InlineData("-9223372036854775808")]
+        public void Should_RejectUid_When_UidFragmentIsNegative(string uid)
+        {
+            // a non-numeric fragment such as "#abc" throws on these code paths, so a negative one must too
+            var root = new RootActorPath(new Address("akka", "mysys"));
+            ((Action)(() => ActorPath.TryParse($"akka://mysys/user/child#{uid}", out _))).Should().Throw<Exception>();
+            ((Action)(() => ActorPath.Parse($"akka://mysys/user/child#{uid}"))).Should().Throw<Exception>();
+            ((Action)(() => ActorPath.TryParse(root, $"/user/child#{uid}", out _))).Should().Throw<Exception>();
+            ((Action)(() => { var _ = root / $"child#{uid}"; })).Should().Throw<Exception>();
+        }
+
         private ActorPath ActorPathParse(string path)
         {
             if (ActorPath.TryParse(path, out var actorPath))
