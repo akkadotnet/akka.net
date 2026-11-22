@@ -552,10 +552,9 @@ namespace Akka.Remote.Artery
             if (length == 0)
                 return string.Empty;
 
-            // PERF: netstandard2.0 has no Encoding.GetString(ReadOnlySpan<byte>) overload (added in
-            // netstandard2.1), so literal resolution always allocates an intermediate byte[] via
-            // ArrayPool. Acceptable at G1 -- literals are the cold path; ref/manifest compression
-            // (deferred) replaces them with O(1) index lookups on the hot path.
+            if (_frameBody.IsSingleSegment)
+                return Encoding.UTF8.GetString(_frameBody.Slice(dataStart, length).FirstSpan);
+
             var rented = ArrayPool<byte>.Shared.Rent(length);
             try
             {
