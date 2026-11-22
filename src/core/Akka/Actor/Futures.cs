@@ -102,7 +102,9 @@ namespace Akka.Actor
         /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, object message, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            return Ask<T>(self, _ => message, timeout, cancellationToken);
+            var future = BeginAsk<T>(self, timeout, cancellationToken, out var result);
+            future.DeliverAsk(message, self);
+            return result;
         }
 
         /// <summary>
@@ -119,13 +121,23 @@ namespace Akka.Actor
         /// <returns>A task that completes with the reply cast to <typeparamref name="T"/>.</returns>
         public static Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
+            var future = BeginAsk<T>(self, timeout, cancellationToken, out var result);
+            var message = messageFactory(future);
+            future.DeliverAsk(message, self);
+            return result;
+        }
+
+#nullable enable
+        private static FutureActorRef<T> BeginAsk<T>(ICanTell self, TimeSpan? timeout,
+            CancellationToken cancellationToken, out Task<T> resultTask)
+        {
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
             var result = TaskEx.NonBlockingTaskCompletionSource<T>();
 
-            CancellationTokenSource timeoutCancellation = null;
+            CancellationTokenSource? timeoutCancellation = null;
             timeout ??= provider.Settings.AskTimeout;
 
             CancellationTokenRegistration? ctr1 = null;
@@ -169,11 +181,10 @@ namespace Akka.Actor
                 }, TaskContinuationOptions.ExecuteSynchronously);
             }
 
-            var message = messageFactory(future);
-            future.DeliverAsk(message, self);
-
-            return result.Task;
+            resultTask = result.Task;
+            return future;
         }
+#nullable restore
 
         /// <summary>
         /// Resolves <see cref="IActorRefProvider"/> for Ask pattern
