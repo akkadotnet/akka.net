@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -1081,8 +1082,18 @@ namespace Akka.Remote.Artery
                 // classic's DefaultMessageDispatcher system-message path, NOT Tell. System messages
                 // never carry a sender in practice (RemoteActorRef.SendSystemMessage always sends
                 // with sender: null) -- see SystemMessageEnvelope's type-level remarks.
-                if (TryResolveInboundPath(env.RecipientPath, "recipient", systemMessage, env.OriginUid, out var systemRecipient))
-                    systemRecipient.SendSystemMessage(systemMessage);
+                IInternalActorRef systemRecipient;
+                try
+                {
+                    systemRecipient = Provider.ResolveActorRefWithLocalAddress(env.RecipientPath, DefaultAddress);
+                }
+                catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+                {
+                    LogUnresolvableInboundPath(ex, env.RecipientPath, "recipient", systemMessage, env.OriginUid);
+                    return;
+                }
+
+                systemRecipient.SendSystemMessage(systemMessage);
                 return;
             }
 
@@ -1100,8 +1111,16 @@ namespace Akka.Remote.Artery
         /// </summary>
         private void DispatchOrdinaryMessage(object message, string? senderPath, string recipientPath, long originUid)
         {
-            if (!TryResolveInboundPath(recipientPath, "recipient", message, originUid, out var recipient))
+            IInternalActorRef recipient;
+            try
+            {
+                recipient = Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
+            }
+            catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+            {
+                LogUnresolvableInboundPath(ex, recipientPath, "recipient", message, originUid);
                 return;
+            }
 
             // Defensive-only safety branch mirroring DispatchInbound's ISystemMessage handling
             // above -- in practice UNREACHABLE for either of this method's callers: DispatchInbound
@@ -1121,12 +1140,22 @@ namespace Akka.Remote.Artery
 
             // Resolve the sender here, not at the final Tell, so a sender path that cannot be resolved
             // drops this one message before it is buffered or delivered. No sender means dead letters.
-            IActorRef sender = System.DeadLetters;
-            if (senderPath is not null)
+            IActorRef sender;
+            if (senderPath is null)
             {
-                if (!TryResolveInboundPath(senderPath, "sender", message, originUid, out var resolvedSender))
+                sender = System.DeadLetters;
+            }
+            else
+            {
+                try
+                {
+                    sender = Provider.ResolveActorRefWithLocalAddress(senderPath, DefaultAddress);
+                }
+                catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+                {
+                    LogUnresolvableInboundPath(ex, senderPath, "sender", message, originUid);
                     return;
-                sender = resolvedSender;
+                }
             }
 
             // A remote-deployed recipient that does not exist YET: with DaemonMsgCreate riding the
@@ -1176,35 +1205,28 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Resolves the sender or recipient path of ONE inbound message. An unparseable path (the path
-        /// cache throws, for example, <see cref="FormatException"/> on a bad uid fragment) must not fail
-        /// the inbound stream and abort the TCP connection for every other message on it. The failure
-        /// is logged as one warning line (message type, origin, role, path and reason, the last two
-        /// truncated because they are peer-controlled) with the stack trace at debug level, and the
-        /// caller drops the message. Covers ONLY the resolve call: the recipient's Tell /
-        /// SendSystemMessage stay outside this catch, and fatal exceptions are never caught.
+        /// Handles the failure to resolve the sender or recipient path of ONE inbound message. An
+        /// unparseable path (the path cache throws, for example, <see cref="FormatException"/> on a
+        /// bad uid fragment) must not fail the inbound stream and abort the TCP connection for every
+        /// other message on it. The failure is logged as one warning line (message type, origin,
+        /// role, path and reason, the last two truncated because they are peer-controlled) with the
+        /// stack trace at debug level, and the caller drops the message. The callers' try blocks
+        /// cover ONLY the resolve call: the recipient's Tell / SendSystemMessage stay outside, and
+        /// fatal exceptions are never caught. Kept out of line so the success path carries no
+        /// logging code.
         /// </summary>
-        private bool TryResolveInboundPath(string path, string role, object message, long originUid, out IInternalActorRef resolved)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void LogUnresolvableInboundPath(Exception ex, string path, string role, object message, long originUid)
         {
-            try
-            {
-                resolved = Provider.ResolveActorRefWithLocalAddress(path, DefaultAddress);
-                return true;
-            }
-            catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
-            {
-                resolved = null!;
-                _log.Warning(
-                    "Dropping inbound Artery message of type [{0}] from [{1}#{2}]: cannot resolve {3} path [{4}]. {5}: {6}",
-                    new object?[]
-                    {
-                        message.GetType(), _inboundContext?.TryResolveOriginAddress(originUid), originUid, role,
-                        Truncate(path), ex.GetType().Name, Truncate(ex.Message)
-                    });
-                if (_log.IsDebugEnabled)
-                    _log.Debug(ex, "Cannot resolve inbound {0} path of a [{1}] message.", role, message.GetType());
-                return false;
-            }
+            _log.Warning(
+                "Dropping inbound Artery message of type [{0}] from [{1}#{2}]: cannot resolve {3} path [{4}]. {5}: {6}",
+                new object?[]
+                {
+                    message.GetType(), _inboundContext?.TryResolveOriginAddress(originUid), originUid, role,
+                    Truncate(path), ex.GetType().Name, Truncate(ex.Message)
+                });
+            if (_log.IsDebugEnabled)
+                _log.Debug(ex, "Cannot resolve inbound {0} path of a [{1}] message.", role, message.GetType());
         }
 
         private const int MaxLoggedTextLength = 256;
