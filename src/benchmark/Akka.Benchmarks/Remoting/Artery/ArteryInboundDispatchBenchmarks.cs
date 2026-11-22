@@ -101,7 +101,11 @@ namespace Akka.Benchmarks.Remoting.Artery
         }
 
         [GlobalCleanup]
-        public void Cleanup() => _system.Terminate().Wait(TimeSpan.FromSeconds(10));
+        public void Cleanup()
+        {
+            if (!_system.Terminate().Wait(TimeSpan.FromSeconds(10)))
+                throw new TimeoutException("The actor system did not terminate within 10 seconds.");
+        }
 
         [IterationSetup]
         public void IterationSetup()
@@ -116,6 +120,9 @@ namespace Akka.Benchmarks.Remoting.Artery
             var sw = System.Diagnostics.Stopwatch.StartNew();
             while (Volatile.Read(ref Sink.Received) < _sent && sw.Elapsed < TimeSpan.FromSeconds(30))
                 Thread.Sleep(1);
+
+            if (Volatile.Read(ref Sink.Received) < _sent)
+                throw new TimeoutException($"Only {Volatile.Read(ref Sink.Received)} of {_sent} dispatched messages were delivered within 30 seconds.");
         }
 
         /// <summary>Local user actor recipient, remote sender (typical Tell with sender). Per op: one DispatchInbound.</summary>

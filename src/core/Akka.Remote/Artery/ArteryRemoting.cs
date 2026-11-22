@@ -250,7 +250,7 @@ namespace Akka.Remote.Artery
         private sealed class PendingRemoteDeployedResolve
         {
             public readonly object Gate = new();
-            public readonly Queue<(object Message, IActorRef Sender)> Buffered = new();
+            public readonly Queue<(object Message, string? SenderPath, long OriginUid)> Buffered = new();
             public bool Done;
             public int AttemptsLeft = RetryResolveRemoteDeployedRecipientAttempts;
         }
@@ -632,7 +632,7 @@ namespace Akka.Remote.Artery
                         wonDrain = true;
                         while (pendingResolve.Buffered.Count > 0)
                         {
-                            var (message, _) = pendingResolve.Buffered.Dequeue();
+                            var (message, _, _) = pendingResolve.Buffered.Dequeue();
                             System.EventStream.Publish(new Dropped(
                                 message,
                                 $"Inbound message for unresolved remote-deployed recipient [{kvp.Key}] drained on transport shutdown",
@@ -1166,7 +1166,7 @@ namespace Akka.Remote.Artery
             // best effort retry").
             if (IsUnresolvedRemoteDeployedRecipient(recipient))
             {
-                BufferUnresolvedRemoteDeployedRecipient(recipientPath, message, sender, recipient);
+                BufferUnresolvedRemoteDeployedRecipient(recipientPath, message, senderPath, originUid, recipient);
                 return;
             }
 
@@ -1181,7 +1181,7 @@ namespace Akka.Remote.Artery
                 {
                     if (!pending.Done)
                     {
-                        pending.Buffered.Enqueue((message, sender));
+                        pending.Buffered.Enqueue((message, senderPath, originUid));
                         return;
                     }
                 }
@@ -1202,6 +1202,37 @@ namespace Akka.Remote.Artery
             // an unresolvable recipient resolves to an EmptyLocalActorRef, whose Tell publishes a
             // DeadLetter automatically.
             recipient.Tell(message, sender);
+        }
+
+        /// <summary>
+        /// Delivers a message that was buffered for a not-yet-created remote-deployed recipient. The
+        /// sender PATH was buffered, not a resolved ref, and is resolved here at delivery time: the
+        /// sender can itself be a remote-deployed actor whose creation arrives while the message waits,
+        /// and a ref resolved earlier would be an <see cref="EmptyLocalActorRef"/> that never becomes
+        /// the live actor. A sender path that cannot be resolved drops only this message (same warning
+        /// as the direct path), so it cannot strand the messages buffered behind it.
+        /// </summary>
+        private void DeliverBufferedOrdinaryMessage(IActorRef recipient, object message, string? senderPath, long originUid)
+        {
+            IActorRef sender;
+            if (senderPath is null)
+            {
+                sender = System.DeadLetters;
+            }
+            else
+            {
+                try
+                {
+                    sender = Provider.ResolveActorRefWithLocalAddress(senderPath, DefaultAddress);
+                }
+                catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+                {
+                    LogUnresolvableInboundPath(ex, senderPath, "sender", message, originUid);
+                    return;
+                }
+            }
+
+            DeliverOrdinaryMessage(recipient, message, sender);
         }
 
         /// <summary>
@@ -1256,7 +1287,7 @@ namespace Akka.Remote.Artery
         /// (prior give-up) skip the machinery and dead-letter immediately, mirroring Pekko's banned
         /// branch verbatim.
         /// </summary>
-        private void BufferUnresolvedRemoteDeployedRecipient(string recipientPath, object message, IActorRef sender, IActorRef emptyRecipient)
+        private void BufferUnresolvedRemoteDeployedRecipient(string recipientPath, object message, string? senderPath, long originUid, IActorRef emptyRecipient)
         {
             // Shutdown guard: the transport is tearing down, so the DaemonMsgCreate this message is
             // waiting on will never be processed, Shutdown()'s drain of the pending buffers may
@@ -1264,7 +1295,7 @@ namespace Akka.Remote.Artery
             // scheduler. Account the message to dead letters immediately instead.
             if (_isShutdown)
             {
-                DeliverOrdinaryMessage(emptyRecipient, message, sender);
+                DeliverBufferedOrdinaryMessage(emptyRecipient, message, senderPath, originUid);
                 return;
             }
 
@@ -1281,7 +1312,7 @@ namespace Akka.Remote.Artery
                     _log.Warning(
                         "Message for banned (terminated, unresolved) remote deployed recipient [{0}].",
                         recipientPath);
-                    DeliverOrdinaryMessage(emptyRecipient, message, sender);
+                    DeliverBufferedOrdinaryMessage(emptyRecipient, message, senderPath, originUid);
                     return;
                 }
 
@@ -1300,7 +1331,7 @@ namespace Akka.Remote.Artery
                     {
                         // A racing creator won AND already completed/removed its entry -- re-check
                         // from the top (the path may now be banned, resolvable, or need a new entry).
-                        if (TryDeliverIfNowResolved(recipientPath, message, sender))
+                        if (TryDeliverIfNowResolved(recipientPath, message, senderPath, originUid))
                             return;
                         continue;
                     }
@@ -1310,7 +1341,7 @@ namespace Akka.Remote.Artery
                 {
                     if (!pending.Done)
                     {
-                        pending.Buffered.Enqueue((message, sender));
+                        pending.Buffered.Enqueue((message, senderPath, originUid));
                         return;
                     }
                 }
@@ -1318,7 +1349,7 @@ namespace Akka.Remote.Artery
                 // The entry completed between lookup and lock: its flush has fully finished (Done
                 // latches only after delivery, under the gate). Either the actor exists now, or the
                 // path just got banned -- re-resolve and loop.
-                if (TryDeliverIfNowResolved(recipientPath, message, sender))
+                if (TryDeliverIfNowResolved(recipientPath, message, senderPath, originUid))
                     return;
             }
         }
@@ -1329,13 +1360,13 @@ namespace Akka.Remote.Artery
         /// otherwise <see langword="false"/> so the caller loops back through the ban check /
         /// fresh-entry path.
         /// </summary>
-        private bool TryDeliverIfNowResolved(string recipientPath, object message, IActorRef sender)
+        private bool TryDeliverIfNowResolved(string recipientPath, object message, string? senderPath, long originUid)
         {
             var recipient = Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
             if (IsUnresolvedRemoteDeployedRecipient(recipient))
                 return false;
 
-            DeliverOrdinaryMessage(recipient, message, sender);
+            DeliverBufferedOrdinaryMessage(recipient, message, senderPath, originUid);
             return true;
         }
 
@@ -1384,8 +1415,8 @@ namespace Akka.Remote.Artery
 
                 while (pending.Buffered.Count > 0)
                 {
-                    var (message, sender) = pending.Buffered.Dequeue();
-                    DeliverOrdinaryMessage(recipient, message, sender);
+                    var (message, senderPath, originUid) = pending.Buffered.Dequeue();
+                    DeliverBufferedOrdinaryMessage(recipient, message, senderPath, originUid);
                 }
 
                 pending.Done = true;
