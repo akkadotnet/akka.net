@@ -208,6 +208,70 @@ namespace Akka.Remote.Tests.Artery
             Assert.Equal(payload, decoded.Payload.ToArray());
         }
 
+        [Theory(DisplayName = "Should_preserve_UTF8_replacement_When_literal_bytes_are_invalid")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_preserve_UTF8_replacement_When_literal_bytes_are_invalid(bool segmented)
+        {
+            var invalidLiterals = new[]
+            {
+                new byte[] { 0xC3, 0x28 },
+                new byte[] { 0xE2, 0x82 },
+                new byte[] { 0xFF, 0x61, 0x80 }
+            };
+            foreach (var literal in invalidLiterals)
+            {
+                var body = BodyWithSharedLiteral(literal);
+                var frame = segmented ? TwoSegment(body, splitAt: 35) : new ReadOnlySequence<byte>(body);
+                var decoded = ArteryEnvelopeCodec.Decode(frame);
+                var expected = Encoding.UTF8.GetString(literal);
+                Assert.Contains("\uFFFD", expected);
+                Assert.True(decoded.TryGetSenderPath(out var sender));
+                Assert.True(decoded.TryGetRecipientPath(out var recipient));
+                Assert.True(decoded.TryGetManifest(out var manifest));
+                Assert.Equal(expected, sender);
+                Assert.Equal(expected, recipient);
+                Assert.Equal(expected, manifest);
+            }
+        }
+
+        [Theory(DisplayName = "Should_decode_UTF8_literals_When_frame_segments_split_header_prefix_or_codepoint")]
+        [InlineData(10)] // segmented frame, contiguous literal
+        [InlineData(33)] // split length prefix, contiguous literal
+        [InlineData(35)] // split the first three-byte UTF8 code point
+        [InlineData(36)]
+        public void Should_decode_UTF8_literals_When_frame_segments_split_header_prefix_or_codepoint(int splitAt)
+        {
+            const string expected = "型-Ω-😀";
+            var body = BodyWithSharedLiteral(Encoding.UTF8.GetBytes(expected));
+            var decoded = ArteryEnvelopeCodec.Decode(TwoSegment(body, splitAt));
+            Assert.True(decoded.TryGetSenderPath(out var sender));
+            Assert.True(decoded.TryGetRecipientPath(out var recipient));
+            Assert.True(decoded.TryGetManifest(out var manifest));
+            Assert.Equal(expected, sender);
+            Assert.Equal(expected, recipient);
+            Assert.Equal(expected, manifest);
+        }
+
+        [Theory(DisplayName = "Should_return_empty_When_an_explicit_literal_has_zero_length")]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_return_empty_When_an_explicit_literal_has_zero_length(bool segmented)
+        {
+            var body = BodyWithSharedLiteral(Array.Empty<byte>());
+            var frame = segmented ? TwoSegment(body, splitAt: 33) : new ReadOnlySequence<byte>(body);
+            var decoded = ArteryEnvelopeCodec.Decode(frame);
+            Assert.Equal(ArteryTagKind.Literal, decoded.SenderKind);
+            Assert.Equal(ArteryTagKind.Literal, decoded.RecipientKind);
+            Assert.Equal(ArteryTagKind.Literal, decoded.ManifestKind);
+            Assert.True(decoded.TryGetSenderPath(out var sender));
+            Assert.True(decoded.TryGetRecipientPath(out var recipient));
+            Assert.True(decoded.TryGetManifest(out var manifest));
+            Assert.Same(string.Empty, sender);
+            Assert.Same(string.Empty, recipient);
+            Assert.Same(string.Empty, manifest);
+        }
+
         // ===================== rejections =====================
 
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_the_version_is_not_1")]
@@ -312,6 +376,17 @@ namespace Akka.Remote.Tests.Artery
         }
 
         // ===================== helpers =====================
+
+        private static byte[] BodyWithSharedLiteral(byte[] literal)
+        {
+            var body = new byte[HeaderLength + sizeof(ushort) + literal.Length];
+            var header = BuildRawHeader(ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 1, serializerId: 1,
+                senderTag: HeaderLength, recipientTag: HeaderLength, manifestTag: HeaderLength, payloadOffset: (uint)body.Length);
+            header.CopyTo(body, 0);
+            BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(HeaderLength, sizeof(ushort)), checked((ushort)literal.Length));
+            literal.CopyTo(body, HeaderLength + sizeof(ushort));
+            return body;
+        }
 
         private static byte[] MakePayload(int length, int seed)
         {
