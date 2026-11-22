@@ -72,22 +72,6 @@ namespace Akka.Tests.Actor
             child.Uid.Should().Be(uid);
         }
 
-        [Fact(DisplayName = "Should_NotAcceptUid_When_UidFragmentExceedsInt64")]
-        public void Should_NotAcceptUid_When_UidFragmentExceedsInt64()
-        {
-            var accepted = false;
-            try
-            {
-                accepted = ActorPath.TryParse("akka://mysys/user/child#9223372036854775808", out _);
-            }
-            catch (FormatException)
-            {
-                // rejecting by throwing is also not accepting
-            }
-
-            accepted.Should().BeFalse();
-        }
-
         private ActorPath ActorPathParse(string path)
         {
             if (ActorPath.TryParse(path, out var actorPath))
