@@ -178,7 +178,9 @@ namespace Akka.Remote.Artery
 
                 const int reservedPrefixLength = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
                 var capacityHint = reservedPrefixLength
-                    + LiteralWireSize(state.senderPath) + LiteralWireSize(state.recipientPath) + LiteralWireSize(manifest);
+                    + LiteralWireSize(state.senderPath, out var senderByteCount)
+                    + LiteralWireSize(state.recipientPath, out var recipientByteCount)
+                    + LiteralWireSize(manifest, out var manifestByteCount);
 
                 // Fold in the serializer's own size hint (a hint only -- the frame length is still
                 // back-patched from actual bytes written below, never predicted) so the pooled
@@ -195,9 +197,9 @@ namespace Akka.Remote.Artery
                     writer.GetSpan(reservedPrefixLength);
                     writer.Advance(reservedPrefixLength);
 
-                    var senderTag = WriteLiteral(writer, state.senderPath);
-                    var recipientTag = WriteLiteral(writer, state.recipientPath);
-                    var manifestTag = WriteLiteral(writer, manifest);
+                    var senderTag = WriteLiteral(writer, state.senderPath, senderByteCount);
+                    var recipientTag = WriteLiteral(writer, state.recipientPath, recipientByteCount);
+                    var manifestTag = WriteLiteral(writer, manifest, manifestByteCount);
 
                     var payloadOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
 
@@ -352,12 +354,17 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a growable <see cref="Akka.Serialization.PooledPayloadWriter"/>.</summary>
-        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, string? value)
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, string? value, int byteCount)
         {
             if (string.IsNullOrEmpty(value))
                 return ArteryEnvelopeHeader.AbsentTag;
 
-            var byteCount = ValidatedUtf8ByteCount(value);
+            // Strings are immutable snapshots captured before SizeHint. Reuse the raw count,
+            // but keep range validation here so serializer/rent/earlier-literal failures retain
+            // their original precedence and writer disposal still covers this rejection.
+            if (byteCount > ArteryEnvelopeHeader.MaxLiteralByteLength)
+                throw new ArteryEnvelopeException(
+                    $"Literal exceeds the maximum encodable length of {ArteryEnvelopeHeader.MaxLiteralByteLength} UTF-8 bytes (was {byteCount}).");
             var tagOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
 
             var lengthSpan = writer.GetSpan(ArteryEnvelopeHeader.LiteralLengthPrefixSize);
@@ -385,6 +392,18 @@ namespace Akka.Remote.Artery
 
         private static int LiteralWireSize(string? value) =>
             string.IsNullOrEmpty(value) ? 0 : ArteryEnvelopeHeader.LiteralLengthPrefixSize + Encoding.UTF8.GetByteCount(value);
+
+        private static int LiteralWireSize(string? value, out int byteCount)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                byteCount = 0;
+                return 0;
+            }
+
+            byteCount = Encoding.UTF8.GetByteCount(value);
+            return ArteryEnvelopeHeader.LiteralLengthPrefixSize + byteCount;
+        }
     }
 
     /// <summary>
