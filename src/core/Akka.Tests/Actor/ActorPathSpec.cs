@@ -88,6 +88,26 @@ namespace Akka.Tests.Actor
             ((Action)(() => { var _ = root / $"child#{uid}"; })).Should().Throw<Exception>();
         }
 
+        [Theory(DisplayName = "Should_RejectUid_When_UidIsNegative")]
+        [InlineData(-1L)]
+        [InlineData(-5L)]
+        [InlineData(long.MinValue)]
+        public void Should_RejectUid_When_UidIsNegative(long uid)
+        {
+            var parent = new RootActorPath(new Address("akka", "mysys")) / "user";
+            foreach (var create in new Action[] { () => parent.WithUid(uid), () => parent.Root.WithUid(uid), () => _ = new ChildActorPath(parent, "child", uid) })
+                create.Should().Throw<ArgumentOutOfRangeException>().Which.ParamName.Should().Be("uid");
+        }
+
+        [Fact(DisplayName = "Should_AcceptUid_When_UidIsZeroOrMaxValue")]
+        public void Should_AcceptUid_When_UidIsZeroOrMaxValue()
+        {
+            var path = new RootActorPath(new Address("akka", "mysys")) / "user";
+            path.WithUid(0).Uid.Should().Be(0);
+            var wide = path.WithUid(long.MaxValue);
+            ActorPath.Parse(wide.ToSerializationFormat()).Should().Be(wide);
+        }
+
         private ActorPath ActorPathParse(string path)
         {
             if (ActorPath.TryParse(path, out var actorPath))

@@ -175,6 +175,7 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
     /// <param name="parentPath"> The parentPath. </param>
     /// <param name="name"> The name. </param>
     /// <param name="uid"> The uid. </param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uid"/> is negative.</exception>
     protected ActorPath(ActorPath parentPath, string name, long uid)
     {
         // guard for possible null parentPath
@@ -182,7 +183,14 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
         Address = parentPath.Address;
         _depth = parentPath._depth + 1;
         Name = name;
-        Uid = uid;
+        Uid = RequireNonNegativeUid(uid);
+    }
+
+    private static long RequireNonNegativeUid(long uid)
+    {
+        if (uid < 0)
+            throw new ArgumentOutOfRangeException(nameof(uid), uid, "An actor uid must be non-negative.");
+        return uid;
     }
 
     /// <summary>
@@ -332,8 +340,10 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
     /// </summary>
     /// <param name="uid"> The uid. </param>
     /// <returns> ActorPath. </returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uid"/> is negative.</exception>
     public ActorPath WithUid(long uid)
     {
+        RequireNonNegativeUid(uid);
         if (_depth == 0)
         {
             if (uid != 0) throw new NotSupportedException("RootActorPath must have undefined Uid");
@@ -830,6 +840,7 @@ public sealed class ChildActorPath : ActorPath
     /// <param name="parentPath"> The parent path. </param>
     /// <param name="name"> The name. </param>
     /// <param name="uid"> The uid. </param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uid"/> is negative.</exception>
     public ChildActorPath(ActorPath parentPath, string name, long uid)
         : base(parentPath, name, uid)
     {
