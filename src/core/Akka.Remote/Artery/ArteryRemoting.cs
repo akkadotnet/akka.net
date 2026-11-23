@@ -1658,7 +1658,10 @@ namespace Akka.Remote.Artery
             // Either an ordinary lane index already, or an ActorSelectionMessage whose recipient's
             // cached route says "large" -- forced onto lane 0 for THIS send only (see the remarks
             // above; the ref's cache is left untouched for its own future non-selection sends).
-            var laneIndex = route == LargeMessageRoute ? 0 : route;
+            // A message that carries both ids rides its sender-recipient pair's lane instead.
+            var laneIndex = route == LargeMessageRoute ? 0
+                : senderId != 0 && recipientId != 0 ? Association.SelectPairLane(senderId, recipientId, association.OutboundLanes)
+                : route;
 
             if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, null, senderId, recipientId) { RecipientPathUtf8 = recipientPathUtf8 }, laneIndex))
             {
