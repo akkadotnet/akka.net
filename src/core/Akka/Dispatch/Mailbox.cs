@@ -432,6 +432,10 @@ namespace Akka.Dispatch
         /// </summary>
         private void ProcessAllSystemMessages()
         {
+            // common case: nothing queued, so avoid the interlocked exchange in SystemDrain
+            if (_systemQueueDoNotCallMeDirectly == null)
+                return;
+
             Exception interruption = null;
             var messageList = SystemDrain(SystemMessageList.LNil);
             while (messageList.NonEmpty && !IsClosed())
