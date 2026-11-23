@@ -428,6 +428,21 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             : throw new UriFormatException($"Can not parse an ActorPath: {path}");
     }
 
+    private const string UserElementName = "user";
+    private const string SystemElementName = "system";
+    private const string TempElementName = "temp";
+
+    /// <summary>
+    /// Returns a shared constant for the well-known root element names, and allocates a new string otherwise.
+    /// </summary>
+    private static string ToPathElementName(ReadOnlySpan<char> element)
+    {
+        if (element.SequenceEqual(UserElementName.AsSpan())) return UserElementName;
+        if (element.SequenceEqual(SystemElementName.AsSpan())) return SystemElementName;
+        if (element.SequenceEqual(TempElementName.AsSpan())) return TempElementName;
+        return element.ToString();
+    }
+
     /// <summary>
     /// Tries to parse the uri, which should be a full uri, i.e containing protocol.
     /// For example "akka://System/user/my-actor"
@@ -479,7 +494,7 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             nextSlash = absoluteUri.IndexOf('/');
             if (nextSlash > 0)
             {
-                var name = absoluteUri.Slice(0, nextSlash).ToString();
+                var name = ToPathElementName(absoluteUri.Slice(0, nextSlash));
                 actorPath = new ChildActorPath(actorPath, name, ActorCell.UndefinedUid);
             }
             else if (nextSlash < 0 && absoluteUri.Length > 0) // final segment
@@ -490,11 +505,11 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
                     var fragment = absoluteUri.Slice(fragLoc + 1);
                     var fragValue = ActorCell.ParseUidFragment(fragment);
                     absoluteUri = absoluteUri.Slice(0, fragLoc);
-                    actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), fragValue);
+                    actorPath = new ChildActorPath(actorPath, ToPathElementName(absoluteUri), fragValue);
                 }
                 else
                 {
-                    actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), ActorCell.UndefinedUid);
+                    actorPath = new ChildActorPath(actorPath, ToPathElementName(absoluteUri), ActorCell.UndefinedUid);
                 }
 
             }
