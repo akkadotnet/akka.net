@@ -51,6 +51,8 @@ namespace Akka.Actor.Internal
         private IScheduler _scheduler;
         private ActorProducerPipelineResolver _actorProducerPipelineResolver;
         private TerminationCallbacks _terminationCallbacks;
+        private bool _use64BitActorUids;
+        private long _actorUidCounter;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorSystemImpl"/> class.
@@ -538,7 +540,31 @@ namespace Akka.Actor.Internal
         {
             // TODO: on this line, in scala, the config is validated with `Dispatchers.InternalDispatcherId` path removed.
             _settings = new Settings(this, config, setup);
+
+            // Artery is new in v1.6, so every Artery peer can parse wide UIDs; classic remoting
+            // and local-only systems keep the legacy random 31-bit UIDs. Decided once, here.
+            _use64BitActorUids = _settings.Config.GetBoolean("akka.remote.artery.enabled", false);
+            if (_use64BitActorUids)
+            {
+                // random start in [1, 2^62) so a restarted system does not repeat its predecessor's UIDs;
+                // incrementing from there can never overflow into negative values in practice
+                Span<byte> bytes = stackalloc byte[8];
+                System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+                var start = BitConverter.ToInt64(bytes) & ((1L << 62) - 1);
+                _actorUidCounter = start == 0 ? 1 : start;
+            }
         }
+
+        /// <summary>
+        /// True when Artery remoting is enabled (<c>akka.remote.artery.enabled</c>), read once at startup.
+        /// </summary>
+        internal bool Use64BitActorUids => _use64BitActorUids;
+
+        /// <summary>
+        /// Next per-system actor UID: positive, non-zero and unique within this system.
+        /// Only valid when <see cref="Use64BitActorUids"/> is true.
+        /// </summary>
+        internal long NextActorUid() => Interlocked.Increment(ref _actorUidCounter);
 
         private void ConfigureEventStream()
         {
