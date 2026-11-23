@@ -587,6 +587,26 @@ namespace Akka.Remote.Artery
         /// </summary>
         public SystemMessageDeliveryState SystemMessageDeliveryState => _systemMessageDeliveryState;
 
+        private InboundSequenceEntry? _inboundSequence;
+
+        /// <summary>
+        /// The receiver-side system-message expectation for peer incarnation <paramref name="uid"/>. One entry per
+        /// association: a new incarnation replaces the previous one's entry, so nothing is kept for dead peers.
+        /// </summary>
+        public InboundSequenceEntry InboundSequenceFor(long uid)
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref _inboundSequence);
+                if (current != null && current.Uid == uid)
+                    return current;
+
+                var fresh = new InboundSequenceEntry(uid);
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _inboundSequence, fresh, current), current))
+                    return fresh;
+            }
+        }
+
         /// <summary>
         /// Whether this association's ORDINARY outbound stream has been permanently torn down by
         /// <see cref="CompleteOutbound"/> (transport <see cref="ArteryRemoting.Shutdown"/>) -- design.md
@@ -1258,9 +1278,6 @@ namespace Akka.Remote.Artery
     {
         private readonly ConcurrentDictionary<Address, Association> _byAddress = new();
         private readonly ConcurrentDictionary<long, Association> _byUid = new();
-
-        /// <summary>Acker expectation per peer incarnation; entries are never removed.</summary>
-        private readonly ConcurrentDictionary<UniqueAddress, InboundSequenceEntry> _shared = new();
         private readonly int _outboundQueueCapacity;
         private readonly int _controlQueueCapacity;
         private readonly int _largeQueueCapacity;
@@ -1320,18 +1337,16 @@ namespace Akka.Remote.Artery
         public Association? TryGetByUid(long uid) => _byUid.TryGetValue(uid, out var association) ? association : null;
 
         /// <summary>
-        /// The shared acker entry of <paramref name="origin"/>, or null (per-connection memory only) when the
-        /// frame's uid does not match or the peer has no completed handshake and no entry yet.
+        /// The acker entry of <paramref name="origin"/>, held by its association, or null (per-connection memory
+        /// only) when the frame's uid does not match or the peer is not the association's current incarnation.
         /// </summary>
         public InboundSequenceEntry? GetInboundSequenceEntry(long originUid, UniqueAddress origin)
         {
             if (origin.Uid != originUid)
                 return null;
-            if (_shared.TryGetValue(origin, out var entry))
-                return entry;
-            if (_byUid.TryGetValue(originUid, out var association) && association.RemoteAddress.Equals(origin.Address))
-                return _shared.GetOrAdd(origin, static _ => new InboundSequenceEntry());
-            return null;
+            return _byUid.TryGetValue(originUid, out var association) && association.RemoteAddress.Equals(origin.Address)
+                ? association.InboundSequenceFor(originUid)
+                : null;
         }
 
         /// <summary>
@@ -1386,9 +1401,14 @@ namespace Akka.Remote.Artery
         }
     }
 
-    /// <summary>INTERNAL API. Shared system-message expectation of one peer incarnation; also the lock the acker handles its messages under.</summary>
+    /// <summary>INTERNAL API. System-message expectation of an association's current peer incarnation, shared by its control connections; also the lock the acker handles its messages under.</summary>
     internal sealed class InboundSequenceEntry
     {
+        public InboundSequenceEntry(long uid) => Uid = uid;
+
+        /// <summary>The peer incarnation this expectation belongs to.</summary>
+        public long Uid { get; }
+
         /// <summary>Next expected seq; guarded by lock (this).</summary>
         public long Next = 1;
     }

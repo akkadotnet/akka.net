@@ -45,7 +45,7 @@ namespace Akka.Remote.Artery
     ///
     /// <para>
     /// <b>Expectation.</b> The effective expected seq is the larger of the per-connection value and the shared
-    /// <see cref="InboundSequenceEntry"/> of the sender (address and uid), so a new control connection of the same
+    /// <see cref="InboundSequenceEntry"/> held by the sender's association, so a new control connection of the same
     /// sender resumes instead of restarting at 1. Messages are handled under <c>lock (entry)</c>; a sender without a
     /// completed handshake uses the per-connection value only.
     /// </para>
