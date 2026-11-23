@@ -589,6 +589,13 @@ namespace Akka.Remote.Artery
             return _frameBody.Slice(dataStart, length);
         }
 
+        /// <summary>The raw UTF-8 bytes of the manifest literal; see <see cref="GetSenderLiteralBytes"/>.</summary>
+        public ReadOnlySequence<byte> GetManifestLiteralBytes()
+        {
+            ReadLiteralBounds(Header.ManifestTag, out var dataStart, out var length);
+            return _frameBody.Slice(dataStart, length);
+        }
+
         /// <summary>
         /// The single bounds check for literal tags, shared by string decoding
         /// (<see cref="ResolveLiteral"/>) and raw-byte access (<see cref="GetRecipientLiteralBytes"/>)

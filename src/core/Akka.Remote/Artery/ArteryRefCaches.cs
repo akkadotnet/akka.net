@@ -7,6 +7,8 @@
 
 #nullable enable
 
+using System;
+using System.Text;
 using Akka.Actor;
 
 namespace Akka.Remote.Artery
@@ -117,6 +119,43 @@ namespace Akka.Remote.Artery
             entry.OriginUid = originUid;
             entry.Id = id;
             entry.Ref = sender;
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// Manifest strings decoded on one connection or inbound lane, so a repeated manifest is not
+    /// decoded into a new string for every message. Used by one thread at a time. Only ASCII literals
+    /// hit; anything else is decoded as before.
+    /// </summary>
+    internal sealed class ArteryManifestCache
+    {
+        private readonly string?[] _slots = new string?[8];
+
+        /// <summary>The same result as <see cref="ArteryEnvelopeDecoded.TryGetManifest"/>.</summary>
+        public bool TryGetManifest(in ArteryEnvelopeDecoded decoded, out string manifest)
+        {
+            var bytes = decoded.ManifestKind == ArteryTagKind.Literal ? decoded.GetManifestLiteralBytes() : default;
+            if (bytes.IsEmpty || !bytes.IsSingleSegment)
+                return decoded.TryGetManifest(out manifest);
+
+            var span = bytes.First.Span;
+            ref var slot = ref _slots[(span.Length + span[span.Length - 1]) & 7];
+            if (slot is null || !AsciiEquals(span, slot))
+                slot = Encoding.UTF8.GetString(span);
+            manifest = slot;
+            return true;
+        }
+
+        private static bool AsciiEquals(ReadOnlySpan<byte> bytes, string value)
+        {
+            if (bytes.Length != value.Length)
+                return false;
+            for (var i = 0; i < bytes.Length; i++)
+                if (bytes[i] >= 0x80 || bytes[i] != value[i])
+                    return false;
+            return true;
         }
     }
 }

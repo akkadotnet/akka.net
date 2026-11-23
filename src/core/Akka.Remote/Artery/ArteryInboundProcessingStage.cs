@@ -368,6 +368,7 @@ namespace Akka.Remote.Artery
 
             private readonly ArteryInboundProcessingStage _stage;
             private readonly Queue<IInboundEnvelope> _pending = new();
+            private readonly ArteryManifestCache _manifests = new();
             /// <summary>
             /// Clock reading at the last warning; <see langword="null"/> until the first one. Uses
             /// <see cref="ITimeProvider.Now"/> -- the reading <c>TestScheduler</c> virtualizes.
@@ -640,7 +641,7 @@ namespace Akka.Remote.Artery
             {
                 var decoded = ArteryEnvelopeCodec.Decode(frameBody);
 
-                if (!decoded.TryGetManifest(out var manifest))
+                if (!_manifests.TryGetManifest(decoded, out var manifest))
                 {
                     Log.Warning("Dropping inbound Artery frame: COMPRESSED manifest tag (ref/manifest compression is not implemented at G2).");
                     return null;
@@ -776,6 +777,7 @@ namespace Akka.Remote.Artery
                 ArteryRemoteSenderCache senders,
                 ILoggingAdapter log)
             {
+                var manifests = new ArteryManifestCache();
                 try
                 {
                     while (await reader.WaitToReadAsync().ConfigureAwait(false))
@@ -791,7 +793,7 @@ namespace Akka.Remote.Artery
                             try
                             {
                                 decoded = ArteryEnvelopeCodec.Decode(item.FrameBody);
-                                decoded.TryGetManifest(out manifest);
+                                manifests.TryGetManifest(decoded, out manifest);
                             }
                             catch (Exception ex)
                             {
