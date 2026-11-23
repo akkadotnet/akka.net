@@ -911,6 +911,8 @@ namespace Akka.Remote.Artery
         /// taken before the modulo. Under Artery, actor UIDs come from a per-system counter, so actors
         /// created in a repeating pattern (an actor and its peer, created in turn) have UIDs with a
         /// fixed stride; a plain <c>uid % lanes</c> would put all of them on the same few lanes.
+        /// The same uid always maps to the same lane, so per-recipient ordering is unchanged; the
+        /// cost is one multiply and a shift per send.
         /// </para>
         /// </summary>
         public static int SelectLane(long recipientUid, int lanes) =>
