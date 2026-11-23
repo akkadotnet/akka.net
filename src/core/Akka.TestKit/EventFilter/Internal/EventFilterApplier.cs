@@ -404,13 +404,15 @@ public class InternalEventFilterApplier : IEventFilterApplier
    
             
         matchedEventHandler ??= new MatchedEventHandler();
-        system.EventStream.Publish(new Mute(_filters));
         try
         {
+            // Attach handlers before muting to avoid missing early matches
             foreach(var filter in _filters)
             {
                 filter.EventMatched += matchedEventHandler.HandleEvent;
             }
+            system.EventStream.Publish(new Mute(_filters));
+            await Task.Yield();
             var result = await func();
 
             if(!await AwaitDoneAsync(timeoutValue, expectedOccurrences, matchedEventHandler, cancellationToken))

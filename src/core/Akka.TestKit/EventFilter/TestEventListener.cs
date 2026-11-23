@@ -35,14 +35,13 @@ public class TestEventListener : DefaultLogger
         {
             case InitializeLogger initLogger:
             {
-                base.Receive(message);
                 var bus = initLogger.LoggingBus;
                 var self = Context.Self;
                 bus.Subscribe(self, typeof(Mute));
                 bus.Subscribe(self, typeof(Unmute));
                 bus.Subscribe(self, typeof(DeadLetter));
                 bus.Subscribe(self, typeof(UnhandledMessage));
-                Sender.Tell(new LoggerInitialized());
+                base.Receive(message);
                 break;
             }
             case Mute mute:
