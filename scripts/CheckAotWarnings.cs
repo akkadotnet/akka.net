@@ -18,16 +18,23 @@
 //       --log <publish log> \
 //       --baseline src/aot/Akka.AOT.App/aot-warnings.baseline.txt \
 //       [--repo-root <dir>] [--scope <prefix>[,<prefix>...]] [--allow-empty]
+//       [--unlocated-scope <namespace>[,<namespace>...]]
 //
 // --scope defaults to src/core/Akka/ (the plain-core canary's surface). The Hosting canary passes
 // its own comma-separated list, e.g. --scope src/contrib/hosting/,src/contrib/dependencyinjection/,src/core/Akka.Streams/
+//
+// --unlocated-scope is for publishes where ILC never sees our PDBs (the MAUI canary on Android: the
+// Android SDK rewrites every assembly before ILC runs), so even Akka.NET's own warnings arrive with
+// no source file and --scope cannot see them. A warning with no file whose member starts with one of
+// these namespaces fails the check outright: with no file it cannot be baselined, only fixed.
 //
 // Exit codes:
 //   0  every emitted in-scope warning is in the baseline. Extra baseline entries only print a
 //      notice: a warning that went away is a fix, and failing the build for it would punish the
 //      person who fixed it.
 //   1  at least one in-scope warning is NOT in the baseline, the log measured nothing while the
-//      baseline expects warnings, or the arguments/files are bad.
+//      baseline expects warnings, an --unlocated-scope warning was emitted, or the arguments/files
+//      are bad.
 
 #:property TreatWarningsAsErrors=true
 #:property Nullable=enable
@@ -39,6 +46,7 @@ string? logPath = null;
 string? baselinePath = null;
 var repoRoot = Directory.GetCurrentDirectory();
 string? scope = null;
+string? unlocatedScope = null;
 var allowEmpty = false;
 
 for (var i = 0; i < args.Length; i++)
@@ -50,6 +58,7 @@ for (var i = 0; i < args.Length; i++)
         case "--baseline":
         case "--repo-root":
         case "--scope":
+        case "--unlocated-scope":
             // Read the value here so a flag with nothing after it reports the real problem instead
             // of falling through and claiming the flag itself is unrecognized.
             if (i + 1 >= args.Length)
@@ -58,7 +67,8 @@ for (var i = 0; i < args.Length; i++)
             if (arg == "--log") logPath = value;
             else if (arg == "--baseline") baselinePath = value;
             else if (arg == "--repo-root") repoRoot = value;
-            else scope = value;
+            else if (arg == "--scope") scope = value;
+            else unlocatedScope = value;
             break;
         case "--allow-empty":
             allowEmpty = true;
@@ -90,7 +100,11 @@ string[] scopePrefixes = scope is null
     ? [AotWarningCheck.DefaultScope]
     : scope.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-var scan = AotWarningCheck.Scan(File.ReadAllLines(logPath), repoRoot, scopePrefixes);
+string[] unlocatedPrefixes = unlocatedScope is null
+    ? []
+    : unlocatedScope.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+var scan = AotWarningCheck.Scan(File.ReadAllLines(logPath), repoRoot, scopePrefixes, unlocatedPrefixes);
 var baseline = AotWarningCheck.ReadBaseline(File.ReadAllLines(baselinePath));
 var scopeDisplay = string.Join(", ", scopePrefixes);
 
@@ -102,8 +116,24 @@ Console.WriteLine($"  scope            : {scopeDisplay}");
 Console.WriteLine($"  in scope         : {scan.InScope.Count} distinct warning(s)");
 Console.WriteLine($"  other files      : {scan.OtherFileCount} warning(s) in files outside the scope");
 Console.WriteLine($"  no source location: {scan.NoLocationCount} warning(s) ILC/ILLink reported without a file - dependencies and assembly-level diagnostics land here, and none of them can be baselined");
+if (unlocatedPrefixes.Length > 0)
+    Console.WriteLine($"  no location, ours: {scan.UnlocatedInScope.Count} of those with a member in {string.Join(", ", unlocatedPrefixes)}");
 Console.WriteLine($"  baseline entries : {baseline.Count}");
 Console.WriteLine();
+
+if (scan.UnlocatedInScope.Count > 0)
+{
+    Console.WriteLine($"FAILED: {scan.UnlocatedInScope.Count} trim/AOT warning(s) from {string.Join(", ", unlocatedPrefixes)} code arrived without a");
+    Console.WriteLine("        source file, so they cannot be baselined. Fix the site:");
+    Console.WriteLine();
+    foreach (var display in scan.UnlocatedInScope)
+    {
+        Console.WriteLine($"  {display}");
+        AotWarningCheck.Annotate("error", $"New AOT warning (no source location): {display}");
+    }
+
+    return 1;
+}
 
 var emitted = scan.InScope.Keys.ToList();
 
@@ -177,6 +207,7 @@ internal static class AotWarningCheck
     internal const string Usage = """
         usage: dotnet run scripts/CheckAotWarnings.cs -- --log <path> --baseline <path>
                    [--repo-root <dir>] [--scope <prefix>[,<prefix>...]] [--allow-empty]
+                   [--unlocated-scope <namespace>[,<namespace>...]]
 
           --log         a `dotnet publish` log, captured with `2>&1 | tee`.
           --baseline    the checked-in baseline file.
@@ -186,6 +217,10 @@ internal static class AotWarningCheck
                         with to be compared against the baseline. Defaults to src/core/Akka/.
           --allow-empty do not fail when the log has no in-scope warnings but the baseline is
                         non-empty. Only correct when the surface really did go clean.
+          --unlocated-scope
+                        comma-separated namespace prefix(es), e.g. Akka. A warning with NO source
+                        file whose member starts with one fails the check. For publishes where ILC
+                        never sees the PDBs, so --scope alone would see nothing.
         """;
 
     /// <summary>
@@ -210,7 +245,7 @@ internal static class AotWarningCheck
     /// counted so a log that reports *only* these cannot masquerade as a clean run.
     /// </summary>
     private static readonly Regex NoLocation = new(
-        @"\b(?:warning|error)\s+IL\d{4}:",
+        @"\b(?:warning|error)\s+IL\d{4}:\s*(?<body>.*)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
@@ -223,9 +258,12 @@ internal static class AotWarningCheck
         @"^(?<member>\S+?):\s+",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    /// <summary>MSBuild's trailing <c> [/path/to/project.csproj]</c> annotation.</summary>
+    /// <summary>
+    /// MSBuild's trailing <c> [/path/to/project.csproj]</c> annotation, which a multi-targeted project (the MAUI
+    /// canary) writes as <c> [/path/to/project.csproj::TargetFramework=net10.0-maccatalyst]</c>.
+    /// </summary>
     private static readonly Regex ProjectSuffix = new(
-        @"\s*\[[^\[\]]*\.csproj\]\s*$",
+        @"\s*\[[^\[\]]*\.csproj(?:::[^\[\]]*)?\]\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
@@ -257,7 +295,8 @@ internal static class AotWarningCheck
     internal sealed record ScanResult(
         Dictionary<string, string> InScope,
         int OtherFileCount,
-        int NoLocationCount);
+        int NoLocationCount,
+        IReadOnlyList<string> UnlocatedInScope);
 
     /// <summary>
     /// Writes an Azure Pipelines logging command, but only when running on an agent - locally it
@@ -280,20 +319,37 @@ internal static class AotWarningCheck
     /// Reduces a publish log to the distinct set of in-scope warnings, keyed so that unrelated edits
     /// do not churn the baseline.
     /// </summary>
-    internal static ScanResult Scan(IEnumerable<string> logLines, string repoRoot, IReadOnlyList<string> scopePrefixes)
+    internal static ScanResult Scan(IEnumerable<string> logLines, string repoRoot, IReadOnlyList<string> scopePrefixes,
+        IReadOnlyList<string> unlocatedPrefixes)
     {
         var found = new List<Warning>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var otherFile = 0;
         var noLocation = 0;
+        var unlocatedInScope = new List<string>();
+        var unlocatedSeen = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var line in logLines)
         {
             var match = Diagnostic.Match(line);
             if (!match.Success)
             {
-                if (NoLocation.IsMatch(line))
+                var unlocated = NoLocation.Match(line);
+                if (unlocated.Success)
+                {
                     noLocation++;
+
+                    // ILC/ILLink put the owning member in front of the prose; only that names whose code it is
+                    var unlocatedBody = ProjectSuffix.Replace(unlocated.Groups["body"].Value, string.Empty).Trim();
+                    var owner = MemberPrefix.Match(unlocatedBody);
+                    if (owner.Success
+                        && unlocatedPrefixes.Any(p => owner.Groups["member"].Value.StartsWith(p, StringComparison.Ordinal))
+                        && unlocatedSeen.Add(unlocatedBody))
+                    {
+                        unlocatedInScope.Add(ProjectSuffix.Replace(line, string.Empty).Trim());
+                    }
+                }
+
                 continue;
             }
 
@@ -335,7 +391,7 @@ internal static class AotWarningCheck
         foreach (var warning in kept)
             inScope[warning.Key] = warning.Display;
 
-        return new ScanResult(inScope, otherFile, noLocation);
+        return new ScanResult(inScope, otherFile, noLocation, unlocatedInScope);
     }
 
     /// <summary>

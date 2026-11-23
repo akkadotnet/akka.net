@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- NOT in Akka.slnx on purpose: a MAUI project needs the MAUI workloads to restore, and the solution build
+       runs on agents that do not have them. CI publishes this project directly (MauiAotCanary job in
+       build-system/pr-validation.yaml). -->
+
+  <PropertyGroup>
+    <!-- One MAUI target per host OS, so a restore never asks for a workload the machine cannot have
+         (Mac Catalyst only builds on macOS). Override with -p:TargetFrameworks=... for anything else. -->
+    <!-- The maccatalyst platform version is pinned. Without it the workload picks its newest pack, and each pack
+         builds with exactly one Xcode major.minor: SDK 10.0.401 brings .NET for Mac Catalyst 27.0, which needs
+         Xcode 27.0, and the CI image stops at Xcode 26.3. Every .NET 10 maccatalyst workload also carries the
+         26.0 pack (it needs Xcode 26.0), and MAUI 10 itself targets net10.0-maccatalyst26.0. -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net10.0-maccatalyst26.0</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('osx'))">net10.0-android</TargetFrameworks>
+
+    <OutputType>Exe</OutputType>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- MAUI's binding source generator emits interceptors; the repo-wide LangVersion 12 is too old for them. -->
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Akka.Maui.AOT.App</RootNamespace>
+    <IsPackable>false</IsPackable>
+
+    <ApplicationTitle>Akka.NET MAUI canary</ApplicationTitle>
+    <ApplicationId>net.getakka.mauicanary</ApplicationId>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- Native AOT. Not gated on a RuntimeIdentifier like the console canaries: this project is not in the solution,
+       so nothing restores it without meaning to publish it, and MAUI's docs say PublishAot must not depend on the
+       configuration (it also flips trimming feature switches that Debug builds should share). -->
+  <PropertyGroup Label="AotSettings">
+    <PublishAot>true</PublishAot>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <!-- Same as the other canaries: this app's job is to print ILC's IL2xxx/IL3xxx list, so ILC's warnings must
+         not fail the publish. The app's own C# still builds with warnings as errors. -->
+    <IlcTreatWarningsAsErrors>false</IlcTreatWarningsAsErrors>
+    <!-- The Akka.Hosting #8782 setup: invariant globalization plus a satellite assembly (Resources/Strings.cs.resx). -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+    <!-- CI runs the .app straight from the publish directory; no installer package, no signing identity. -->
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <!-- XA1040: Native AOT on Android is experimental in .NET 10. Expected here, not a failure. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);XA1040</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Brings Akka.Hosting, Akka.DependencyInjection, Akka.Streams and Akka. -->
+    <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting.Maui\Akka.Hosting.Maui.csproj" />
+  </ItemGroup>
+
+  <!-- Turns Akka.DynamicTypeLoading off, same as the other canaries: buildTransitive/Akka.targets only does this
+       automatically for the NuGet package, not for a ProjectReference. -->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Akka.DynamicTypeLoading" Value="false" Trim="true" />
+  </ItemGroup>
+
+</Project>
