@@ -38,9 +38,9 @@ public class SplitBrainConfig : MultiNodeConfig
         CommonConfig = DebugConfig(false)
             .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.remote.retry-gate-closed-for = 3s
-                    akka.cluster.auto-down-unreachable-after = 1s
                     akka.cluster.failure-detector.threshold = 4
                 "))
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.FromSeconds(1)))
             .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
 
         TestTransport = true;

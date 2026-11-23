@@ -42,11 +42,12 @@ public class DistributedPubSubMediatorSpecConfig : MultiNodeConfig
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.actor.serialize-messages = off
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = 0s
-                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI stalls during formation (default 3s); keep 0s auto-down (spec crashes nodes)
+                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI stalls during formation (default 3s); keep zero-delay TestKit downing (spec crashes nodes)
                 akka.cluster.pub-sub.max-delta-elements = 500
                 akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
-            ").WithFallback(DistributedPubSub.DefaultConfig());
+            ")
+            .WithFallback(AutoDowning.GetConfig(TimeSpan.Zero))
+            .WithFallback(DistributedPubSub.DefaultConfig());
     }
 }
 

@@ -39,8 +39,7 @@ namespace Akka.Cluster
     }
 
     /// <summary>
-    /// Default downing provider used when no provider is configured and 'auto-down-unreachable-after'
-    /// is not enabled.
+    /// Downing provider used when no automatic downing provider is configured.
     /// </summary>
     public sealed class NoDowning : IDowningProvider
     {

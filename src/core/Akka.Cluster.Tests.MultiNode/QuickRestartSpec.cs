@@ -34,7 +34,6 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.cluster.auto-down-unreachable-after = off
                     # Dilate every Within/AwaitAssert window in this spec uniformly. The
                     # same-address rejoin each round is a multi-step convergence dance (leader
                     # downs the old incarnation, removes it, the new incarnation's seed join
