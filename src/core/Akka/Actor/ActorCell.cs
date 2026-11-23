@@ -7,6 +7,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Akka.Actor.Internal;
@@ -41,8 +42,15 @@ namespace Akka.Actor
         private const int SuspendedState = 1;
         private const int SuspendedWaitForChildrenState = 2;
 
+        // Every Tell to this actor reads the method table, _self, the mailbox, the dispatcher and the system
+        // (SendMessage, Dispatch). Declaring them first keeps them on the object's first cache line, apart from
+        // the fields written for every processed message (declared last, in ActorCell.ReceiveTimeout.cs).
         private volatile Mailbox? _mailboxDoNotCallMeDirectly;
+        private readonly MessageDispatcher _dispatcher;
+        private readonly ActorSystemImpl _systemImpl;
         private ActorTaskScheduler? _taskScheduler;
+        private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private ImmutableDictionary<string, FunctionRef> _functionRefsDoNotCallMeDirectly = ImmutableDictionary<string, FunctionRef>.Empty;
 
         // special system message stash, used when we aren't able to handle other system messages just yet
         private LatestFirstSystemMessageList _sysMsgStash = SystemMessageList.LNil;
@@ -76,9 +84,9 @@ namespace Akka.Actor
         {
             _self = self;
             Props = props;
-            SystemImpl = system;
+            _systemImpl = system;
             Parent = parent;
-            Dispatcher = dispatcher;
+            _dispatcher = dispatcher;
         }
 
         /// <summary>
@@ -97,7 +105,7 @@ namespace Akka.Actor
         /// <summary>
         /// This actor's message dispatcher.
         /// </summary>
-        public MessageDispatcher Dispatcher { get; private set; }
+        public MessageDispatcher Dispatcher => _dispatcher;
         
         /// <summary>
         /// Returns <c>true</c> if this actor is local to the system. Can only return <c>false</c> if this actor
@@ -138,7 +146,7 @@ namespace Akka.Actor
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        public ActorSystemImpl SystemImpl { get; }
+        public ActorSystemImpl SystemImpl => _systemImpl;
 
         /// <summary>
         /// The <see cref="Props"/> used to create this actor.
