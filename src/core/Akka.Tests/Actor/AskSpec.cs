@@ -144,6 +144,24 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public async Task Ask_finite_timeout_should_fire_when_garbage_collected_while_pending()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+            var pending = actor.Ask<string>("timeout", TimeSpan.FromSeconds(1));
+
+            var deadline = DateTime.UtcNow.AddMilliseconds(300);
+            while (DateTime.UtcNow < deadline)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                await Task.Delay(20);
+            }
+
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+
+        [Fact]
         public async Task Ask_should_put_timeout_answer_into_deadletter()
         {
             var actor = Sys.ActorOf<SomeActor>();            

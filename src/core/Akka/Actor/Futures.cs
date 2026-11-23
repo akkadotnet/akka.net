@@ -128,6 +128,38 @@ namespace Akka.Actor
         }
 
 #nullable enable
+        private sealed class AskState<T>
+        {
+            public static readonly TimerCallback OnTimeout = static s =>
+            {
+                var state = (AskState<T>)s!;
+                state.Result.TrySetException(new AskTimeoutException($"Timeout after {state.Timeout.TotalSeconds:F2} seconds"));
+            };
+
+            public static readonly Action<object?> OnCancel = static s => ((AskState<T>)s!).Result.TrySetCanceled();
+
+            public static readonly Action<Task, object?> OnCompleted = static (_, s) =>
+            {
+                var state = (AskState<T>)s!;
+                state.Provider.UnregisterTempActor(state.Path);
+                state.TimeoutTimer?.Dispose();
+                state.CancellationRegistration.Dispose();
+            };
+
+            public AskState(TaskCompletionSource<T> result, IActorRefProvider provider)
+            {
+                Result = result;
+                Provider = provider;
+            }
+
+            public readonly TaskCompletionSource<T> Result;
+            public readonly IActorRefProvider Provider;
+            public ActorPath Path = null!;
+            public TimeSpan Timeout;
+            public Timer? TimeoutTimer;
+            public CancellationTokenRegistration CancellationRegistration;
+        }
+
         private static FutureActorRef<T> BeginAsk<T>(ICanTell self, TimeSpan? timeout,
             CancellationToken cancellationToken, out Task<T> resultTask)
         {
@@ -136,32 +168,36 @@ namespace Akka.Actor
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
             var result = TaskEx.NonBlockingTaskCompletionSource<T>();
+            var state = new AskState<T>(result, provider);
 
-            CancellationTokenSource? timeoutCancellation = null;
             timeout ??= provider.Settings.AskTimeout;
-
-            CancellationTokenRegistration? ctr1 = null;
-            CancellationTokenRegistration? ctr2 = null;
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
-                timeoutCancellation = new CancellationTokenSource();
+                state.Timeout = timeout.Value;
 
-                ctr1 = timeoutCancellation.Token.Register(() =>
+                // Timer captures the ExecutionContext, CancelAfter did not
+                var suppressFlow = !ExecutionContext.IsFlowSuppressed();
+                var flowControl = suppressFlow ? ExecutionContext.SuppressFlow() : default;
+                try
                 {
-                    result.TrySetException(new AskTimeoutException($"Timeout after {timeout.Value.TotalSeconds:F2} seconds"));
-                });
-
-                timeoutCancellation.CancelAfter(timeout.Value);
+                    state.TimeoutTimer = new Timer(AskState<T>.OnTimeout, state, timeout.Value, Timeout.InfiniteTimeSpan);
+                }
+                finally
+                {
+                    if (suppressFlow)
+                        flowControl.Undo();
+                }
             }
 
             if (cancellationToken.CanBeCanceled)
             {
-                ctr2 = cancellationToken.Register(() => result.TrySetCanceled());
+                state.CancellationRegistration = cancellationToken.Register(AskState<T>.OnCancel, state);
             }
 
             var future = provider.CreateFutureRef(result);
             var path = future.Path;
+            state.Path = path;
 
             try
             {
@@ -171,14 +207,8 @@ namespace Akka.Actor
             finally
             {
                 // Keep cleanup attached even if temporary registration throws.
-                _ = result.Task.ContinueWith(_ =>
-                {
-                    provider.UnregisterTempActor(path);
-
-                    ctr1?.Dispose();
-                    ctr2?.Dispose();
-                    timeoutCancellation?.Dispose();
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                _ = result.Task.ContinueWith(AskState<T>.OnCompleted, state, CancellationToken.None,
+                    TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Current);
             }
 
             resultTask = result.Task;
