@@ -1141,10 +1141,23 @@ namespace Akka.Remote.Artery
             var originUid = frame.Header.OriginUid;
             var recipientId = frame.Header.RecipientId;
 
-            // A cached ref with the recipient's id is used without decoding or resolving the
-            // recipient path. While messages wait for a remote-deployed recipient to be created,
-            // the cache is skipped so later messages queue behind them.
-            var recipient = Volatile.Read(ref _pendingRemoteDeployedResolveCount) == 0 ? _localRefs.Get(recipientId) : null;
+            // A recipient found by its id is used without decoding or resolving the recipient path.
+            // A negative id is an Ask future, looked up in the temp container by its temp number;
+            // a future that has completed is no longer there and takes the path route, as before.
+            // Any other id is looked up in the local ref cache, which is skipped while messages wait
+            // for a remote-deployed recipient to be created so later messages queue behind them.
+            IInternalActorRef? recipient;
+            var toFuture = false;
+            if (recipientId < 0)
+            {
+                recipient = TempChildByWireId(recipientId);
+                toFuture = recipient is not null;
+            }
+            else
+            {
+                recipient = Volatile.Read(ref _pendingRemoteDeployedResolveCount) == 0 ? _localRefs.Get(recipientId) : null;
+            }
+
             string? recipientPath = null;
             if (recipient is null)
             {
@@ -1185,8 +1198,9 @@ namespace Akka.Remote.Artery
             // address and the raw path literal bytes, with no decode or parse, and reused for that
             // sender's next messages. Its path is parsed only if something reads it, so a malformed
             // sender path is no longer rejected here.
+            // An Ask future ignores the sender of its reply, so that sender is not resolved at all.
             var senderId = frame.Header.SenderId;
-            var sender = senders.Get(originUid, senderId);
+            var sender = toFuture ? System.DeadLetters : senders.Get(originUid, senderId);
             string? senderPath = null;
             if (sender is null && senderId != 0 && frame.SenderKind == ArteryTagKind.Literal &&
                 _inboundContext?.TryResolveOriginAddress(originUid) is { } originAddress)
@@ -1203,7 +1217,10 @@ namespace Akka.Remote.Artery
                 }
 
                 sender = new RemoteActorRef(this, DefaultAddress, originAddress, senderPathUtf8, senderId);
-                senders.Put(originUid, senderId, sender);
+
+                // An Ask future (negative id) is a new sender every time; caching it would only evict others.
+                if (senderId > 0)
+                    senders.Put(originUid, senderId, sender);
             }
 
             if (sender is null)
@@ -1254,6 +1271,13 @@ namespace Akka.Remote.Artery
 
             DeliverOrdinaryMessage(recipient, message, sender);
         }
+
+        /// <summary>The Ask future registered in the temp container under the temp number in <paramref name="wireId"/>, or <see langword="null"/>.</summary>
+        private IInternalActorRef? TempChildByWireId(long wireId) =>
+            Provider.TempContainer is VirtualPathContainer temp &&
+            temp.TryGetChild((wireId & ~MinimalActorRef.TempChildIdFlag).Base64Encode(), out var child)
+                ? child
+                : null;
 
         /// <summary>The sender path the remote-deploy buffers keep, for a sender that was not resolved from its path.</summary>
         private static string? SenderPathOf(in ArteryEnvelopeDecoded frame, IActorRef sender) =>

@@ -128,7 +128,7 @@ namespace Akka.Remote
         internal Address RemoteAddress => _address;
 
         /// <summary>INTERNAL API. The uid of <see cref="Path"/>, read without forcing it.</summary>
-        internal long PathUid => _path?.Uid ?? WireId;
+        internal long PathUid => _path?.Uid ?? (WireId > 0 ? WireId : 0);
 
         /// <summary>INTERNAL API. The serialized path as UTF-8, formatted at most once.</summary>
         internal byte[] SerializedPathUtf8 =>

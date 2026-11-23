@@ -38,8 +38,15 @@ namespace Akka.Remote.Artery
 
         private readonly IInternalActorRef?[] _slots = new IInternalActorRef?[Capacity];
 
-        /// <summary>The id a local ref carries on the wire: its actor UID, or 0 for none.</summary>
-        public static long IdOf(IInternalActorRef local) => local.Path.Uid;
+        /// <summary>
+        /// The id a local ref carries on the wire: its actor UID; for an Ask future, whose path has no
+        /// uid, its negative /temp child id (never cached here); otherwise 0.
+        /// </summary>
+        public static long IdOf(IInternalActorRef local)
+        {
+            var uid = local.Path.Uid;
+            return uid != 0 ? uid : local is MinimalActorRef minimal ? minimal.WireId : 0;
+        }
 
         /// <summary>The cached ref with exactly this id, or <see langword="null"/>.</summary>
         public IInternalActorRef? Get(long id)
