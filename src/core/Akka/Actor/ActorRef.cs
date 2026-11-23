@@ -129,6 +129,11 @@ namespace Akka.Actor
         public override IActorRefProvider Provider => _provider;
 
         /// <summary>
+        /// INTERNAL API: set by Ask; its cleanup runs once the task is completed.
+        /// </summary>
+        internal Futures.AskState<T> AskState;
+
+        /// <summary>
         /// Completes the task for a compatible ordinary reply and faults it for system messages, failure replies, or incompatible reply types.
         /// </summary>
         /// <param name="message">A compatible ordinary value completes the task, and <c>null</c> completes it with the default value. <see cref="Status.Failure"/> faults the task unless <typeparamref name="T"/> derives from <see cref="Status"/>; the legacy <see cref="Failure"/> follows the same rule for <see cref="Failure"/>. An incompatible ordinary value faults the task with an <see cref="ArgumentException"/>.</param>
@@ -165,6 +170,9 @@ namespace Akka.Actor
                     break;
             }
 
+            if (_result.Task.IsCompleted)
+                AskState?.Cleanup();
+
             //ignore canceled ask and put unhandled answers into deadletter
             if (!handled && !_result.Task.IsCanceled)
                 _provider.DeadLetters.Tell(message ?? default(T), this);            
@@ -194,7 +202,8 @@ namespace Akka.Actor
             else
             {
                 // TODO: blow up the caller here by just throwing the exception at the callsite?
-                _result.TrySetException(new InvalidOperationException($"system message of type '{message.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
+                if (_result.TrySetException(new InvalidOperationException($"system message of type '{message.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}")))
+                    AskState?.Cleanup();
             }
         }
 
