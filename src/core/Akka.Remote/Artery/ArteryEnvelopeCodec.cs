@@ -155,6 +155,10 @@ namespace Akka.Remote.Artery
         /// The recipient path already encoded as UTF-8; when not <see langword="null"/> it is written
         /// instead of <paramref name="recipientPath"/>.
         /// </param>
+        /// <param name="reuse">
+        /// A writer from an earlier call that has since been detached, re-armed instead of allocating a new
+        /// one; it must use <paramref name="pool"/>. <see langword="null"/> allocates a new writer.
+        /// </param>
         /// <returns>
         /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
         /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
@@ -172,7 +176,8 @@ namespace Akka.Remote.Artery
             ArrayPool<byte>? pool = null,
             long senderId = 0,
             long recipientId = 0,
-            byte[]? recipientPathUtf8 = null)
+            byte[]? recipientPathUtf8 = null,
+            Akka.Serialization.PooledPayloadWriter? reuse = null)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -180,7 +185,7 @@ namespace Akka.Remote.Artery
                 throw new ArgumentNullException(nameof(message));
 
             return Akka.Serialization.Serialization.WithTransport(serialization.System,
-                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8), static state =>
+                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8, reuse), static state =>
             {
                 var serializer = state.serialization.FindSerializerV2For(state.message);
                 var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, state.message) ?? string.Empty;
@@ -201,7 +206,11 @@ namespace Akka.Remote.Artery
                 if (payloadSizeHint != Akka.Serialization.SerializerV2.UnknownSize)
                     capacityHint += payloadSizeHint;
 
-                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: state.pool);
+                var writer = state.reuse;
+                if (writer is null)
+                    writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: state.pool);
+                else
+                    writer.Rearm(capacityHint);
                 try
                 {
                     // Reserve the frame-length field + fixed header; both are back-patched below

@@ -242,6 +242,22 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// INTERNAL API. Re-arms a detached or disposed writer with a newly rented buffer, so a
+        /// single-threaded caller can reuse one writer for every encode instead of allocating one each time.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The writer still owns a buffer.</exception>
+        internal void Rearm(int initialCapacityHint)
+        {
+            if (!_detached && !_disposed)
+                throw new InvalidOperationException("Only a detached or disposed writer can be re-armed.");
+
+            _buffer = _pool.Rent(Math.Min(Math.Max(initialCapacityHint, MinimumCapacity), _maxCapacity));
+            _written = 0;
+            _detached = false;
+            _disposed = false;
+        }
+
+        /// <summary>
         /// Resets the writer for reuse without re-renting: the currently rented array is kept and
         /// the written count is set back to zero. Only valid while the writer is still alive (has
         /// not been detached or disposed).

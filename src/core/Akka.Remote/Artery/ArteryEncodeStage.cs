@@ -91,6 +91,9 @@ namespace Akka.Remote.Artery
         {
             private readonly ArteryEncodeStage _stage;
 
+            // One writer for the life of the stage: each encode detaches its buffer and the next re-arms it.
+            private Akka.Serialization.PooledPayloadWriter? _writer;
+
             public Logic(ArteryEncodeStage stage) : base(stage.Shape)
             {
                 _stage = stage;
@@ -109,7 +112,8 @@ namespace Akka.Remote.Artery
                 // behavior of failing the whole outbound stream on an encode error).
                 var writer = ArteryEnvelopeCodec.Encode(
                     _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool,
-                    elem.SenderId, elem.RecipientId, elem.RecipientPathUtf8);
+                    elem.SenderId, elem.RecipientId, elem.RecipientPathUtf8, _writer);
+                _writer = writer;
 
                 // Detach moves ownership of the encoded, pooled buffer to `owner` -- no
                 // WrittenSpan.ToArray() copy, and deliberately NO writer.Dispose() here (Detach
