@@ -47,7 +47,7 @@ namespace Akka.Actor
         {
             var r = GetRandomActorName("$$");
             var n = string.IsNullOrEmpty(suffix) ? r : r + "-" + suffix;
-            var childPath = new ChildActorPath(Self.Path, n, NewUid());
+            var childPath = new ChildActorPath(Self.Path, n, NewUid(SystemImpl));
             var functionRef = new FunctionRef(childPath, SystemImpl.Provider, SystemImpl.EventStream, tell);
 
             return ImmutableInterlocked.GetOrAdd(ref _functionRefsDoNotCallMeDirectly, childPath.Name, functionRef);
@@ -467,7 +467,7 @@ namespace Akka.Actor
             IInternalActorRef actor;
             try
             {
-                var childPath = new ChildActorPath(Self.Path, name, NewUid());
+                var childPath = new ChildActorPath(Self.Path, name, NewUid(SystemImpl));
                 actor = SystemImpl.Provider.ActorOf(SystemImpl, props, _self, childPath,
                     systemService: systemService, deploy: null, lookupDeploy: true, async: async);
             }

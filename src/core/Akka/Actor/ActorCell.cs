@@ -367,8 +367,11 @@ namespace Akka.Actor
             BecomeStacked(m => { receive(m); return true; });
         }
 
-        private static long NewUid()
+        private static long NewUid(ActorSystemImpl system)
         {
+            if (system.Use64BitActorUids)
+                return system.NextActorUid();
+
             // Note that this uid is also used as hashCode in ActorRef, so be careful
             // to not break hashing if you change the way uid is generated
             var uid = ThreadLocalRandom.Current.Next();
