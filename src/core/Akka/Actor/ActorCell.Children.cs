@@ -19,9 +19,7 @@ namespace Akka.Actor
 {
     public partial class ActorCell
     {
-        private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
-        private ImmutableDictionary<string, FunctionRef> _functionRefsDoNotCallMeDirectly = ImmutableDictionary<string, FunctionRef>.Empty;
 
         /// <summary>
         /// The child container collection, used to house information about all child actors.

@@ -6,11 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
+using Akka.Util;
 using Akka.TestKit;
 using Xunit;
 
@@ -39,6 +44,12 @@ namespace Akka.Tests.Dispatch
                         type = ForkJoinDispatcher
                         dedicated-thread-pool.thread-count = 3
                         dedicated-thread-pool.deadlock-timeout = 3s
+                    }
+                    my-single-thread-deadline-dispatcher{
+                        executor = fork-join-executor
+                        dedicated-thread-pool.thread-count = 1
+                        throughput = 5
+                        throughput-deadline-time = 500ms
                     }
                     my-synchronized-dispather{
                         type = SynchronizedDispatcher
@@ -193,9 +204,80 @@ namespace Akka.Tests.Dispatch
             d1.ShouldNotBeSame(d2);
         }
 
+        [Fact]
+        public async Task Dispatcher_with_throughput_deadline_must_process_more_than_one_message_per_mailbox_run()
+        {
+            // the deadline is a duration; make sure the monotonic clock is well past it, so a duration
+            // mistaken for an absolute deadline would already have expired
+            while (MonotonicClock.Elapsed < TimeSpan.FromSeconds(1))
+                await Task.Delay(100);
+
+            var order = new ConcurrentQueue<string>();
+            var gate = new ManualResetEventSlim();
+            var entered = new ManualResetEventSlim();
+            var props = Props.Create(() => new RunRecorder(order, gate, entered, TestActor))
+                .WithDispatcher("myapp.my-single-thread-deadline-dispatcher");
+            var a = Sys.ActorOf(props, "a");
+            var b = Sys.ActorOf(props, "b");
+
+            // occupy the dispatcher's only thread, then fill both mailboxes so the runs of a and b interleave
+            a.Tell("block");
+            entered.Wait(TimeSpan.FromSeconds(3)).ShouldBeTrue();
+            for (var i = 0; i < 20; i++)
+            {
+                a.Tell(i);
+                b.Tell(i);
+            }
+            gate.Set();
+            await ExpectMsgAsync("done");
+            await ExpectMsgAsync("done");
+
+            // each contiguous stretch of messages from one actor is one mailbox run
+            var runs = new List<int>();
+            string last = null;
+            foreach (var name in order)
+            {
+                if (name == last) runs[^1]++;
+                else runs.Add(1);
+                last = name;
+            }
+            Assert.True(runs.Max() > 1, $"messages per run: {string.Join(",", runs)}");
+        }
+
         #endregion
 
         #region Support methods and classes
+
+        class RunRecorder : UntypedActor
+        {
+            private readonly ConcurrentQueue<string> _order;
+            private readonly ManualResetEventSlim _gate;
+            private readonly ManualResetEventSlim _entered;
+            private readonly IActorRef _done;
+            private int _received;
+
+            public RunRecorder(ConcurrentQueue<string> order, ManualResetEventSlim gate, ManualResetEventSlim entered, IActorRef done)
+            {
+                _order = order;
+                _gate = gate;
+                _entered = entered;
+                _done = done;
+            }
+
+            protected override void OnReceive(object message)
+            {
+                if (message is string)
+                {
+                    _entered.Set();
+                    _gate.Wait();
+                    return;
+                }
+
+                _order.Enqueue(Self.Path.Name);
+                if (++_received == 20) _done.Tell("done");
+            }
+        }
+
 
         class DispatcherNameEcho : UntypedActor
         {
