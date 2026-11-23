@@ -684,6 +684,7 @@ namespace Akka.Remote.Artery
                 var laneCount = _stage.InboundLanes;
                 _laneLog = Log;
                 var lanes = new Channel<LaneWorkItem>[laneCount];
+                var onConsumerFailed = GetAsyncCallback<Exception>(FailStage);
 
                 for (var i = 0; i < laneCount; i++)
                 {
@@ -700,7 +701,9 @@ namespace Akka.Remote.Artery
                     var log = _laneLog;
                     var serialization = _stage.Serialization;
                     var dispatch = _stage.DispatchOrdinary!;
-                    _ = Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log));
+                    // A consumer that ends abnormally would leave its lane unread: fail the stage so the connection restarts.
+                    Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log))
+                        .ContinueWith(t => onConsumerFailed(t.Exception!.GetBaseException()), TaskContinuationOptions.OnlyOnFaulted);
                 }
 
                 _lanes = lanes;
@@ -740,7 +743,7 @@ namespace Akka.Remote.Artery
                                 var message = serialization.Deserialize(item.Payload, item.SerializerId, item.Manifest);
                                 dispatch(message, item.SenderPath, item.RecipientPath, item.OriginUid);
                             }
-                            catch (Exception ex)
+                            catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
                             {
                                 log.Warning(
                                     ex,
@@ -751,9 +754,10 @@ namespace Akka.Remote.Artery
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
                 {
                     log.Warning(ex, "Inbound Artery lane consumer loop terminated unexpectedly.");
+                    throw;
                 }
             }
 
