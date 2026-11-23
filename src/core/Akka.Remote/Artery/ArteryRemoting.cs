@@ -1561,7 +1561,7 @@ namespace Akka.Remote.Artery
                 }
 
                 if (!association.IsLargeOutboundMaterialized)
-                    association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
+                    EnsureLargeOutboundMaterialized(remoteAddress, association);
 
                 return;
             }
@@ -1596,8 +1596,17 @@ namespace Akka.Remote.Artery
                 // callback for who actually wins EnsureOutboundMaterialized after a reset, and
                 // BOTH must agree on whether a fresh handshake is required (see
                 // Association.HasOutboundEverRestarted's remarks).
-                association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
+                EnsureOutboundMaterialized(remoteAddress, association);
         }
+
+        // Kept out of line so the closure capturing remoteAddress is only allocated when materialization is needed.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void EnsureLargeOutboundMaterialized(Address remoteAddress, Association association)
+            => association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void EnsureOutboundMaterialized(Address remoteAddress, Association association)
+            => association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
 
         /// <summary>
         /// Enqueues <paramref name="message"/> onto <paramref name="remoteAddress"/>'s CONTROL
