@@ -12,6 +12,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -268,6 +269,9 @@ namespace Akka.Remote.Artery
         /// </summary>
         private Action<bool>? _onBoundPortKnown;
 
+        /// <summary>Fault-injection hook -- see <see cref="ArteryTransportSetup.OnOutboundControlStarted"/>.</summary>
+        private Action<Address, Action>? _onOutboundControlStarted;
+
         /// <summary>
         /// Applied to EVERY Artery socket: the accepting <c>Tcp.Bind</c> and both outbound
         /// <c>Tcp.OutgoingConnection</c> call sites in <see cref="MaterializeOutboundStream"/>.
@@ -409,6 +413,7 @@ namespace Akka.Remote.Artery
             _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
             _onInboundLanesInitialized = arteryTransportSetup.Select(s => s.OnInboundLanesInitialized).GetOrElse(null);
             _onBoundPortKnown = arteryTransportSetup.Select(s => s.OnBoundPortKnown).GetOrElse(null);
+            _onOutboundControlStarted = arteryTransportSetup.Select(s => s.OnOutboundControlStarted).GetOrElse(null);
 
             // Outbound lanes: one DEDICATED ArrayPool<byte>.Create() per lane (never Shared, never
             // reused across lanes) -- see _laneEncodeBufferPools' remarks. A test-injected
@@ -2349,6 +2354,13 @@ namespace Akka.Remote.Artery
             {
                 if (isControlStream)
                 {
+                    if (_onOutboundControlStarted is { } onControlStarted)
+                    {
+                        var connectionSwitch = KillSwitches.Shared($"arteryOutboundControlTestSwitch-{remoteAddress}");
+                        preambleAndFrames = preambleAndFrames.Via(connectionSwitch.Flow<ReadOnlySequence<byte>>());
+                        onControlStarted(remoteAddress, () => connectionSwitch.Abort(new IOException("Artery control connection aborted by test hook.")));
+                    }
+
                     // halfClose: false on every outbound connection: upstream completion then
                     // sends Tcp.Close, which drains and closes, instead of ConfirmedClose (#8629).
                     Task connectionTask;

@@ -286,10 +286,14 @@ namespace Akka.Remote.Artery
                 switch (evt.Message)
                 {
                     case Ack ack when evt.OriginUid == currentUid:
+                        if (AcknowledgesUnsent(ack.SeqNo))
+                            break;
                         ProcessAck(ack.SeqNo);
                         break;
 
                     case Nack nack when evt.OriginUid == currentUid:
+                        if (AcknowledgesUnsent(nack.SeqNo))
+                            break;
                         ProcessNack(nack.SeqNo);
                         break;
                 }
@@ -297,22 +301,49 @@ namespace Akka.Remote.Artery
                 TryDeliver();
             }
 
+            /// <summary>An Ack/Nack for a seq not yet assigned acknowledges nothing and is ignored.</summary>
+            private bool AcknowledgesUnsent(long seqNo)
+            {
+                if (seqNo < State.NextSeq)
+                    return false;
+
+                Log.Debug("Ignoring Ack/Nack [{0}] from [{1}]: next seq to assign is [{2}].", seqNo, _stage.Context.RemoteAddress, State.NextSeq);
+                return true;
+            }
+
             private void ProcessAck(long seqNo)
             {
                 while (State.Buffer.Count > 0 && State.Buffer.Peek().Seq <= seqNo)
+                {
                     State.Buffer.Dequeue();
+                    _noProgressNackResent = false;
+                }
             }
+
+            /// <summary>True after an immediate resend for a Nack that acknowledged nothing; cleared by progress.</summary>
+            private bool _noProgressNackResent;
 
             private void ProcessNack(long seqNo)
             {
+                var progress = false;
                 while (State.Buffer.Count > 0 && State.Buffer.Peek().Seq <= seqNo)
+                {
                     State.Buffer.Dequeue();
+                    progress = true;
+                }
+
+                if (progress)
+                    _noProgressNackResent = false;
 
                 // Immediate tail resend -- do not wait for the next resend-timer tick. Skipped if a
                 // batch is already queued (bounds memory; see the type-level backpressure remarks).
-                if (State.Buffer.Count > 0 && _outQueue.Count == 0)
+                // A Nack that acknowledged nothing resends immediately only once; further ones wait for the resend timer.
+                if (State.Buffer.Count > 0 && _outQueue.Count == 0 && (progress || !_noProgressNackResent))
+                {
+                    _noProgressNackResent = !progress;
                     foreach (var entry in State.Buffer)
                         _outQueue.Enqueue(entry.Envelope);
+                }
             }
 
             public void OnPush()
@@ -435,6 +466,7 @@ namespace Akka.Remote.Artery
                 State.Buffer.Clear();
                 State.NextSeq = 1;
                 State.CurrentIncarnation = incarnation;
+                _noProgressNackResent = false;
                 DiscardQueuedSystemMessages();
             }
 

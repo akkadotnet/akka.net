@@ -1258,6 +1258,9 @@ namespace Akka.Remote.Artery
     {
         private readonly ConcurrentDictionary<Address, Association> _byAddress = new();
         private readonly ConcurrentDictionary<long, Association> _byUid = new();
+
+        /// <summary>Acker expectation per peer incarnation; entries are never removed.</summary>
+        private readonly ConcurrentDictionary<UniqueAddress, InboundSequenceEntry> _shared = new();
         private readonly int _outboundQueueCapacity;
         private readonly int _controlQueueCapacity;
         private readonly int _largeQueueCapacity;
@@ -1317,6 +1320,21 @@ namespace Akka.Remote.Artery
         public Association? TryGetByUid(long uid) => _byUid.TryGetValue(uid, out var association) ? association : null;
 
         /// <summary>
+        /// The shared acker entry of <paramref name="origin"/>, or null (per-connection memory only) when the
+        /// frame's uid does not match or the peer has no completed handshake and no entry yet.
+        /// </summary>
+        public InboundSequenceEntry? GetInboundSequenceEntry(long originUid, UniqueAddress origin)
+        {
+            if (origin.Uid != originUid)
+                return null;
+            if (_shared.TryGetValue(origin, out var entry))
+                return entry;
+            if (_byUid.TryGetValue(originUid, out var association) && association.RemoteAddress.Equals(origin.Address))
+                return _shared.GetOrAdd(origin, static _ => new InboundSequenceEntry());
+            return null;
+        }
+
+        /// <summary>
         /// A point-in-time snapshot of every association currently known to this registry. Used by
         /// <c>ArteryRemoting.Shutdown</c> to complete every association's outbound channel.
         /// </summary>
@@ -1366,5 +1384,12 @@ namespace Akka.Remote.Artery
             _byUid[peer.Uid] = association;
             return updated;
         }
+    }
+
+    /// <summary>INTERNAL API. Shared system-message expectation of one peer incarnation; also the lock the acker handles its messages under.</summary>
+    internal sealed class InboundSequenceEntry
+    {
+        /// <summary>Next expected seq; guarded by lock (this).</summary>
+        public long Next = 1;
     }
 }
