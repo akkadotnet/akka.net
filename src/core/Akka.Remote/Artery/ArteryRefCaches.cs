@@ -60,11 +60,13 @@ namespace Akka.Remote.Artery
 
         /// <summary>
         /// Stores <paramref name="local"/> under <paramref name="id"/>, which must be its
-        /// <see cref="IdOf"/>. Refs to actors that do not exist are never stored.
+        /// <see cref="IdOf"/>. Only refs backed by an actor cell are stored: a stopped actor's ref
+        /// dead-letters by itself, whereas a function ref (a stream's stage actor) keeps accepting
+        /// messages after it is removed and must be found through its parent each time.
         /// </summary>
         public void Put(long id, IInternalActorRef local)
         {
-            if (id <= 0 || local is EmptyLocalActorRef)
+            if (id <= 0 || local is not ActorRefWithCell)
                 return;
 
             ref var slot = ref _slots[id & Mask];

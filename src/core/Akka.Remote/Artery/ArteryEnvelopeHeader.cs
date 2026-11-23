@@ -132,7 +132,7 @@ namespace Akka.Remote.Artery
             RecipientId = recipientId;
         }
 
-        /// <summary>Envelope wire-layout version. Always 1 in a successfully decoded header.</summary>
+        /// <summary>Envelope wire-layout version. Always <see cref="ArteryEnvelopeHeader.CurrentVersion"/> in a successfully decoded header.</summary>
         public byte Version { get; }
 
         /// <summary>Envelope flags byte. Bit 0 = metadata section present; bits 1-7 are reserved-must-be-zero.</summary>
