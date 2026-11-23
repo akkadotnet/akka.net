@@ -863,11 +863,14 @@ namespace Akka.Actor
         /// <param name="actor">The child reference to register.</param>
         public void AddChild(string name, IInternalActorRef actor)
         {
-            _children.AddOrUpdate(name, actor, (_, v) =>
+            while (!_children.TryAdd(name, actor))
             {
-                Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
-                return v;
-            });
+                if (_children.TryGetValue(name, out var v))
+                {
+                    Log.Warning("{0} replacing child {1} ({2} -> {3})", name, actor, v, actor);
+                    return;
+                }
+            }
         }
 
         /// <summary>

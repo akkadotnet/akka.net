@@ -102,6 +102,7 @@ namespace Akka.Remote.Artery
 
         private const string RetryTimerKey = "OutboundHandshake-Retry";
         private const string TimeoutTimerKey = "OutboundHandshake-Timeout";
+        private const string LivenessTimerKey = "OutboundHandshake-Liveness";
 
         public OutboundHandshakeStage(
             IOutboundContext context,
@@ -209,6 +210,9 @@ namespace Akka.Remote.Artery
             /// </summary>
             private DateTimeOffset? _lastInject;
 
+            /// <summary>Set by the liveness timer once per inject interval; cleared when a Req is injected.</summary>
+            private bool _reinjectDue;
+
             /// <summary>
             /// Resolved once at <see cref="PreStart"/>: the stage's explicit clock, else the
             /// materializing system's scheduler.
@@ -249,7 +253,7 @@ namespace Akka.Remote.Artery
                 if (!_stage.ForceReqOnStart && CanSkipOwnHandshake(state))
                 {
                     _state = State.Completed;
-                    _lastInject = _timeProvider.Now;
+                    ScheduleRepeatedly(LivenessTimerKey, _stage.InjectHandshakeInterval);
                     return;
                 }
 
@@ -427,7 +431,7 @@ namespace Akka.Remote.Artery
 
                         if (IsAvailable(_stage.Out))
                         {
-                            _lastInject = _timeProvider.Now;
+                            _reinjectDue = false;
                             Push(_stage.Out, BuildReqEnvelope());
                         }
 
@@ -437,7 +441,7 @@ namespace Akka.Remote.Artery
                     // Non-control stream: the Req travels via the control side channel and never
                     // occupies this stream's Out slot, so the user element can flow through
                     // immediately below -- no need to hold it.
-                    _lastInject = _timeProvider.Now;
+                    _reinjectDue = false;
                     _stage.Context.SendControl(BuildReqMessage());
                 }
 
@@ -461,6 +465,12 @@ namespace Akka.Remote.Artery
 
             protected override void OnTimer(object timerKey)
             {
+                if (LivenessTimerKey.Equals(timerKey))
+                {
+                    _reinjectDue = true;
+                    return;
+                }
+
                 if (RetryTimerKey.Equals(timerKey))
                 {
                     RefreshCompletionFromContext();
@@ -527,7 +537,7 @@ namespace Akka.Remote.Artery
                 CancelTimer(RetryTimerKey);
                 CancelTimer(TimeoutTimerKey);
                 UnsubscribeHandshakeStateChanged();
-                _lastInject = _timeProvider.Now;
+                ScheduleRepeatedly(LivenessTimerKey, _stage.InjectHandshakeInterval);
             }
 
             private void TryInjectReq()
@@ -556,11 +566,7 @@ namespace Akka.Remote.Artery
                 Push(_stage.Out, BuildReqEnvelope());
             }
 
-            private bool ShouldReinjectForLiveness()
-            {
-                var now = _timeProvider.Now;
-                return _lastInject is not { } lastInject || now - lastInject >= _stage.InjectHandshakeInterval;
-            }
+            private bool ShouldReinjectForLiveness() => _reinjectDue;
 
             private HandshakeReq BuildReqMessage() => new(_stage.Context.LocalAddress, _stage.Context.RemoteAddress);
 

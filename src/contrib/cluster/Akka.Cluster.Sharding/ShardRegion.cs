@@ -1299,7 +1299,7 @@ namespace Akka.Cluster.Sharding
             if (_entityProps == null)
                 throw new IllegalStateException("Shard must not be allocated to a proxy only ShardRegion");
 
-            if (_shardsByRef.Values.Any(shardId => shardId == id)) return shard ?? ActorRefs.Nobody;
+            if (_shardsByRef.Values.Contains(id)) return shard ?? ActorRefs.Nobody;
             _log.Debug("{0}: Starting shard [{1}] in region", _typeName, id);
 
             var name = Uri.EscapeDataString(id);
