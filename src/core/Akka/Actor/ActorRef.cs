@@ -132,7 +132,7 @@ namespace Akka.Actor
         // here instead of in a separate object per Ask. AskProvider is null when no Ask owns this reference.
         internal IActorRefProvider AskProvider;
         internal TimeSpan AskTimeout;
-        internal Timer AskTimeoutTimer;
+        internal ITimer AskTimeoutTimer;
         internal CancellationTokenRegistration AskCancellationRegistration;
         private int _askCleanedUp;
 

@@ -170,7 +170,7 @@ namespace Akka.Actor
                 var flowControl = suppressFlow ? ExecutionContext.SuppressFlow() : default;
                 try
                 {
-                    future.AskTimeoutTimer = new Timer(FutureActorRef<T>.OnAskTimeout, future, timeout.Value, Timeout.InfiniteTimeSpan);
+                    future.AskTimeoutTimer = TimeProvider.System.CreateTimer(FutureActorRef<T>.OnAskTimeout, future, timeout.Value, Timeout.InfiniteTimeSpan);
                 }
                 finally
                 {
