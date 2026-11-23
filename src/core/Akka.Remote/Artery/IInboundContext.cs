@@ -111,6 +111,9 @@ namespace Akka.Remote.Artery
         /// association, and <see langword="false"/> for an unknown uid. See #9010.
         /// </summary>
         bool TryClaimHeartbeatQuarantineNotice(long originUid);
+
+        /// <summary>The shared acker entry of <paramref name="origin"/>, or null for per-connection memory only.</summary>
+        InboundSequenceEntry? GetInboundSequenceEntry(long originUid, UniqueAddress origin);
     }
 
     /// <summary>
@@ -164,5 +167,9 @@ namespace Akka.Remote.Artery
         /// <inheritdoc/>
         public bool TryClaimHeartbeatQuarantineNotice(long originUid) =>
             _registry.TryGetByUid(originUid)?.TryClaimHeartbeatQuarantineNotice(InboundQuarantineCheckStage.HeartbeatNoticeInterval) ?? false;
+
+        /// <inheritdoc/>
+        public InboundSequenceEntry? GetInboundSequenceEntry(long originUid, UniqueAddress origin) =>
+            _registry.GetInboundSequenceEntry(originUid, origin);
     }
 }

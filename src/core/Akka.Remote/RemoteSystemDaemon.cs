@@ -169,8 +169,12 @@ namespace Akka.Remote
                 var child = GetChild(concatenatedChildNames.ToList());
                 if (child.IsNobody())
                 {
-                    var emptyRef = new EmptyLocalActorRef(_system.Provider,
-                        Path / sel.Elements.Select(el => el.ToString()), _system.EventStream);
+                    // A malformed element cannot form a path: dead-letter at the daemon path instead.
+                    ActorPath emptyPath;
+                    try { emptyPath = Path / sel.Elements.Select(el => el.ToString()); }
+                    catch (FormatException) { emptyPath = Path; }
+
+                    var emptyRef = new EmptyLocalActorRef(_system.Provider, emptyPath, _system.EventStream);
                     emptyRef.Tell(sel, sender);
                 }
                 else
@@ -265,10 +269,25 @@ namespace Akka.Remote
             var supervisor = (IInternalActorRef) message.Supervisor;
             var parent = supervisor;
             Props props = message.Props;
-            if(ActorPath.TryParse(message.Path, out var childPath))
+            // The path comes from the peer: a malformed name makes the rebuild throw, so drop the message instead.
+            ActorPath childPath = null, p = null;
+            IEnumerable<string> subPath = null;
+            try
             {
-                IEnumerable<string> subPath = childPath.ElementsWithUid.Drop(1); //drop the /remote
-                ActorPath p = Path/subPath;
+                if (ActorPath.TryParse(message.Path, out childPath))
+                {
+                    subPath = childPath.ElementsWithUid.Drop(1).ToList(); //drop the /remote
+                    p = Path/subPath;
+                }
+            }
+            catch (FormatException ex)
+            {
+                Log.Warning("Ignoring DaemonMsgCreate with malformed path [{0}]: {1}", message.Path, ex.Message);
+                return;
+            }
+
+            if(p != null)
+            {
                 var s = subPath.Join("/");
                 var i = s.IndexOf("#", StringComparison.Ordinal);
                 var childName = i < 0 ? s : s.Substring(0, i); // extract the name without the UID
@@ -312,7 +331,19 @@ namespace Akka.Remote
             var n = 0;
             while (true)
             {
-                var (s, uid) = ActorCell.GetNameAndUid(path);
+                string s;
+                long uid;
+                try
+                {
+                    (s, uid) = ActorCell.GetNameAndUid(path);
+                }
+                catch (FormatException ex)
+                {
+                    // A malformed name can match no child, like an unknown one.
+                    Log.Warning("Ignoring malformed child name [{0}]: {1}", path, ex.Message);
+                    return Nobody.Instance;
+                }
+
                 if (TryGetChild(s, out var child))
                 {
                     if (uid != ActorCell.UndefinedUid && uid != child.Path.Uid)

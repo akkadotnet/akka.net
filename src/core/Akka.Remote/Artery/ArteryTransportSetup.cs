@@ -9,6 +9,7 @@
 
 using System;
 using System.Buffers;
+using Akka.Actor;
 using Akka.Actor.Setup;
 
 namespace Akka.Remote.Artery
@@ -73,12 +74,17 @@ namespace Akka.Remote.Artery
         /// <param name="onBoundPortKnown">
         /// Test-observability hook -- see <see cref="OnBoundPortKnown"/>.
         /// </param>
+        /// <param name="onOutboundControlStarted">
+        /// Fault-injection test hook -- see <see cref="OnOutboundControlStarted"/>.
+        /// </param>
         public ArteryTransportSetup(
             ArrayPool<byte>? encodeBufferPool = null,
             Func<object, bool>? dropOutboundControlMessage = null,
             Action<int>? onInboundLanesInitialized = null,
-            Action<bool>? onBoundPortKnown = null)
+            Action<bool>? onBoundPortKnown = null,
+            Action<Address, Action>? onOutboundControlStarted = null)
         {
+            OnOutboundControlStarted = onOutboundControlStarted;
             EncodeBufferPool = encodeBufferPool;
             DropOutboundControlMessage = dropOutboundControlMessage;
             OnInboundLanesInitialized = onInboundLanesInitialized;
@@ -124,5 +130,12 @@ namespace Akka.Remote.Artery
         /// disables this entirely.
         /// </summary>
         public Action<bool>? OnBoundPortKnown { get; }
+
+        /// <summary>
+        /// Fault-injection test hook: invoked every time an outbound CONTROL connection to a remote address
+        /// is materialized, with that address and an action that aborts that one connection (as a socket
+        /// failure would). <see langword="null"/> (the default, and the only production value) disables it.
+        /// </summary>
+        public Action<Address, Action>? OnOutboundControlStarted { get; }
     }
 }
