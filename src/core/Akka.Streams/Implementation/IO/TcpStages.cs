@@ -466,8 +466,8 @@ namespace Akka.Streams.Implementation.IO
             // writeBuffer/writeInProgress fields and the onPush/WriteAck handling around lines
             // 275-388), minus the optional WriteDelayAck/coalesceWrites round-trip refinement --
             // see the comments on the WriteAck case in <see cref="Connected"/> for why.
-            private WriteBufferSegment _writeBufferHead;
-            private WriteBufferSegment _writeBufferTail;
+            private OwnedSequenceSegment _writeBufferHead;
+            private OwnedSequenceSegment _writeBufferTail;
             private long _writeBufferedBytes;
 
             /// <summary>There is a write outstanding (sent to the connection actor, awaiting <see cref="WriteAck"/>).</summary>
@@ -479,53 +479,6 @@ namespace Akka.Streams.Implementation.IO
             /// Close/ConfirmedClose is sent once the write buffer fully drains.
             /// </summary>
             private bool _connectionClosePending;
-
-            /// <summary>
-            /// A minimal <see cref="ReadOnlySequenceSegment{T}"/> node used to chain buffered write
-            /// payloads together -- a rope-like concatenation mirroring Pekko's <c>ByteString ++</c>
-            /// accumulation of its writeBuffer. Zero-copy: each node wraps the SAME memory a producer
-            /// handed to <see cref="AppendToWriteBuffer"/>, and optionally carries the
-            /// <see cref="IMemoryOwner{T}"/> that memory came from (detached from the producer's own
-            /// segment -- see that method's remarks). The owner is optional HERE, unlike
-            /// <see cref="Akka.IO.OwnedSequenceSegment"/> (which always owns): this buffer is an
-            /// AGGREGATOR that mixes owned frames (e.g. Artery's encoded frames) with borrowed links
-            /// (e.g. the one-time connection preamble, which is never pool-backed) in the same chain.
-            /// </summary>
-            private sealed class WriteBufferSegment : ReadOnlySequenceSegment<byte>, IOwnedSequenceSegment
-            {
-                private IMemoryOwner<byte>? _owner;
-
-                public WriteBufferSegment(ReadOnlyMemory<byte> memory, IMemoryOwner<byte>? owner = null)
-                {
-                    Memory = memory;
-                    _owner = owner;
-                }
-
-                public void Chain(WriteBufferSegment next)
-                {
-                    next.RunningIndex = RunningIndex + Memory.Length;
-                    Next = next;
-                }
-
-                /// <inheritdoc />
-                public bool HasOwner => _owner is not null;
-
-                /// <inheritdoc />
-                public void DisposeOwner()
-                {
-                    var owner = _owner;
-                    _owner = null;
-                    owner?.Dispose();
-                }
-
-                /// <inheritdoc />
-                public IMemoryOwner<byte>? DetachOwner()
-                {
-                    var owner = _owner;
-                    _owner = null;
-                    return owner;
-                }
-            }
 
             public TcpStreamLogic(FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
             {
@@ -624,7 +577,7 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// Appends every segment of <paramref name="data"/> to the write-coalescing buffer --
             /// zero-copy: no <see cref="ReadOnlyMemory{T}.ToArray"/> or other memcpy anywhere in this
-            /// method. Each appended <see cref="WriteBufferSegment"/> wraps the SAME memory
+            /// method. Each appended <see cref="OwnedSequenceSegment"/> wraps the SAME memory
             /// <paramref name="data"/> exposed; if that memory is pool-backed, the owner responsible
             /// for eventually returning it is TRANSFERRED into the new segment rather than copied
             /// (modernize-akka-io-tcp design.md, Decision 8 / the ownership-transfer mechanism).
@@ -639,11 +592,11 @@ namespace Akka.Streams.Implementation.IO
             /// this stage is now responsible for. Walk <paramref name="data"/>'s OWN segment chain
             /// from its <c>Start</c> segment to its <c>End</c> segment (inclusive, bounded so the
             /// walk never runs past the tail this sequence actually references -- a later segment in
-            /// the same chain could belong to a different, still-live write). For each link, take
-            /// <c>(segment as IOwnedSequenceSegment)?.DetachOwner()</c> -- moving responsibility for
-            /// disposal from the producer's segment to this buffer's own <see cref="WriteBufferSegment"/>
-            /// wrapping the identical memory (sliced to <paramref name="data"/>'s own start/end
-            /// offsets on the first/last link) -- and append it. A link's owner is never null-checked
+            /// the same chain could belong to a different, still-live write). Each link moves onto the
+            /// buffer through <see cref="OwnedSequenceSegment.MoveLink"/>: a whole owned segment becomes
+            /// the buffer link itself, owner and all; a sliced one is wrapped in a new
+            /// <see cref="OwnedSequenceSegment"/> (sliced to <paramref name="data"/>'s own start/end
+            /// offsets on the first/last link) that takes over its owner. A link's owner is never null-checked
             /// away here even if its sliced memory happens to be empty: dropping it instead of
             /// appending would detach the owner from its source without giving it anywhere to be
             /// disposed later, i.e. a leak.
@@ -653,7 +606,7 @@ namespace Akka.Streams.Implementation.IO
             /// <c>ArteryRemoting.BuildPreamble</c> as <c>new ReadOnlySequence&lt;byte&gt;(buffer)</c>):
             /// this data is BORROWED, not owned -- there is no producer-side segment to detach
             /// anything from. Each non-empty chunk <see langword="foreach"/> yields becomes a
-            /// <see cref="WriteBufferSegment"/> with a <see langword="null"/> owner (still zero-copy:
+            /// <see cref="OwnedSequenceSegment"/> with a <see langword="null"/> owner (still zero-copy:
             /// the memory itself is still referenced, not copied), so the later buffer-teardown walk
             /// correctly skips it.
             /// </para>
@@ -681,10 +634,11 @@ namespace Akka.Streams.Implementation.IO
                         if (isLast)
                             memory = memory.Slice(0, isFirst ? endIndex - startIndex : endIndex);
 
-                        var owner = (segment as IOwnedSequenceSegment)?.DetachOwner();
-                        AppendWriteBufferSegment(memory, owner);
+                        // A whole owned segment (each frame Artery's encode stage pushes) becomes the buffer
+                        // link itself, owner and all; anything else is wrapped.
+                        AppendWriteBufferSegment(OwnedSequenceSegment.MoveLink(_writeBufferTail, segment, memory, isLast));
 
-                        if (ReferenceEquals(segment, endSegment))
+                        if (isLast)
                             break;
 
                         segment = segment.Next!;
@@ -697,25 +651,21 @@ namespace Akka.Streams.Implementation.IO
                         if (memory.IsEmpty)
                             continue;
 
-                        AppendWriteBufferSegment(memory, owner: null);
+                        var link = new OwnedSequenceSegment(memory);
+                        _writeBufferTail?.Chain(link);
+                        AppendWriteBufferSegment(link);
                     }
                 }
             }
 
             /// <summary>
-            /// Appends a single <see cref="WriteBufferSegment"/> wrapping <paramref name="memory"/>
-            /// (and, if non-null, carrying <paramref name="owner"/>) to the tail of the write buffer.
+            /// Records <paramref name="segment"/>, already linked after the current tail, as the write buffer's new tail.
             /// </summary>
-            private void AppendWriteBufferSegment(ReadOnlyMemory<byte> memory, IMemoryOwner<byte>? owner)
+            private void AppendWriteBufferSegment(OwnedSequenceSegment segment)
             {
-                var segment = new WriteBufferSegment(memory, owner);
-                if (_writeBufferHead is null)
-                    _writeBufferHead = segment;
-                else
-                    _writeBufferTail!.Chain(segment);
-
+                _writeBufferHead ??= segment;
                 _writeBufferTail = segment;
-                _writeBufferedBytes += memory.Length;
+                _writeBufferedBytes += segment.Memory.Length;
             }
 
             /// <summary>
@@ -828,7 +778,7 @@ namespace Akka.Streams.Implementation.IO
                 while (segment is not null)
                 {
                     segment.DisposeOwner();
-                    segment = (WriteBufferSegment?)segment.Next;
+                    segment = (OwnedSequenceSegment?)segment.Next;
                 }
 
                 _writeBufferHead = null;

@@ -29,7 +29,6 @@ using Akka.Util;
 // Akka.IO types aliased individually rather than imported wholesale: `using Akka.IO;` would make
 // Tcp/TcpExt ambiguous with the Akka.Streams.Dsl Tcp/TcpExt this file uses for the transport.
 using Inet = Akka.IO.Inet;
-using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
 using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
 using TlsCertificateRotation = Akka.IO.TlsCertificateRotation;
 
@@ -3021,9 +3020,9 @@ namespace Akka.Remote.Artery
         /// zero-copy, no memcpy anywhere -- and returns a single <see cref="ReadOnlySequence{T}"/>
         /// spanning both. The ownership transfer follows
         /// <c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.AppendToWriteBuffer</c>
-        /// exactly: each source segment's owner is detached exactly once
-        /// (<see cref="IOwnedSequenceSegment.DetachOwner"/>) and re-carried by the new link appended
-        /// to the batch, so every pooled buffer always has exactly one segment responsible for
+        /// exactly (<see cref="OwnedSequenceSegment.MoveLink"/>): a whole source segment is linked onto
+        /// the batch as is, and a sliced one is wrapped by a new link that takes over its owner, so
+        /// every pooled buffer always has exactly one segment responsible for
         /// eventually disposing it. Mutating the batch's tail here is safe: the Batch stage's logic
         /// is single-threaded, and a pushed batch is never aggregated onto again (the next
         /// accumulation starts from a fresh seed).
@@ -3080,14 +3079,14 @@ namespace Akka.Remote.Artery
                 if (isLast)
                     memory = memory.Slice(0, isFirst ? endIndex - startIndex : endIndex);
 
-                var owner = (segment as IOwnedSequenceSegment)?.DetachOwner();
-                if (owner is null)
+                if (segment is not OwnedSequenceSegment { HasOwner: true })
                     throw new InvalidOperationException(
                         $"Artery lane frame batching found a frame segment ([{segment.GetType()}]) " +
                         "carrying no live pooled-buffer owner: every ordinary-lanes frame segment " +
                         "must carry the ownership ArteryEncodeStage minted for it.");
 
-                tail = tail.Append(memory, owner);
+                // A whole frame segment is linked as is; a sliced one is wrapped and its owner moves.
+                tail = OwnedSequenceSegment.MoveLink(tail, segment, memory, isLast);
 
                 if (isLast)
                     break;

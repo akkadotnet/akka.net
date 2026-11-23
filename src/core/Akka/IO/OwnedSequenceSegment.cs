@@ -94,6 +94,55 @@ namespace Akka.IO
     {
         private IMemoryOwner<byte>? _owner;
 
+        /// <summary>A borrowed link that owns nothing, for a chain mixing owned and borrowed memory.</summary>
+        internal OwnedSequenceSegment(ReadOnlyMemory<byte> memory)
+        {
+            Memory = memory;
+        }
+
+        /// <summary>
+        /// A segment over <paramref name="memory"/> (a slice of <paramref name="from"/>'s memory) that takes
+        /// over <paramref name="from"/>'s ownership, leaving <paramref name="from"/> owning nothing.
+        /// </summary>
+        internal OwnedSequenceSegment(ReadOnlyMemory<byte> memory, OwnedSequenceSegment from)
+        {
+            Memory = memory;
+            _owner = from._owner;
+            from._owner = null;
+        }
+
+        /// <summary>Links <paramref name="next"/> after this segment, setting its running index.</summary>
+        internal void Chain(OwnedSequenceSegment next)
+        {
+            next.RunningIndex = RunningIndex + Memory.Length;
+            Next = next;
+        }
+
+        /// <summary>
+        /// Moves one link of a sequence onto a chain whose tail is <paramref name="tail"/> (or starts one when it
+        /// is <see langword="null"/>) and returns the new tail. A whole owned segment is linked as is, so no
+        /// segment is allocated; a sliced or foreign link is wrapped, taking over the owner of an owned one.
+        /// </summary>
+        /// <param name="tail">The chain's current tail, or <see langword="null"/> for an empty chain.</param>
+        /// <param name="segment">The link being moved.</param>
+        /// <param name="memory">The part of <paramref name="segment"/>'s memory the sequence covers.</param>
+        /// <param name="isLast">Whether <paramref name="segment"/> is the sequence's last link.</param>
+        internal static OwnedSequenceSegment MoveLink(OwnedSequenceSegment? tail, ReadOnlySequenceSegment<byte> segment,
+            ReadOnlyMemory<byte> memory, bool isLast)
+        {
+            var owned = segment as OwnedSequenceSegment;
+            // A last link still chained to further segments is a slice of a longer chain; it is wrapped so the
+            // new chain does not run on into links that are not part of the sequence.
+            var next = owned is not null && memory.Equals(owned.Memory) && !(isLast && owned.Next is not null)
+                ? owned
+                : owned is not null ? new OwnedSequenceSegment(memory, owned) : new OwnedSequenceSegment(memory);
+            if (tail is null)
+                next.RunningIndex = 0;
+            else
+                tail.Chain(next);
+            return next;
+        }
+
         /// <summary>
         /// Creates a segment exposing <paramref name="memory"/> and owning <paramref name="owner"/>.
         /// </summary>
