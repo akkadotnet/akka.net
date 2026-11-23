@@ -30,7 +30,7 @@ namespace Akka.Remote.Tests.Artery
     public class ArteryEnvelopeCodecSpec
     {
         private const int FrameLengthFieldLength = 4;
-        private const int HeaderLength = 32;
+        private const int HeaderLength = ArteryEnvelopeHeader.HeaderLength;
 
         // ===================== round trip: explicit parts =====================
 
@@ -47,7 +47,7 @@ namespace Akka.Remote.Tests.Artery
 
             var decoded = ArteryEnvelopeCodec.Decode(EnvelopeBody(frame));
 
-            Assert.Equal((byte)1, decoded.Header.Version);
+            Assert.Equal(ArteryEnvelopeHeader.CurrentVersion, decoded.Header.Version);
             Assert.Equal(0x1122_3344_5566_7788L, decoded.Header.OriginUid);
             Assert.Equal(17, decoded.Header.SerializerId);
             Assert.Equal(HeaderLength, decoded.Header.PayloadOffset);
@@ -199,7 +199,7 @@ namespace Akka.Remote.Tests.Artery
 
             // The sender literal starts right after the 32-byte header (offset 32) with a 2-byte
             // length prefix, so offset 40 is a few bytes into the literal's UTF-8 data.
-            var segmented = TwoSegment(body, splitAt: 40);
+            var segmented = TwoSegment(body, splitAt: HeaderLength + 8);
 
             var decoded = ArteryEnvelopeCodec.Decode(segmented);
 
@@ -222,7 +222,7 @@ namespace Akka.Remote.Tests.Artery
             foreach (var literal in invalidLiterals)
             {
                 var body = BodyWithSharedLiteral(literal);
-                var frame = segmented ? TwoSegment(body, splitAt: 35) : new ReadOnlySequence<byte>(body);
+                var frame = segmented ? TwoSegment(body, splitAt: HeaderLength + 3) : new ReadOnlySequence<byte>(body);
                 var decoded = ArteryEnvelopeCodec.Decode(frame);
                 var expected = Encoding.UTF8.GetString(literal);
                 Assert.Contains("\uFFFD", expected);
@@ -237,9 +237,9 @@ namespace Akka.Remote.Tests.Artery
 
         [Theory(DisplayName = "Should_decode_UTF8_literals_When_frame_segments_split_header_prefix_or_codepoint")]
         [InlineData(10)] // segmented frame, contiguous literal
-        [InlineData(33)] // split length prefix, contiguous literal
-        [InlineData(35)] // split the first three-byte UTF8 code point
-        [InlineData(36)]
+        [InlineData(ArteryEnvelopeHeader.HeaderLength + 1)] // split length prefix, contiguous literal
+        [InlineData(ArteryEnvelopeHeader.HeaderLength + 3)] // split the first three-byte UTF8 code point
+        [InlineData(ArteryEnvelopeHeader.HeaderLength + 4)]
         public void Should_decode_UTF8_literals_When_frame_segments_split_header_prefix_or_codepoint(int splitAt)
         {
             const string expected = "型-Ω-😀";
@@ -259,7 +259,7 @@ namespace Akka.Remote.Tests.Artery
         public void Should_return_empty_When_an_explicit_literal_has_zero_length(bool segmented)
         {
             var body = BodyWithSharedLiteral(Array.Empty<byte>());
-            var frame = segmented ? TwoSegment(body, splitAt: 33) : new ReadOnlySequence<byte>(body);
+            var frame = segmented ? TwoSegment(body, splitAt: HeaderLength + 1) : new ReadOnlySequence<byte>(body);
             var decoded = ArteryEnvelopeCodec.Decode(frame);
             Assert.Equal(ArteryTagKind.Literal, decoded.SenderKind);
             Assert.Equal(ArteryTagKind.Literal, decoded.RecipientKind);
@@ -277,7 +277,7 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_the_version_is_not_1")]
         public void Should_throw_ArteryEnvelopeException_When_the_version_is_not_1()
         {
-            var header = BuildRawHeader(version: 2, flags: 0, originUid: 0, serializerId: 0,
+            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
                 senderTag: 0, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength);
 
             Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header)));
@@ -286,7 +286,7 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_a_reserved_flag_bit_is_set")]
         public void Should_throw_ArteryEnvelopeException_When_a_reserved_flag_bit_is_set()
         {
-            var header = BuildRawHeader(version: 1, flags: 0b0000_0010, originUid: 0, serializerId: 0,
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0b0000_0010, originUid: 0, serializerId: 0,
                 senderTag: 0, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength);
 
             Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header)));
@@ -295,7 +295,7 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_a_literal_tag_offset_is_less_than_32")]
         public void Should_throw_ArteryEnvelopeException_When_a_literal_tag_offset_is_less_than_32()
         {
-            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0, serializerId: 0,
                 senderTag: 10, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength);
 
             var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header));
@@ -307,8 +307,8 @@ namespace Akka.Remote.Tests.Artery
         {
             // payloadOffset = 32 (no room for any literal), but the sender tag claims a literal at
             // offset 32 -- exactly at, not before, the payload offset.
-            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
-                senderTag: 32, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength);
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0, serializerId: 0,
+                senderTag: HeaderLength, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength);
 
             var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header));
             Assert.Throws<ArteryEnvelopeException>(() => decoded.TryGetSenderPath(out _));
@@ -319,11 +319,11 @@ namespace Akka.Remote.Tests.Artery
         {
             // payloadOffset = 34: room for the sender literal's 2-byte length prefix (at [32,34))
             // but zero bytes for its declared 5-byte body before the payload starts.
-            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
-                senderTag: 32, recipientTag: 0, manifestTag: 0, payloadOffset: 34);
-            var frame = new byte[34];
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0, serializerId: 0,
+                senderTag: HeaderLength, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength + 2);
+            var frame = new byte[HeaderLength + 2];
             header.CopyTo(frame, 0);
-            BinaryPrimitives.WriteUInt16LittleEndian(frame.AsSpan(32, 2), 5); // declares 5 bytes; none are available
+            BinaryPrimitives.WriteUInt16LittleEndian(frame.AsSpan(HeaderLength, 2), 5); // declares 5 bytes; none are available
 
             var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(frame));
             Assert.Throws<ArteryEnvelopeException>(() => decoded.TryGetSenderPath(out _));
@@ -332,7 +332,7 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_the_declared_payload_offset_is_beyond_the_frame_end")]
         public void Should_throw_ArteryEnvelopeException_When_the_declared_payload_offset_is_beyond_the_frame_end()
         {
-            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0, serializerId: 0,
                 senderTag: 0, recipientTag: 0, manifestTag: 0, payloadOffset: 1000);
 
             Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header)));
@@ -341,7 +341,7 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_the_declared_payload_offset_is_less_than_32")]
         public void Should_throw_ArteryEnvelopeException_When_the_declared_payload_offset_is_less_than_32()
         {
-            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0, serializerId: 0,
                 senderTag: 0, recipientTag: 0, manifestTag: 0, payloadOffset: 10);
 
             Assert.Throws<ArteryEnvelopeException>(() => ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header)));
@@ -364,7 +364,7 @@ namespace Akka.Remote.Tests.Artery
         public void Should_surface_the_compressed_index_and_report_TryGet_false_When_a_tag_is_compressed()
         {
             const uint compressedSenderTag = 0xFF00_0000u | 7u;
-            var header = BuildRawHeader(version: 1, flags: 0, originUid: 0, serializerId: 0,
+            var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0, serializerId: 0,
                 senderTag: compressedSenderTag, recipientTag: 0, manifestTag: 0, payloadOffset: HeaderLength);
 
             var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header));
@@ -626,7 +626,7 @@ namespace Akka.Remote.Tests.Artery
             var explicitFrame = new byte[ArteryEnvelopeCodec.MaxEncodedSize(literal, null, string.Empty, 0)];
             ArteryEnvelopeCodec.Encode(explicitFrame, 42L, 4, literal, null, string.Empty, ReadOnlySpan<byte>.Empty);
             Assert.Equal(explicitFrame, writer.WrittenSpan.ToArray());
-            Assert.Equal(ushort.MaxValue, BinaryPrimitives.ReadUInt16LittleEndian(writer.WrittenSpan.Slice(36, 2)));
+            Assert.Equal(ushort.MaxValue, BinaryPrimitives.ReadUInt16LittleEndian(writer.WrittenSpan.Slice(ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength, 2)));
             var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(writer.WrittenMemory.Slice(4)));
             Assert.True(decoded.TryGetSenderPath(out var sender));
             Assert.Equal(literal, sender);
