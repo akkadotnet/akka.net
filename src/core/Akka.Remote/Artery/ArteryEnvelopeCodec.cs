@@ -528,7 +528,25 @@ namespace Akka.Remote.Artery
             }
         }
 
-        private string ResolveLiteral(uint tagOffsetRaw)
+        /// <summary>
+        /// Returns the raw UTF-8 bytes of the recipient literal as a slice of the frame body,
+        /// without decoding or copying them. Only valid when <see cref="RecipientKind"/> is
+        /// <see cref="ArteryTagKind.Literal"/>. Uses the same bounds validation as
+        /// <see cref="TryGetRecipientPath"/> (<see cref="ReadLiteralBounds"/>) and throws
+        /// <see cref="ArteryEnvelopeException"/> for a bad offset or length.
+        /// </summary>
+        public ReadOnlySequence<byte> GetRecipientLiteralBytes()
+        {
+            ReadLiteralBounds(Header.RecipientTag, out var dataStart, out var length);
+            return _frameBody.Slice(dataStart, length);
+        }
+
+        /// <summary>
+        /// The single bounds check for literal tags, shared by string decoding
+        /// (<see cref="ResolveLiteral"/>) and raw-byte access (<see cref="GetRecipientLiteralBytes"/>)
+        /// so the two cannot drift apart.
+        /// </summary>
+        private void ReadLiteralBounds(uint tagOffsetRaw, out long dataStart, out int length)
         {
             var offset = (long)tagOffsetRaw;
 
@@ -541,13 +559,17 @@ namespace Akka.Remote.Artery
 
             Span<byte> lenBuf = stackalloc byte[ArteryEnvelopeHeader.LiteralLengthPrefixSize];
             _frameBody.Slice(offset, ArteryEnvelopeHeader.LiteralLengthPrefixSize).CopyTo(lenBuf);
-            var length = BinaryPrimitives.ReadUInt16LittleEndian(lenBuf);
+            length = BinaryPrimitives.ReadUInt16LittleEndian(lenBuf);
 
-            var dataStart = offset + ArteryEnvelopeHeader.LiteralLengthPrefixSize;
-            var dataEnd = dataStart + length;
-            if (dataEnd > Header.PayloadOffset)
+            dataStart = offset + ArteryEnvelopeHeader.LiteralLengthPrefixSize;
+            if (dataStart + length > Header.PayloadOffset)
                 throw new ArteryEnvelopeException(
                     $"Literal at offset {offset} (length {length}) extends past the payload offset ({Header.PayloadOffset}).");
+        }
+
+        private string ResolveLiteral(uint tagOffsetRaw)
+        {
+            ReadLiteralBounds(tagOffsetRaw, out var dataStart, out var length);
 
             if (length == 0)
                 return string.Empty;
