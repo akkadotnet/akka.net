@@ -21,6 +21,7 @@ namespace Akka.Dispatch
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
+        private readonly Action<Task, object> _onTaskCompleted;
 
         /// <summary>
         /// Gets or sets the message whose actor handler started the currently scheduled asynchronous operation.
@@ -56,6 +57,7 @@ namespace Akka.Dispatch
         protected internal ActorTaskScheduler(ActorCell actorCell)
         {
             _actorCell = actorCell;
+            _onTaskCompleted = OnTaskCompleted;
         }
         
         /// <summary>
@@ -157,10 +159,8 @@ namespace Akka.Dispatch
             if (context == null)
                 throw new InvalidOperationException("RunTask must be called from an actor context.");
 
-            var dispatcher = context.Dispatcher;
-
             //suspend the mailbox
-            dispatcher.Suspend(context);
+            context.Dispatcher.Suspend(context);
 
             var actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
@@ -169,27 +169,30 @@ namespace Akka.Dispatch
             
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
-                              .ContinueWith(parent =>
-                              {
-                                  var exception = GetTaskException(parent);
-                                  if (exception == null)
-                                  {
-                                      dispatcher.Resume(context);
-                                      context.CheckReceiveTimeout(context.CurrentMessage is not INotInfluenceReceiveTimeout);
-                                  }
-                                  else
-                                  {
-                                      context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
-                                  }
-                                  
-                                  // Used by TestActorRef to intercept async execution result
-                                  if(actorScheduler is IAsyncResultInterceptor interceptor)
-                                      interceptor.OnTaskCompleted(actorScheduler.CurrentMessage, exception);
-                                  
-                                  //clear the current message field of the scheduler
-                                  actorScheduler.CurrentMessage = null;
-                                  actorScheduler.OnAfterTaskCompleted();
-                              }, actorScheduler);
+                              .ContinueWith(actorScheduler._onTaskCompleted, null, actorScheduler);
+        }
+
+        private void OnTaskCompleted(Task parent, object state)
+        {
+            var context = _actorCell;
+            var exception = GetTaskException(parent);
+            if (exception == null)
+            {
+                context.Dispatcher.Resume(context);
+                context.CheckReceiveTimeout(context.CurrentMessage is not INotInfluenceReceiveTimeout);
+            }
+            else
+            {
+                context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, CurrentMessage));
+            }
+
+            // Used by TestActorRef to intercept async execution result
+            if(this is IAsyncResultInterceptor interceptor)
+                interceptor.OnTaskCompleted(CurrentMessage, exception);
+
+            //clear the current message field of the scheduler
+            CurrentMessage = null;
+            OnAfterTaskCompleted();
         }
 
         private static Exception GetTaskException(Task task)
