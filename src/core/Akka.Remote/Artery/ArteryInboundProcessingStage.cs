@@ -183,7 +183,7 @@ namespace Akka.Remote.Artery
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
-        /// loop, once per deserialized ordinary message, as <c>(message, decoded frame)</c>
+        /// loop, once per deserialized ordinary message, as <c>(message, decoded frame, the lane's remote-sender cache)</c>
         /// -- mirrors <c>ArteryRemoting.DispatchOrdinaryMessage</c> exactly (the same resolve-and-Tell
         /// logic <c>ArteryRemoting.DispatchInbound</c> uses for the lanes=1/non-lane path).
         /// </param>
@@ -208,7 +208,7 @@ namespace Akka.Remote.Artery
             int inboundLanes = 1,
             int inboundLaneBufferSize = 0,
             IInboundContext? inboundContext = null,
-            Action<object, ArteryEnvelopeDecoded>? dispatchOrdinary = null,
+            Action<object, ArteryEnvelopeDecoded, ArteryRemoteSenderCache>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
             SharedTestState? testState = null)
         {
@@ -287,7 +287,7 @@ namespace Akka.Remote.Artery
         public IInboundContext? InboundContext { get; }
 
         /// <summary>See the constructor parameter of the same name. <see langword="null"/> when <see cref="InboundLanes"/> is 1.</summary>
-        public Action<object, ArteryEnvelopeDecoded>? DispatchOrdinary { get; }
+        public Action<object, ArteryEnvelopeDecoded, ArteryRemoteSenderCache>? DispatchOrdinary { get; }
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public Action<int>? OnLanesInitialized { get; }
@@ -719,8 +719,9 @@ namespace Akka.Remote.Artery
                     var log = _laneLog;
                     var serialization = _stage.Serialization;
                     var dispatch = _stage.DispatchOrdinary!;
+                    var senders = new ArteryRemoteSenderCache();
                     // A consumer that ends abnormally would leave its lane unread: fail the stage so the connection restarts.
-                    Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log))
+                    Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, senders, log))
                         .ContinueWith(t => onConsumerFailed(t.Exception!.GetBaseException()), TaskContinuationOptions.OnlyOnFaulted);
                 }
 
@@ -747,7 +748,8 @@ namespace Akka.Remote.Artery
             private static async Task RunLaneConsumer(
                 ChannelReader<LaneWorkItem> reader,
                 Akka.Serialization.Serialization serialization,
-                Action<object, ArteryEnvelopeDecoded> dispatch,
+                Action<object, ArteryEnvelopeDecoded, ArteryRemoteSenderCache> dispatch,
+                ArteryRemoteSenderCache senders,
                 ILoggingAdapter log)
             {
                 try
@@ -776,7 +778,7 @@ namespace Akka.Remote.Artery
                             try
                             {
                                 var message = serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
-                                dispatch(message, decoded);
+                                dispatch(message, decoded, senders);
                             }
                             catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
                             {

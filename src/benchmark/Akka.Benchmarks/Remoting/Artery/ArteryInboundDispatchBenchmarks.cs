@@ -51,7 +51,8 @@ namespace Akka.Benchmarks.Remoting.Artery
         }
 
         private ActorSystem _system = null!;
-        private Action<IInboundEnvelope> _dispatch = null!;
+        private Action<IInboundEnvelope, ArteryRemoteSenderCache> _dispatch = null!;
+        private readonly ArteryRemoteSenderCache _senders = new();
         private IInboundEnvelope _tellWithSender = null!;
         private IInboundEnvelope _tellNoSender = null!;
         private IInboundEnvelope _askReply = null!;
@@ -75,7 +76,8 @@ namespace Akka.Benchmarks.Remoting.Artery
 
             var method = transport.GetType().GetMethod("DispatchInbound", BindingFlags.Instance | BindingFlags.NonPublic)
                          ?? throw new InvalidOperationException("DispatchInbound not found");
-            _dispatch = (Action<IInboundEnvelope>)Delegate.CreateDelegate(typeof(Action<IInboundEnvelope>), transport, method);
+            _dispatch = (Action<IInboundEnvelope, ArteryRemoteSenderCache>)Delegate.CreateDelegate(
+                typeof(Action<IInboundEnvelope, ArteryRemoteSenderCache>), transport, method);
 
             var sink = _system.ActorOf(Props.Create(() => new Sink()), "sink");
             _temp = new CountingTempRef(provider, provider.TempPath());
@@ -101,8 +103,8 @@ namespace Akka.Benchmarks.Remoting.Artery
             // Warm the path caches and the actor so first-use costs are outside the measurement.
             for (var i = 0; i < 100; i++)
             {
-                _dispatch(_tellWithSender);
-                _dispatch(_askReply);
+                _dispatch(_tellWithSender, _senders);
+                _dispatch(_askReply, _senders);
             }
             _sent = 100;
             IterationCleanup();
@@ -138,7 +140,7 @@ namespace Akka.Benchmarks.Remoting.Artery
         public void LocalRecipient_RemoteSender()
         {
             var d = _dispatch; var e = _tellWithSender;
-            for (var i = 0; i < Batch; i++) d(e);
+            for (var i = 0; i < Batch; i++) d(e, _senders);
             _sent += Batch;
         }
 
@@ -147,7 +149,7 @@ namespace Akka.Benchmarks.Remoting.Artery
         public void LocalRecipient_NoSender()
         {
             var d = _dispatch; var e = _tellNoSender;
-            for (var i = 0; i < Batch; i++) d(e);
+            for (var i = 0; i < Batch; i++) d(e, _senders);
             _sent += Batch;
         }
 
@@ -156,7 +158,7 @@ namespace Akka.Benchmarks.Remoting.Artery
         public void TempRecipient_RemoteSender()
         {
             var d = _dispatch; var e = _askReply;
-            for (var i = 0; i < Batch; i++) d(e);
+            for (var i = 0; i < Batch; i++) d(e, _senders);
         }
     }
 }

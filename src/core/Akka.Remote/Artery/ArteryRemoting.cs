@@ -828,7 +828,7 @@ namespace Akka.Remote.Artery
         /// <inheritdoc/>
         public override void Send(object message, IActorRef sender, RemoteActorRef recipient)
         {
-            var remoteAddress = recipient.Path.Address;
+            var remoteAddress = recipient.RemoteAddress;
             var association = _registry.AssociationFor(remoteAddress);
 
             // Quarantine gating at the send-routing layer (design.md Invariants; task 6.6, resolved
@@ -863,10 +863,9 @@ namespace Akka.Remote.Artery
                 return;
             }
 
-            var recipientPath = recipient.Path.ToSerializationFormatWithAddress(remoteAddress);
-
             if (message is ISystemMessage systemMessage)
             {
+                var recipientPath = recipient.Path.ToSerializationFormatWithAddress(remoteAddress);
                 // Reliable system-message delivery (design.md gate G3) rides the CONTROL stream,
                 // wrapped by SystemMessageDeliveryStage -- never the ordinary stream/lanes (design.md
                 // invariant 5: "system messages NEVER hashed onto ordinary lanes").
@@ -888,7 +887,7 @@ namespace Akka.Remote.Artery
                 // Pekko's direct controlQueue.offer (Association.scala: "must be sent over the control
                 // stream because remote deployment process depends on message ordering for
                 // DaemonMsgCreate and Watch messages").
-                EnqueueDaemonMsgCreate(remoteAddress, message, senderPath, recipientPath);
+                EnqueueDaemonMsgCreate(remoteAddress, message, senderPath, recipient.Path.ToSerializationFormatWithAddress(remoteAddress));
                 return;
             }
 
@@ -901,7 +900,9 @@ namespace Akka.Remote.Artery
                 _localRefs.Put(senderId, localSender);
             }
 
-            EnqueueOutbound(remoteAddress, message, senderPath, recipientPath, recipient, senderId, recipient.Path.Uid);
+            // The recipient literal is the ref's serialized path bytes, formatted at most once per ref.
+            var recipientId = recipient.WireId != 0 ? recipient.WireId : recipient.PathUid;
+            EnqueueOutbound(remoteAddress, message, senderPath, recipient.SerializedPathUtf8, recipient, senderId, recipientId);
         }
 
         /// <inheritdoc/>
@@ -1062,11 +1063,13 @@ namespace Akka.Remote.Artery
             //
             // Ordinary, control and large connections all use this one sink, so one instance is
             // sufficient.
+            // The inline path's remote-sender cache: one per connection, used only by this sink.
+            var inlineSenders = new ArteryRemoteSenderCache();
             var inboundSink = decoded
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!, System.Scheduler)))
                 .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
-                .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
+                .To(Sink.ForEach<IInboundEnvelope>(env => DispatchInbound(env, inlineSenders)));
 
             // Every accepted (inbound) connection is read-only: Artery uses SEPARATE per-direction
             // connections, so any reply (a HandshakeRsp, a heartbeat, ...) goes out over a
@@ -1075,7 +1078,7 @@ namespace Akka.Remote.Artery
             connection.HandleWith(Flow.FromSinkAndSource(inboundSink, Source.Empty<ReadOnlySequence<byte>>()), _materializer!);
         }
 
-        private void DispatchInbound(IInboundEnvelope env)
+        private void DispatchInbound(IInboundEnvelope env, ArteryRemoteSenderCache senders)
         {
             if (env.IsControl)
             {
@@ -1089,7 +1092,7 @@ namespace Akka.Remote.Artery
             // An ordinary message decoded inline carries its frame; its paths are decoded on demand.
             if (env is InboundEnvelope { Frame: { } frame })
             {
-                DispatchOrdinaryMessage(env.Message, frame);
+                DispatchOrdinaryMessage(env.Message, frame, senders);
                 return;
             }
 
@@ -1133,7 +1136,7 @@ namespace Akka.Remote.Artery
         /// identical semantics, regardless of which caller invokes it -- lanes change WHERE this
         /// runs (a dedicated lane thread vs. this connection's own stage thread), never WHAT it does.
         /// </summary>
-        private void DispatchOrdinaryMessage(object message, ArteryEnvelopeDecoded frame)
+        private void DispatchOrdinaryMessage(object message, ArteryEnvelopeDecoded frame, ArteryRemoteSenderCache senders)
         {
             var originUid = frame.Header.OriginUid;
             var recipientId = frame.Header.RecipientId;
@@ -1178,19 +1181,45 @@ namespace Akka.Remote.Artery
 
             // Resolve the sender here, not at the final Tell, so a sender path that cannot be resolved
             // drops this one message before it is buffered or delivered. No sender means dead letters.
-            IActorRef sender;
+            // A sender with an id is a local actor of the origin system: it is built from the origin's
+            // address and the raw path literal bytes, with no decode or parse, and reused for that
+            // sender's next messages. Its path is parsed only if something reads it, so a malformed
+            // sender path is no longer rejected here.
+            var senderId = frame.Header.SenderId;
+            var sender = senders.Get(originUid, senderId);
             string? senderPath = null;
-            try
+            if (sender is null && senderId != 0 && frame.SenderKind == ArteryTagKind.Literal &&
+                _inboundContext?.TryResolveOriginAddress(originUid) is { } originAddress)
             {
-                senderPath = frame.TryGetSenderPath(out var s) ? s : null;
-                sender = senderPath is null
-                    ? System.DeadLetters
-                    : Provider.ResolveActorRefWithLocalAddress(senderPath, DefaultAddress);
+                byte[] senderPathUtf8;
+                try
+                {
+                    senderPathUtf8 = frame.GetSenderLiteralBytes().ToArray();
+                }
+                catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+                {
+                    LogUnresolvableInboundPath(ex, string.Empty, "sender", message, originUid);
+                    return;
+                }
+
+                sender = new RemoteActorRef(this, DefaultAddress, originAddress, senderPathUtf8, senderId);
+                senders.Put(originUid, senderId, sender);
             }
-            catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+
+            if (sender is null)
             {
-                LogUnresolvableInboundPath(ex, senderPath ?? string.Empty, "sender", message, originUid);
-                return;
+                try
+                {
+                    senderPath = frame.TryGetSenderPath(out var s) ? s : null;
+                    sender = senderPath is null
+                        ? System.DeadLetters
+                        : Provider.ResolveActorRefWithLocalAddress(senderPath, DefaultAddress);
+                }
+                catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
+                {
+                    LogUnresolvableInboundPath(ex, senderPath ?? string.Empty, "sender", message, originUid);
+                    return;
+                }
             }
 
             // A remote-deployed recipient that does not exist YET: with DaemonMsgCreate riding the
@@ -1201,7 +1230,7 @@ namespace Akka.Remote.Artery
             // best effort retry").
             if (recipientPath is not null && IsUnresolvedRemoteDeployedRecipient(recipient))
             {
-                BufferUnresolvedRemoteDeployedRecipient(recipientPath, message, senderPath, originUid, recipient);
+                BufferUnresolvedRemoteDeployedRecipient(recipientPath, message, senderPath ?? SenderPathOf(frame, sender), originUid, recipient);
                 return;
             }
 
@@ -1217,7 +1246,7 @@ namespace Akka.Remote.Artery
                 {
                     if (!pending.Done)
                     {
-                        pending.Buffered.Enqueue((message, senderPath, originUid));
+                        pending.Buffered.Enqueue((message, senderPath ?? SenderPathOf(frame, sender), originUid));
                         return;
                     }
                 }
@@ -1225,6 +1254,10 @@ namespace Akka.Remote.Artery
 
             DeliverOrdinaryMessage(recipient, message, sender);
         }
+
+        /// <summary>The sender path the remote-deploy buffers keep, for a sender that was not resolved from its path.</summary>
+        private static string? SenderPathOf(in ArteryEnvelopeDecoded frame, IActorRef sender) =>
+            frame.SenderKind == ArteryTagKind.Absent ? null : sender.Path.ToSerializationFormat();
 
         /// <summary>
         /// The final Tell of the ordinary dispatch path -- factored out of
@@ -1555,13 +1588,13 @@ namespace Akka.Remote.Artery
             var computed = _settings.LargeMessageChannelEnabled &&
                             _settings.LargeMessageDestinations.Find(recipient.Path.Elements) is not null
                 ? LargeMessageRoute
-                : Association.SelectLane(recipient.Path.Uid, association.OutboundLanes);
+                : Association.SelectLane(recipient.PathUid, association.OutboundLanes);
 
             recipient.CachedSendQueueIndex = computed;
             return computed;
         }
 
-        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath, RemoteActorRef recipient,
+        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, byte[] recipientPathUtf8, RemoteActorRef recipient,
             long senderId, long recipientId)
         {
             var association = _registry.AssociationFor(remoteAddress);
@@ -1581,7 +1614,7 @@ namespace Akka.Remote.Artery
             // the same anchor -- never leaks into a selection send's routing.
             if (route == LargeMessageRoute && message is not ActorSelectionMessage)
             {
-                if (!association.TryEnqueueLarge(new OutboundEnvelope(message, senderPath, recipientPath, senderId, recipientId)))
+                if (!association.TryEnqueueLarge(new OutboundEnvelope(message, senderPath, null, senderId, recipientId) { RecipientPathUtf8 = recipientPathUtf8 }))
                 {
                     // Same direct-to-event-stream Dropped semantics as the ordinary queue's PR
                     // #8346 fix (see below) -- soft drop, never a quarantine.
@@ -1603,7 +1636,7 @@ namespace Akka.Remote.Artery
             // above; the ref's cache is left untouched for its own future non-selection sends).
             var laneIndex = route == LargeMessageRoute ? 0 : route;
 
-            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath, senderId, recipientId), laneIndex))
+            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, null, senderId, recipientId) { RecipientPathUtf8 = recipientPathUtf8 }, laneIndex))
             {
                 // Publish DIRECTLY to the event stream -- mirrors Pekko's Association.dropped().
                 // NOT routed through System.DeadLetters.Tell (that would double-wrap: Tell to the

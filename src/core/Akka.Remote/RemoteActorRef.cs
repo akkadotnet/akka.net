@@ -34,7 +34,14 @@ namespace Akka.Remote
         /// </summary>
         private readonly Deploy _deploy;
 
-        private readonly ActorPath _path;
+        // Null for a ref built from an inbound sender literal until something reads Path.
+        private ActorPath _path;
+
+        private readonly Address _address;
+
+        // The serialized path as UTF-8, written as the recipient literal of every send to this ref:
+        // the bytes an inbound sender arrived with, or formatted once on first send.
+        private byte[] _pathUtf8;
 
         /// <summary>
         /// The parent
@@ -70,6 +77,12 @@ namespace Akka.Remote
         internal int CachedSendQueueIndex = -1;
 
         /// <summary>
+        /// INTERNAL API. The id an Artery envelope carries for this ref as its recipient, when it
+        /// differs from the path's uid; 0 means use the path's uid.
+        /// </summary>
+        internal long WireId;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RemoteActorRef"/> class.
         /// </summary>
         /// <param name="remote">The remote.</param>
@@ -84,12 +97,49 @@ namespace Akka.Remote
             Remote = remote;
             LocalAddressToUse = localAddressToUse;
             _path = path;
+            _address = path.Address;
             _parent = parent;
             _props = props;
             _deploy = deploy;
 
             if (path.Address.HasLocalScope)
                 throw new ArgumentException($"Unexpected local address in RemoteActorRef [{this}]");
+        }
+
+        /// <summary>
+        /// INTERNAL API. A ref to the sender of an inbound Artery message, built without decoding or
+        /// parsing its path: <paramref name="pathUtf8"/> is the sender path literal as the origin
+        /// system wrote it and <paramref name="address"/> is that origin's address. <see cref="Path"/>
+        /// is decoded and parsed from the bytes the first time it is read.
+        /// </summary>
+        internal RemoteActorRef(RemoteTransport remote, Address localAddressToUse, Address address, byte[] pathUtf8, long wireId)
+        {
+            Remote = remote;
+            LocalAddressToUse = localAddressToUse;
+            _address = address;
+            _pathUtf8 = pathUtf8;
+            WireId = wireId;
+            _parent = ActorRefs.Nobody;
+            _props = Props.None;
+            _deploy = Deploy.None;
+        }
+
+        /// <summary>INTERNAL API. The address of the system this ref points to, read without forcing <see cref="Path"/>.</summary>
+        internal Address RemoteAddress => _address;
+
+        /// <summary>INTERNAL API. The uid of <see cref="Path"/>, read without forcing it.</summary>
+        internal long PathUid => _path?.Uid ?? WireId;
+
+        /// <summary>INTERNAL API. The serialized path as UTF-8, formatted at most once.</summary>
+        internal byte[] SerializedPathUtf8 =>
+            _pathUtf8 ??= System.Text.Encoding.UTF8.GetBytes(_path.ToSerializationFormatWithAddress(_address));
+
+        private ActorPath MaterializePath()
+        {
+            var text = System.Text.Encoding.UTF8.GetString(_pathUtf8);
+            if (!ActorPath.TryParse(text, out var path))
+                throw new InvalidOperationException($"Unparseable remote sender path [{text}]");
+            return _path = path;
         }
 
         /// <summary>
@@ -182,7 +232,7 @@ namespace Akka.Remote
         public override bool IsLocal => false;
 
         /// <inheritdoc cref="IActorRef"/>
-        public override ActorPath Path => _path;
+        public override ActorPath Path => _path ?? MaterializePath();
 
         private void HandleException(Exception ex)
         {

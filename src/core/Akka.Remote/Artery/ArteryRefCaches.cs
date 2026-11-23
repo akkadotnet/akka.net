@@ -65,4 +65,49 @@ namespace Akka.Remote.Artery
                 slot = local;
         }
     }
+
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// Receive-side cache of remote senders: (origin system UID, sender id) to the
+    /// <see cref="RemoteActorRef"/> built for it last time, so a repeat sender needs no new ref. One
+    /// per inbound lane, and one per connection for the inline (inbound-lanes = 1) path, so each
+    /// instance is used by one thread at a time and needs no locking. Direct-mapped like
+    /// <see cref="ArteryLocalRefCache"/>.
+    /// </summary>
+    internal sealed class ArteryRemoteSenderCache
+    {
+        /// <summary>Number of entries; a power of two.</summary>
+        public const int Capacity = 1024;
+
+        private const long Mask = Capacity - 1;
+
+        private struct Entry
+        {
+            public long OriginUid;
+            public long Id;
+            public IActorRef? Ref;
+        }
+
+        private readonly Entry[] _entries = new Entry[Capacity];
+
+        /// <summary>The ref cached for this sender, or <see langword="null"/>.</summary>
+        public IActorRef? Get(long originUid, long id)
+        {
+            if (id == 0)
+                return null;
+
+            ref var entry = ref _entries[id & Mask];
+            return entry.Id == id && entry.OriginUid == originUid ? entry.Ref : null;
+        }
+
+        /// <summary>Caches <paramref name="sender"/> for (<paramref name="originUid"/>, <paramref name="id"/>).</summary>
+        public void Put(long originUid, long id, IActorRef sender)
+        {
+            ref var entry = ref _entries[id & Mask];
+            entry.OriginUid = originUid;
+            entry.Id = id;
+            entry.Ref = sender;
+        }
+    }
 }

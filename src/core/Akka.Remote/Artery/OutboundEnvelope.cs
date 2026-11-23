@@ -59,6 +59,12 @@ namespace Akka.Remote.Artery
 
         /// <summary>The recipient ref's numeric id written into the envelope header, or 0 for none.</summary>
         long RecipientId { get; }
+
+        /// <summary>
+        /// The recipient path already encoded as UTF-8, written instead of <see cref="RecipientPath"/>
+        /// when set (an ordinary message to a remote ref, which keeps its serialized path).
+        /// </summary>
+        byte[]? RecipientPathUtf8 { get; }
     }
 
     /// <summary>
@@ -78,5 +84,8 @@ namespace Akka.Remote.Artery
     {
         /// <inheritdoc/>
         public bool IsControl { get; } = Message is IArteryControlMessage;
+
+        /// <inheritdoc/>
+        public byte[]? RecipientPathUtf8 { get; init; }
     }
 }

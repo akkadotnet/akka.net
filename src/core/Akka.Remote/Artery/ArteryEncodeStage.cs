@@ -109,7 +109,7 @@ namespace Akka.Remote.Artery
                 // behavior of failing the whole outbound stream on an encode error).
                 var writer = ArteryEnvelopeCodec.Encode(
                     _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool,
-                    elem.SenderId, elem.RecipientId);
+                    elem.SenderId, elem.RecipientId, elem.RecipientPathUtf8);
 
                 // Detach moves ownership of the encoded, pooled buffer to `owner` -- no
                 // WrittenSpan.ToArray() copy, and deliberately NO writer.Dispose() here (Detach

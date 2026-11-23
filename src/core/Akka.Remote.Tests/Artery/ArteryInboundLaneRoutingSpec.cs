@@ -152,7 +152,7 @@ namespace Akka.Remote.Tests.Artery
             var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var stage = new ArteryInboundProcessingStage(65536, 65536, Sys.Serialization, Sys.Scheduler,
                 inboundLanes: Lanes, inboundLaneBufferSize: 64, inboundContext: context,
-                dispatchOrdinary: (m, frame) =>
+                dispatchOrdinary: (m, frame, _) =>
                 {
                     var s = frame.TryGetSenderPath(out var sp) ? sp : null;
                     frame.TryGetRecipientPath(out var r);
@@ -320,7 +320,7 @@ namespace Akka.Remote.Tests.Artery
             ManualResetEventSlim release, TaskCompletionSource<bool> entered, ConcurrentQueue<Delivery> delivered, int laneBuffer) =>
             new(65536, 65536, Sys.Serialization, Sys.Scheduler,
                 inboundLanes: Lanes, inboundLaneBufferSize: laneBuffer, inboundContext: NewContext(true, null),
-                dispatchOrdinary: (m, frame) =>
+                dispatchOrdinary: (m, frame, _) =>
                 {
                     var s = frame.TryGetSenderPath(out var sp) ? sp : null;
                     frame.TryGetRecipientPath(out var r);
