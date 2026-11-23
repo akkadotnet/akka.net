@@ -767,9 +767,18 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             // we never change address for IgnoreActorRef
             return ToString();
         }
+        // Cache from the second use of an address, so a path serialized once allocates nothing extra.
+        var cached = _serializedWithAddress;
+        if (cached is SerializedWithAddress hit && ReferenceEquals(hit.Address, address))
+            return hit.Path;
         var result = ToStringWithAddress(address, true);
+        _serializedWithAddress = ReferenceEquals(cached, address) ? new SerializedWithAddress(address, result) : address;
         return result;
     }
+
+    private sealed record SerializedWithAddress(Address Address, string Path);
+
+    private object? _serializedWithAddress;
 
     private string AppendUidFragment(string withAddress)
     {

@@ -315,6 +315,19 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void ToSerializationFormatWithAddress_should_use_each_address_given_in_turn()
+        {
+            var path = (new RootActorPath(new Address("akka", "mysys")) / "user" / "foo").WithUid(42);
+            var a = new Address("akka", "mysys", "host-a", 1000);
+            var b = new Address("akka", "mysys", "host-b", 2000);
+
+            path.ToSerializationFormatWithAddress(a).ShouldBe("akka://mysys@host-a:1000/user/foo#42");
+            path.ToSerializationFormatWithAddress(a).ShouldBe("akka://mysys@host-a:1000/user/foo#42");
+            path.ToSerializationFormatWithAddress(b).ShouldBe("akka://mysys@host-b:2000/user/foo#42");
+            path.ToSerializationFormatWithAddress(a).ShouldBe("akka://mysys@host-a:1000/user/foo#42");
+        }
+
+        [Fact]
         public void Paths_with_different_addresses_and_same_elements_should_not_be_equal()
         {
             ActorPath.TryParse("akka.tcp://remotesystem@localhost:8080/user", out var path1);
