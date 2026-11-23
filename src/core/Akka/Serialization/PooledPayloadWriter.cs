@@ -242,6 +242,21 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// INTERNAL API. Like <see cref="Detach"/>, but the written bytes come back as one
+        /// <see cref="Akka.IO.OwnedSequenceSegment"/> that returns the rented array to the pool itself when its
+        /// owner is disposed, so no separate owner object is allocated. The writer is spent afterwards.
+        /// </summary>
+        internal ReadOnlySequence<byte> DetachSequence()
+        {
+            ThrowIfSpent();
+
+            var segment = new Akka.IO.OwnedSequenceSegment(_buffer!, _written, _pool);
+            _buffer = null;
+            _detached = true;
+            return new ReadOnlySequence<byte>(segment, 0, segment, segment.Memory.Length);
+        }
+
+        /// <summary>
         /// INTERNAL API. Re-arms a detached or disposed writer with a newly rented buffer, so a
         /// single-threaded caller can reuse one writer for every encode instead of allocating one each time.
         /// </summary>

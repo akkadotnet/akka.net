@@ -115,13 +115,11 @@ namespace Akka.Remote.Artery
                     elem.SenderId, elem.RecipientId, elem.RecipientPathUtf8, _writer);
                 _writer = writer;
 
-                // Detach moves ownership of the encoded, pooled buffer to `owner` -- no
-                // WrittenSpan.ToArray() copy, and deliberately NO writer.Dispose() here (Detach
-                // already spent the writer; see PooledPayloadWriter's ownership-rules remarks).
-                // OwnedSequenceSegment.Create wraps it in a segment-backed sequence so the owner
-                // rides -- zero-copy -- straight into coalescing's write buffer.
-                var owner = writer.Detach();
-                Push(_stage.Out, OwnedSequenceSegment.Create(owner));
+                // DetachSequence moves the encoded, pooled buffer into one OwnedSequenceSegment that
+                // owns the rented array itself -- no WrittenSpan.ToArray() copy and no separate owner
+                // object -- and that segment rides, zero-copy, straight into coalescing's write buffer.
+                // It spends the writer; the next encode re-arms it.
+                Push(_stage.Out, writer.DetachSequence());
             }
 
             public void OnPull() => Pull(_stage.In);

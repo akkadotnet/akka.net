@@ -9,6 +9,7 @@
 
 using System;
 using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace Akka.IO
 {
@@ -38,17 +39,6 @@ namespace Akka.IO
         /// most once. Disposal is single-threaded — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
         /// </summary>
         void DisposeOwner();
-
-        /// <summary>
-        /// Returns the owner carried by this segment and clears the segment's own reference to it,
-        /// so a subsequent <see cref="DisposeOwner"/> call on THIS segment becomes a no-op. Used when
-        /// one owner-carrying segment's memory is re-wrapped into another segment (e.g. write
-        /// coalescing chaining a producer's frame into its own buffer) so that exactly one segment
-        /// ends up responsible for eventually disposing the owner — ownership TRANSFERS to the
-        /// caller, it does not dispose anything itself. Single-threaded, same pattern as
-        /// <see cref="DisposeOwner"/> — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
-        /// </summary>
-        IMemoryOwner<byte>? DetachOwner();
     }
 
     /// <summary>
@@ -92,7 +82,20 @@ namespace Akka.IO
     /// </summary>
     internal sealed class OwnedSequenceSegment : ReadOnlySequenceSegment<byte>, IOwnedSequenceSegment
     {
-        private IMemoryOwner<byte>? _owner;
+        // What this segment owns: an IMemoryOwner<byte>, or the ArrayPool<byte> that this segment's own rented
+        // array (the array under Memory) goes back to. Holding the pool directly means a pooled frame needs no
+        // owner object besides its segment.
+        private object? _owner;
+
+        /// <summary>
+        /// A segment over the first <paramref name="length"/> bytes of <paramref name="rented"/> that returns
+        /// the array to <paramref name="pool"/> when its owner is disposed.
+        /// </summary>
+        internal OwnedSequenceSegment(byte[] rented, int length, ArrayPool<byte> pool)
+        {
+            Memory = new ReadOnlyMemory<byte>(rented, 0, length);
+            _owner = pool;
+        }
 
         /// <summary>A borrowed link that owns nothing, for a chain mixing owned and borrowed memory.</summary>
         internal OwnedSequenceSegment(ReadOnlyMemory<byte> memory)
@@ -198,15 +201,16 @@ namespace Akka.IO
         {
             var owner = _owner;
             _owner = null;
-            owner?.Dispose();
-        }
-
-        /// <inheritdoc />
-        public IMemoryOwner<byte>? DetachOwner()
-        {
-            var owner = _owner;
-            _owner = null;
-            return owner;
+            if (owner is ArrayPool<byte> pool)
+            {
+                // Memory may have been sliced since, but it still refers to the rented array.
+                if (MemoryMarshal.TryGetArray(Memory, out var rented))
+                    pool.Return(rented.Array!);
+            }
+            else
+            {
+                ((IMemoryOwner<byte>?)owner)?.Dispose();
+            }
         }
 
         /// <summary>
