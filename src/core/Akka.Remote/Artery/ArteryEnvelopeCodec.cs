@@ -19,7 +19,7 @@ namespace Akka.Remote.Artery
     ///
     /// Encodes and decodes the Artery envelope described in
     /// <c>openspec/changes/artery-tcp-remoting/design.md</c> ("Envelope wire layout" / Decision 4):
-    /// a 32-byte fixed header (<see cref="ArteryEnvelopeFixedHeader"/>) followed by an optional
+    /// a 48-byte fixed header (<see cref="ArteryEnvelopeFixedHeader"/>) followed by an optional
     /// metadata section, then length-prefixed UTF-8 literals for any LITERAL sender/recipient/
     /// manifest tag, then the serialized payload. The whole frame on the wire is
     /// <c>[u32 LE frame length][envelope]</c>; the frame length is always back-patched from actual
@@ -53,7 +53,7 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Encodes one Artery frame -- <c>[u32 LE frame length][32B fixed header][literals][payload]</c>
+        /// Encodes one Artery frame -- <c>[u32 LE frame length][48B fixed header][literals][payload]</c>
         /// -- into <paramref name="destination"/>, from already-resolved parts (serializer id,
         /// manifest, and raw payload bytes are all provided by the caller; compare the V2 single-pass
         /// overload, which resolves serializer id + manifest from a message object and streams the
@@ -89,7 +89,7 @@ namespace Akka.Remote.Artery
             BinaryPrimitives.WriteUInt32LittleEndian(destination, (uint)frameLength);
             WriteFixedHeader(
                 envelope.Slice(0, ArteryEnvelopeHeader.HeaderLength),
-                serializerId, originUid, senderTag, recipientTag, manifestTag, payloadOffset);
+                serializerId, originUid, senderTag, recipientTag, manifestTag, payloadOffset, senderId: 0, recipientId: 0);
 
             return ArteryEnvelopeHeader.FrameLengthFieldLength + frameLength;
         }
@@ -149,6 +149,12 @@ namespace Akka.Remote.Artery
         /// array, turning a buffer-lifetime bug into a loud, deterministic assertion failure instead
         /// of a silent race -- see the G3 opening-refactor Task 2 "poison pool" test.
         /// </param>
+        /// <param name="senderId">The sender ref's numeric id for the fixed header, or 0 for none.</param>
+        /// <param name="recipientId">The recipient ref's numeric id for the fixed header, or 0 for none.</param>
+        /// <param name="recipientPathUtf8">
+        /// The recipient path already encoded as UTF-8; when not <see langword="null"/> it is written
+        /// instead of <paramref name="recipientPath"/>.
+        /// </param>
         /// <returns>
         /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
         /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
@@ -163,7 +169,10 @@ namespace Akka.Remote.Artery
             string? senderPath,
             string? recipientPath,
             object message,
-            ArrayPool<byte>? pool = null)
+            ArrayPool<byte>? pool = null,
+            long senderId = 0,
+            long recipientId = 0,
+            byte[]? recipientPathUtf8 = null)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -171,15 +180,18 @@ namespace Akka.Remote.Artery
                 throw new ArgumentNullException(nameof(message));
 
             return Akka.Serialization.Serialization.WithTransport(serialization.System,
-                (serialization, originUid, senderPath, recipientPath, message, pool), static state =>
+                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8), static state =>
             {
                 var serializer = state.serialization.FindSerializerV2For(state.message);
                 var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, state.message) ?? string.Empty;
 
                 const int reservedPrefixLength = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
+                var recipientByteCount = 0;
                 var capacityHint = reservedPrefixLength
                     + LiteralWireSize(state.senderPath, out var senderByteCount)
-                    + LiteralWireSize(state.recipientPath, out var recipientByteCount)
+                    + (state.recipientPathUtf8 is { } recipientUtf8
+                        ? ArteryEnvelopeHeader.LiteralLengthPrefixSize + recipientUtf8.Length
+                        : LiteralWireSize(state.recipientPath, out recipientByteCount))
                     + LiteralWireSize(manifest, out var manifestByteCount);
 
                 // Fold in the serializer's own size hint (a hint only -- the frame length is still
@@ -198,7 +210,9 @@ namespace Akka.Remote.Artery
                     writer.Advance(reservedPrefixLength);
 
                     var senderTag = WriteLiteral(writer, state.senderPath, senderByteCount);
-                    var recipientTag = WriteLiteral(writer, state.recipientPath, recipientByteCount);
+                    var recipientTag = state.recipientPathUtf8 is { } recipientBytes
+                        ? WriteLiteral(writer, recipientBytes)
+                        : WriteLiteral(writer, state.recipientPath, recipientByteCount);
                     var manifestTag = WriteLiteral(writer, manifest, manifestByteCount);
 
                     var payloadOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
@@ -213,7 +227,8 @@ namespace Akka.Remote.Artery
                         writer.GetPatchSpan(0, ArteryEnvelopeHeader.FrameLengthFieldLength), (uint)frameLength);
                     WriteFixedHeader(
                         writer.GetPatchSpan(ArteryEnvelopeHeader.FrameLengthFieldLength, ArteryEnvelopeHeader.HeaderLength),
-                        serializer.Identifier, state.originUid, senderTag, recipientTag, manifestTag, payloadOffset);
+                        serializer.Identifier, state.originUid, senderTag, recipientTag, manifestTag, payloadOffset,
+                        state.senderId, state.recipientId);
 
                     return writer;
                 }
@@ -229,7 +244,7 @@ namespace Akka.Remote.Artery
         /// Decodes envelope metadata from <paramref name="frameBody"/> -- the envelope WITHOUT the
         /// 4-byte frame-length prefix (that prefix belongs to the TCP framing layer, Decision 3, and
         /// is consumed by the frame parser before this codec ever sees the bytes). Only the fixed
-        /// 32-byte header (plus, if present, the metadata-section length prefix) is read; the
+        /// 48-byte header (plus, if present, the metadata-section length prefix) is read; the
         /// payload is exposed as a lazy <see cref="ReadOnlySequence{T}"/> slice, and sender/recipient/
         /// manifest literals are resolved lazily on demand. Decoding the fixed header itself never
         /// allocates (single-segment fast path; stackalloc copy fallback for a header split across
@@ -237,7 +252,7 @@ namespace Akka.Remote.Artery
         /// </summary>
         /// <exception cref="ArteryEnvelopeException">
         /// The frame body is shorter than the fixed header; the version is unsupported; a reserved
-        /// flag bit is set; the declared payload offset is less than 32 or beyond the frame end; or
+        /// flag bit is set; the declared payload offset is less than the header length or beyond the frame end; or
         /// (if flags bit 0 is set) the metadata section's declared length extends past the payload
         /// offset.
         /// </exception>
@@ -278,6 +293,8 @@ namespace Akka.Remote.Artery
             var recipientTag = BinaryPrimitives.ReadUInt32LittleEndian(h.Slice(ArteryEnvelopeHeader.RecipientTagOffset));
             var manifestTag = BinaryPrimitives.ReadUInt32LittleEndian(h.Slice(ArteryEnvelopeHeader.ManifestTagOffset));
             var payloadOffset = (long)BinaryPrimitives.ReadUInt32LittleEndian(h.Slice(ArteryEnvelopeHeader.PayloadOffsetFieldOffset));
+            var senderId = BinaryPrimitives.ReadInt64LittleEndian(h.Slice(ArteryEnvelopeHeader.SenderIdOffset));
+            var recipientId = BinaryPrimitives.ReadInt64LittleEndian(h.Slice(ArteryEnvelopeHeader.RecipientIdOffset));
 
             if (payloadOffset < ArteryEnvelopeHeader.HeaderLength)
                 throw new ArteryEnvelopeException(
@@ -306,7 +323,7 @@ namespace Akka.Remote.Artery
 
             var header = new ArteryEnvelopeFixedHeader(
                 version, flags, actorRefTableVersion, manifestTableVersion,
-                originUid, serializerId, senderTag, recipientTag, manifestTag, payloadOffset);
+                originUid, serializerId, senderTag, recipientTag, manifestTag, payloadOffset, senderId, recipientId);
 
             return new ArteryEnvelopeDecoded(frameBody, header);
         }
@@ -318,7 +335,9 @@ namespace Akka.Remote.Artery
             uint senderTag,
             uint recipientTag,
             uint manifestTag,
-            long payloadOffset)
+            long payloadOffset,
+            long senderId,
+            long recipientId)
         {
             header[ArteryEnvelopeHeader.VersionOffset] = ArteryEnvelopeHeader.CurrentVersion;
             header[ArteryEnvelopeHeader.FlagsOffset] = 0;
@@ -330,6 +349,8 @@ namespace Akka.Remote.Artery
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.RecipientTagOffset), recipientTag);
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.ManifestTagOffset), manifestTag);
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.PayloadOffsetFieldOffset), checked((uint)payloadOffset));
+            BinaryPrimitives.WriteInt64LittleEndian(header.Slice(ArteryEnvelopeHeader.SenderIdOffset), senderId);
+            BinaryPrimitives.WriteInt64LittleEndian(header.Slice(ArteryEnvelopeHeader.RecipientIdOffset), recipientId);
         }
 
         /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a fixed <see cref="Span{T}"/>, advancing <paramref name="cursor"/>.</summary>
@@ -376,6 +397,22 @@ namespace Akka.Remote.Artery
                 Encoding.UTF8.GetBytes(value.AsSpan(), writer.GetSpan(byteCount));
                 writer.Advance(byteCount);
             }
+
+            return (uint)tagOffset;
+        }
+
+        /// <summary>Writes an already UTF-8 encoded LITERAL into a growable <see cref="Akka.Serialization.PooledPayloadWriter"/>.</summary>
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, byte[] utf8)
+        {
+            if (utf8.Length > ArteryEnvelopeHeader.MaxLiteralByteLength)
+                throw new ArteryEnvelopeException(
+                    $"Literal exceeds the maximum encodable length of {ArteryEnvelopeHeader.MaxLiteralByteLength} UTF-8 bytes (was {utf8.Length}).");
+            var tagOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
+
+            BinaryPrimitives.WriteUInt16LittleEndian(writer.GetSpan(ArteryEnvelopeHeader.LiteralLengthPrefixSize), (ushort)utf8.Length);
+            writer.Advance(ArteryEnvelopeHeader.LiteralLengthPrefixSize);
+            utf8.CopyTo(writer.GetSpan(utf8.Length));
+            writer.Advance(utf8.Length);
 
             return (uint)tagOffset;
         }
@@ -446,7 +483,7 @@ namespace Akka.Remote.Artery
             Header = header;
         }
 
-        /// <summary>The decoded fixed 32-byte header.</summary>
+        /// <summary>The decoded fixed 48-byte header.</summary>
         public ArteryEnvelopeFixedHeader Header { get; }
 
         /// <summary>
@@ -538,6 +575,17 @@ namespace Akka.Remote.Artery
         public ReadOnlySequence<byte> GetRecipientLiteralBytes()
         {
             ReadLiteralBounds(Header.RecipientTag, out var dataStart, out var length);
+            return _frameBody.Slice(dataStart, length);
+        }
+
+        /// <summary>
+        /// The raw UTF-8 bytes of the sender literal, as a slice of the frame body. Only valid when
+        /// <see cref="SenderKind"/> is <see cref="ArteryTagKind.Literal"/>; same bounds validation as
+        /// <see cref="GetRecipientLiteralBytes"/>.
+        /// </summary>
+        public ReadOnlySequence<byte> GetSenderLiteralBytes()
+        {
+            ReadLiteralBounds(Header.SenderTag, out var dataStart, out var length);
             return _frameBody.Slice(dataStart, length);
         }
 

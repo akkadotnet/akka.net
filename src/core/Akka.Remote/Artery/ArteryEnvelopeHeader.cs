@@ -12,7 +12,7 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Wire-layout constants for the Artery envelope's fixed 32-byte header, per
+    /// Wire-layout constants for the Artery envelope's fixed 48-byte header, per
     /// <c>openspec/changes/artery-tcp-remoting/design.md</c> ("Envelope wire layout", Decision 4;
     /// sub-decisions CLOSED at G1, 2026-07-04). All multi-byte fields are little-endian.
     ///
@@ -31,11 +31,14 @@ namespace Akka.Remote.Artery
         /// <summary>Length, in bytes, of the frame-length field that precedes every envelope on the wire.</summary>
         public const int FrameLengthFieldLength = 4;
 
-        /// <summary>Length, in bytes, of the fixed envelope header (offsets 0..32).</summary>
-        public const int HeaderLength = 32;
+        /// <summary>Length, in bytes, of the fixed envelope header (offsets 0..48).</summary>
+        public const int HeaderLength = 48;
 
-        /// <summary>The only version this codec understands; the decoder rejects any other value.</summary>
-        public const byte CurrentVersion = 1;
+        /// <summary>
+        /// The only version this codec understands; the decoder rejects any other value. Version 2
+        /// added the sender and recipient ref ids at offsets 32 and 40.
+        /// </summary>
+        public const byte CurrentVersion = 2;
 
         /// <summary>Flags bit 0: a metadata section is present immediately after the fixed header.</summary>
         public const byte MetadataPresentFlag = 0b0000_0001;
@@ -80,6 +83,8 @@ namespace Akka.Remote.Artery
         public const int RecipientTagOffset = 20;
         public const int ManifestTagOffset = 24;
         public const int PayloadOffsetFieldOffset = 28;
+        public const int SenderIdOffset = 32;
+        public const int RecipientIdOffset = 40;
 
         /// <summary>Offset (relative to envelope offset 0) where an optional metadata section's u32 LE length field begins.</summary>
         public const int MetadataSectionOffset = HeaderLength;
@@ -88,7 +93,7 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
-    /// The decoded fixed 32-byte Artery envelope header. Sender/recipient/manifest tags are left
+    /// The decoded fixed 48-byte Artery envelope header. Sender/recipient/manifest tags are left
     /// undecoded here (raw <see cref="uint"/>) -- classifying and resolving them (ABSENT / LITERAL /
     /// COMPRESSED) is the job of <see cref="ArteryEnvelopeDecoded"/>, which also needs the envelope
     /// body to resolve a LITERAL tag to a string. This type is a readonly struct so decoding the
@@ -109,7 +114,9 @@ namespace Akka.Remote.Artery
             uint senderTag,
             uint recipientTag,
             uint manifestTag,
-            long payloadOffset)
+            long payloadOffset,
+            long senderId = 0,
+            long recipientId = 0)
         {
             Version = version;
             Flags = flags;
@@ -121,9 +128,11 @@ namespace Akka.Remote.Artery
             RecipientTag = recipientTag;
             ManifestTag = manifestTag;
             PayloadOffset = payloadOffset;
+            SenderId = senderId;
+            RecipientId = recipientId;
         }
 
-        /// <summary>Envelope wire-layout version. Always 1 in a successfully decoded header.</summary>
+        /// <summary>Envelope wire-layout version. Always <see cref="ArteryEnvelopeHeader.CurrentVersion"/> in a successfully decoded header.</summary>
         public byte Version { get; }
 
         /// <summary>Envelope flags byte. Bit 0 = metadata section present; bits 1-7 are reserved-must-be-zero.</summary>
@@ -155,6 +164,18 @@ namespace Akka.Remote.Artery
         /// O(1) -- does not need to be derived from frame length minus a variable-length tail.
         /// </summary>
         public long PayloadOffset { get; }
+
+        /// <summary>
+        /// Numeric id of the sender ref on the origin system, or 0 when the sender carries none.
+        /// The sender path literal is always present too.
+        /// </summary>
+        public long SenderId { get; }
+
+        /// <summary>
+        /// Numeric id of the recipient ref on the receiving system, or 0 when it carries none. The
+        /// recipient path literal is always present too.
+        /// </summary>
+        public long RecipientId { get; }
 
         /// <summary><see langword="true"/> iff <see cref="Flags"/> bit 0 is set (a metadata section follows the fixed header).</summary>
         public bool HasMetadataSection => (Flags & ArteryEnvelopeHeader.MetadataPresentFlag) != 0;

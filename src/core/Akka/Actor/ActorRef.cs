@@ -574,6 +574,16 @@ namespace Akka.Actor
     [InternalApi]
     public abstract class MinimalActorRef : InternalActorRefBase, ILocalRef
     {
+        /// <summary>
+        /// INTERNAL API. The id an Ask future carries on the Artery wire (its path has no uid), 0 for
+        /// any other ref: <see cref="TempChildIdFlag"/> combined with the temp counter value its
+        /// /temp name was made from, so the receiving system finds it in the temp container.
+        /// </summary>
+        internal long WireId;
+
+        /// <summary>INTERNAL API. Marks a wire id as a child of /temp whose low 63 bits are its temp number.</summary>
+        internal const long TempChildIdFlag = long.MinValue;
+
         /// <inheritdoc cref="InternalActorRefBase"/>
         public override IInternalActorRef Parent
         {
@@ -860,7 +870,7 @@ namespace Akka.Actor
         /// <param name="name">The direct child name to find.</param>
         /// <param name="child">Receives the child reference when one is registered under that name.</param>
         /// <returns><c>true</c> if a child with that name is registered; otherwise, <c>false</c>.</returns>
-        protected bool TryGetChild(string name, out IInternalActorRef child)
+        protected internal bool TryGetChild(string name, out IInternalActorRef child)
         {
             return _children.TryGetValue(name, out child);
         }

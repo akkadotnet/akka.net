@@ -8,6 +8,7 @@
 #nullable enable
 
 using System;
+using System.Buffers;
 using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -60,16 +61,17 @@ namespace Akka.Remote.Tests.Artery
                 "DispatchInbound",
                 BindingFlags.Instance | BindingFlags.NonPublic,
                 binder: null,
-                types: new[] { typeof(IInboundEnvelope) },
+                types: new[] { typeof(IInboundEnvelope), typeof(ArteryRemoteSenderCache) },
                 modifiers: null)!;
-            var dispatch = (Action<IInboundEnvelope>)Delegate.CreateDelegate(
-                typeof(Action<IInboundEnvelope>), transport, method);
+            var dispatch = (Action<IInboundEnvelope, ArteryRemoteSenderCache>)Delegate.CreateDelegate(
+                typeof(Action<IInboundEnvelope, ArteryRemoteSenderCache>), transport, method);
 
             try
             {
                 // Ordinary traffic wins the race against both creates.
-                dispatch(new InboundEnvelope(
-                    "ping", senderPath, recipientPath, 42L, 1, "S"));
+                using var frame = ArteryEnvelopeCodec.Encode(Sys.Serialization, 42L, senderPath, recipientPath, "ping");
+                var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(frame.WrittenMemory.Slice(4).ToArray()));
+                dispatch(new InboundEnvelope("ping", null, null, 42L, 1, "S") { Frame = decoded }, new ArteryRemoteSenderCache());
 
                 // Model processing both creates before the first recipient retry.
                 daemon.AddChild(senderKey, (IInternalActorRef)senderProbe.Ref);

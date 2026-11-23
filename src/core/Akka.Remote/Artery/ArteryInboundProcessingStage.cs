@@ -29,8 +29,8 @@ namespace Akka.Remote.Artery
     /// (<see cref="ArteryEnvelopeCodec"/>), and deserializes the payload of every subsequent frame,
     /// wrapping each in an <see cref="IInboundEnvelope"/> -- a control envelope
     /// (<see cref="IInboundEnvelope.IsControl"/> true, <see cref="IInboundEnvelope.RecipientPath"/>
-    /// <see langword="null"/>) for a handshake message, or an ordinary envelope (recipient/sender
-    /// paths resolved) for a user message -- see design.md "G2 staging" and "Decode order
+    /// <see langword="null"/>) for a handshake message, or an ordinary envelope (carrying its decoded
+    /// frame, whose path literals the dispatcher decodes on demand) for a user message -- see design.md "G2 staging" and "Decode order
     /// (structural, not an optimization)".
     ///
     /// <para>
@@ -183,7 +183,7 @@ namespace Akka.Remote.Artery
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
-        /// loop, once per deserialized ordinary message, as <c>(message, senderPath, recipientPath, originUid)</c>
+        /// loop, once per deserialized ordinary message, as <c>(message, decoded frame, the lane's remote-sender cache)</c>
         /// -- mirrors <c>ArteryRemoting.DispatchOrdinaryMessage</c> exactly (the same resolve-and-Tell
         /// logic <c>ArteryRemoting.DispatchInbound</c> uses for the lanes=1/non-lane path).
         /// </param>
@@ -208,7 +208,7 @@ namespace Akka.Remote.Artery
             int inboundLanes = 1,
             int inboundLaneBufferSize = 0,
             IInboundContext? inboundContext = null,
-            Action<object, string?, string, long>? dispatchOrdinary = null,
+            Action<object, ArteryEnvelopeDecoded, ArteryRemoteSenderCache>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
             SharedTestState? testState = null)
         {
@@ -287,7 +287,7 @@ namespace Akka.Remote.Artery
         public IInboundContext? InboundContext { get; }
 
         /// <summary>See the constructor parameter of the same name. <see langword="null"/> when <see cref="InboundLanes"/> is 1.</summary>
-        public Action<object, string?, string, long>? DispatchOrdinary { get; }
+        public Action<object, ArteryEnvelopeDecoded, ArteryRemoteSenderCache>? DispatchOrdinary { get; }
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public Action<int>? OnLanesInitialized { get; }
@@ -651,7 +651,8 @@ namespace Akka.Remote.Artery
                 if (payload is IArteryControlMessage)
                     return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
 
-                if (!decoded.TryGetRecipientPath(out var recipientPath))
+                var recipientKind = decoded.RecipientKind;
+                if (recipientKind == ArteryTagKind.Compressed)
                 {
                     Log.Warning(
                         "Dropping inbound ordinary-stream message of type [{0}]: COMPRESSED recipient tag " +
@@ -659,15 +660,18 @@ namespace Akka.Remote.Artery
                     return null;
                 }
 
-                if (recipientPath is null)
+                if (recipientKind == ArteryTagKind.Absent)
                 {
                     Log.Warning(
                         "Dropping inbound ordinary-stream message of type [{0}] with no recipient.", payload.GetType());
                     return null;
                 }
 
-                var senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
-                return new InboundEnvelope(payload, senderPath, recipientPath, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                // The dispatcher decodes the sender and recipient literals, and only when needed.
+                return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest)
+                {
+                    Frame = decoded
+                };
             }
 
             private void DeliverOrPull()
@@ -715,8 +719,9 @@ namespace Akka.Remote.Artery
                     var log = _laneLog;
                     var serialization = _stage.Serialization;
                     var dispatch = _stage.DispatchOrdinary!;
+                    var senders = new ArteryRemoteSenderCache();
                     // A consumer that ends abnormally would leave its lane unread: fail the stage so the connection restarts.
-                    Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, log))
+                    Task.Run(() => RunLaneConsumer(reader, serialization, dispatch, senders, log))
                         .ContinueWith(t => onConsumerFailed(t.Exception!.GetBaseException()), TaskContinuationOptions.OnlyOnFaulted);
                 }
 
@@ -726,6 +731,30 @@ namespace Akka.Remote.Artery
                 // null (the production default) does nothing.
                 _stage.OnLanesInitialized?.Invoke(laneCount);
             }
+
+            /// <summary>
+            /// Reads the next item, spinning briefly for one before giving up. Only reached after the
+            /// consumer has just processed an item: when it then parks, the reader's next write to this
+            /// lane has to wake it through the thread pool, a hand-off paid on the reader's thread.
+            /// </summary>
+            private static bool TryReadOrSpin(ChannelReader<LaneWorkItem> reader, out LaneWorkItem item)
+            {
+                if (reader.TryRead(out item))
+                    return true;
+
+                var spinner = new System.Threading.SpinWait();
+                for (var i = 0; i < LaneSpinIterations; i++)
+                {
+                    spinner.SpinOnce(sleep1Threshold: -1);
+                    if (reader.TryRead(out item))
+                        return true;
+                }
+
+                return false;
+            }
+
+            // Ten iterations stay within SpinWait's busy-spin phase (no yields): a few microseconds at most.
+            private const int LaneSpinIterations = 10;
 
             /// <summary>
             /// One lane's long-running consumer loop (design's benchmark-locked mechanism: one
@@ -743,27 +772,26 @@ namespace Akka.Remote.Artery
             private static async Task RunLaneConsumer(
                 ChannelReader<LaneWorkItem> reader,
                 Akka.Serialization.Serialization serialization,
-                Action<object, string?, string, long> dispatch,
+                Action<object, ArteryEnvelopeDecoded, ArteryRemoteSenderCache> dispatch,
+                ArteryRemoteSenderCache senders,
                 ILoggingAdapter log)
             {
                 try
                 {
                     while (await reader.WaitToReadAsync().ConfigureAwait(false))
                     {
-                        while (reader.TryRead(out var item))
+                        while (TryReadOrSpin(reader, out var item))
                         {
                             // Decode on the lane: the reader left every literal undecoded. A
                             // malformed literal (or any other decode error) drops only this item.
+                            // The dispatcher decodes the sender and recipient literals, and only
+                            // when needed.
                             ArteryEnvelopeDecoded decoded;
                             string manifest;
-                            string? senderPath;
-                            string? recipientPath;
                             try
                             {
                                 decoded = ArteryEnvelopeCodec.Decode(item.FrameBody);
                                 decoded.TryGetManifest(out manifest);
-                                decoded.TryGetRecipientPath(out recipientPath);
-                                senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
                             }
                             catch (Exception ex)
                             {
@@ -774,7 +802,7 @@ namespace Akka.Remote.Artery
                             try
                             {
                                 var message = serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
-                                dispatch(message, senderPath, recipientPath!, decoded.Header.OriginUid);
+                                dispatch(message, decoded, senders);
                             }
                             catch (Exception ex) when (!Akka.IO.TlsCertificateSource.IsFatal(ex))
                             {

@@ -53,6 +53,18 @@ namespace Akka.Remote.Artery
         /// this instead of re-running an <c>is</c> type-test on every element at every stage.
         /// </summary>
         bool IsControl { get; }
+
+        /// <summary>The sender ref's numeric id written into the envelope header, or 0 for none.</summary>
+        long SenderId { get; }
+
+        /// <summary>The recipient ref's numeric id written into the envelope header, or 0 for none.</summary>
+        long RecipientId { get; }
+
+        /// <summary>
+        /// The recipient path already encoded as UTF-8, written instead of <see cref="RecipientPath"/>
+        /// when set (an ordinary message to a remote ref, which keeps its serialized path).
+        /// </summary>
+        byte[]? RecipientPathUtf8 { get; }
     }
 
     /// <summary>
@@ -66,9 +78,14 @@ namespace Akka.Remote.Artery
     /// <param name="Message">The message to serialize as the envelope's payload.</param>
     /// <param name="SenderPath">The sender's wire-format path, or <see langword="null"/> for no sender.</param>
     /// <param name="RecipientPath">The recipient's wire-format path, or <see langword="null"/> for control messages.</param>
-    internal sealed record OutboundEnvelope(object Message, string? SenderPath, string? RecipientPath) : IOutboundEnvelope
+    /// <param name="SenderId">The sender ref's numeric id (see <see cref="ArteryEnvelopeFixedHeader.SenderId"/>), or 0.</param>
+    /// <param name="RecipientId">The recipient ref's numeric id (see <see cref="ArteryEnvelopeFixedHeader.RecipientId"/>), or 0.</param>
+    internal sealed record OutboundEnvelope(object Message, string? SenderPath, string? RecipientPath, long SenderId = 0, long RecipientId = 0) : IOutboundEnvelope
     {
         /// <inheritdoc/>
         public bool IsControl { get; } = Message is IArteryControlMessage;
+
+        /// <inheritdoc/>
+        public byte[]? RecipientPathUtf8 { get; init; }
     }
 }

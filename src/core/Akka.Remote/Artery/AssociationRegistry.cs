@@ -905,9 +905,18 @@ namespace Akka.Remote.Artery
         /// uid into <c>[0, lanes)</c> -- functionally equivalent to "abs mod lanes" for partitioning
         /// purposes, just crash-proof.
         /// </para>
+        ///
+        /// <para>
+        /// The uid is multiplied by a 64-bit odd constant and the high 32 bits of the product are
+        /// taken before the modulo. Under Artery, actor UIDs come from a per-system counter, so actors
+        /// created in a repeating pattern (an actor and its peer, created in turn) have UIDs with a
+        /// fixed stride; a plain <c>uid % lanes</c> would put all of them on the same few lanes.
+        /// The same uid always maps to the same lane, so per-recipient ordering is unchanged; the
+        /// cost is one multiply and a shift per send.
+        /// </para>
         /// </summary>
         public static int SelectLane(long recipientUid, int lanes) =>
-            lanes <= 1 ? 0 : (int)(unchecked((ulong)recipientUid) % (ulong)lanes);
+            lanes <= 1 ? 0 : (int)((unchecked((ulong)recipientUid * 0x9E3779B97F4A7C15UL) >> 32) % (ulong)lanes);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the CONTROL outbound stream to send.

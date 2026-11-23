@@ -406,9 +406,12 @@ namespace Akka.Actor
         public FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs)
         {
             //create a new tempcontainer path
-            var path = TempPath();
+            var number = _tempNumber.GetAndIncrement();
+            var path = _tempNode / number.Base64Encode();
 
             var future = new FutureActorRef<T>(tcs, path, this);
+            if (_system.Use64BitActorUids)
+                future.WireId = MinimalActorRef.TempChildIdFlag | number;
             return future;
         }
 

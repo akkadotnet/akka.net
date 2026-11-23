@@ -142,6 +142,21 @@ namespace Akka.Remote.Tests.Artery
             observedLanes.Should().BeEquivalentTo(new[] { 0, 1, 2, 3 }, "1000 distinct sequential uids over 4 lanes must exercise every lane");
         }
 
+        [Theory(DisplayName = "SelectLane should spread uids that advance by a fixed stride across every configured lane")]
+        [InlineData(2)]
+        [InlineData(4)]
+        [InlineData(8)]
+        public void SelectLane_should_spread_strided_uids_across_all_lanes(int stride)
+        {
+            const long start = 0x1234_5678_9ABCL;
+            var perLane = Enumerable.Range(0, 400)
+                .GroupBy(i => Association.SelectLane(start + (long)i * stride, 4))
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            perLane.Keys.Should().BeEquivalentTo(new[] { 0, 1, 2, 3 });
+            perLane.Values.Should().OnlyContain(n => n > 50, "400 strided uids over 4 lanes must not pile onto a few lanes");
+        }
+
         // ----------------------------------------------------------------------------------
         // Test 1: per-recipient ordering at outbound-lanes = 4 with many concurrent senders to
         // ~16 distinct remote recipients.

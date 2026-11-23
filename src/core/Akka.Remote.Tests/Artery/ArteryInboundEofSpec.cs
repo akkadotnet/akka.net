@@ -44,7 +44,7 @@ public sealed class ArteryInboundEofSpec : AkkaSpec
         context.CompleteHandshake(new UniqueAddress(new Address("akka", "peer", "127.0.0.1", 4321), 42));
         return new ArteryInboundProcessingStage(65536, 65536, Sys.Serialization, Sys.Scheduler,
             inboundLanes: lanes, inboundLaneBufferSize: 4, inboundContext: context,
-            dispatchOrdinary: (payload, _, _, _) => deliver(payload));
+            dispatchOrdinary: (payload, _, _) => deliver(payload));
     }
 
     private static Source<ReadOnlySequence<byte>, NotUsed> Input(byte[] bytes, bool fragmented) => fragmented

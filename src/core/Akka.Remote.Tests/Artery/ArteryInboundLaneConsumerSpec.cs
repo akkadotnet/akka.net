@@ -32,7 +32,7 @@ public sealed class ArteryInboundLaneConsumerSpec : AkkaSpec
         context.CompleteHandshake(new UniqueAddress(new Address("akka", "peer", "127.0.0.1", 4321), 42));
         return new ArteryInboundProcessingStage(65536, 65536, Sys.Serialization, Sys.Scheduler,
             inboundLanes: 2, inboundLaneBufferSize: 4, inboundContext: context,
-            dispatchOrdinary: (message, _, _, _) => deliver(message));
+            dispatchOrdinary: (message, _, _) => deliver(message));
     }
 
     private Task Run(ArteryInboundProcessingStage stage, bool keepOpen)
