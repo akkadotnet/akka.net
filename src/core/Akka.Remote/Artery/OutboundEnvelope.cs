@@ -82,10 +82,25 @@ namespace Akka.Remote.Artery
     /// <param name="RecipientId">The recipient ref's numeric id (see <see cref="ArteryEnvelopeFixedHeader.RecipientId"/>), or 0.</param>
     internal sealed record OutboundEnvelope(object Message, string? SenderPath, string? RecipientPath, long SenderId = 0, long RecipientId = 0) : IOutboundEnvelope
     {
-        /// <inheritdoc/>
-        public bool IsControl { get; } = Message is IArteryControlMessage;
+        // One field holds the recipient as either its path string or its UTF-8 bytes. A send sets one of
+        // the two; if both are set, the UTF-8 bytes win (the encoder prefers them anyway).
+        private object? _recipient = RecipientPath;
 
         /// <inheritdoc/>
-        public byte[]? RecipientPathUtf8 { get; init; }
+        public string? RecipientPath { get => _recipient as string; init => _recipient = value; }
+
+        /// <inheritdoc/>
+        public bool IsControl => Message is IArteryControlMessage;
+
+        /// <inheritdoc/>
+        public byte[]? RecipientPathUtf8
+        {
+            get => _recipient as byte[];
+            init
+            {
+                if (value is not null)
+                    _recipient = value;
+            }
+        }
     }
 }
