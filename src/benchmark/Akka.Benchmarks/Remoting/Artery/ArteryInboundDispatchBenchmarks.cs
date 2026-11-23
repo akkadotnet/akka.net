@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Buffers;
 using System.Reflection;
 using System.Threading;
 using Akka.Actor;
@@ -20,8 +21,8 @@ namespace Akka.Benchmarks.Remoting.Artery
     /// <summary>
     /// Cost of the inbound Artery dispatch step for one already-decoded ordinary message on the
     /// success path (all paths valid, nothing throws). One operation is one call of the real
-    /// <c>ArteryRemoting.DispatchInbound(IInboundEnvelope)</c> (the lanes = 1 sink callback) on an
-    /// envelope carrying literal sender/recipient path strings: control/system-message checks,
+    /// <c>ArteryRemoting.DispatchInbound</c> (the lanes = 1 sink callback) on an envelope carrying a
+    /// decoded frame with literal sender/recipient paths and no ref ids: control/system-message checks,
     /// recipient resolve, sender resolve, and <c>Tell</c> into the recipient. No sockets, framing or
     /// deserialization are involved. For a local mailbox recipient an operation ends once the
     /// message is enqueued; the recipient actor drains it asynchronously, and the iteration cleanup
@@ -86,9 +87,16 @@ namespace Akka.Benchmarks.Remoting.Artery
             var senderPath = "akka://remote-peer@10.1.2.3:4053/user/sender#1234567";
 
             const string msg = "ping";
-            _tellWithSender = new InboundEnvelope(msg, senderPath, recipientPath, 42L, 1, "S");
-            _tellNoSender = new InboundEnvelope(msg, null, recipientPath, 42L, 1, "S");
-            _askReply = new InboundEnvelope(msg, senderPath, tempPath, 42L, 1, "S");
+            IInboundEnvelope Envelope(string? sender, string recipient)
+            {
+                using var frame = Akka.Remote.Artery.ArteryEnvelopeCodec.Encode(_system.Serialization, 42L, sender, recipient, msg);
+                var decoded = Akka.Remote.Artery.ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(frame.WrittenMemory.Slice(4).ToArray()));
+                return new InboundEnvelope(msg, null, null, 42L, 1, "S") { Frame = decoded };
+            }
+
+            _tellWithSender = Envelope(senderPath, recipientPath);
+            _tellNoSender = Envelope(null, recipientPath);
+            _askReply = Envelope(senderPath, tempPath);
 
             // Warm the path caches and the actor so first-use costs are outside the measurement.
             for (var i = 0; i < 100; i++)

@@ -152,9 +152,11 @@ namespace Akka.Remote.Tests.Artery
             var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var stage = new ArteryInboundProcessingStage(65536, 65536, Sys.Serialization, Sys.Scheduler,
                 inboundLanes: Lanes, inboundLaneBufferSize: 64, inboundContext: context,
-                dispatchOrdinary: (m, s, r, _) =>
+                dispatchOrdinary: (m, frame) =>
                 {
-                    delivered.Enqueue(new Delivery(m, s, r));
+                    var s = frame.TryGetSenderPath(out var sp) ? sp : null;
+                    frame.TryGetRecipientPath(out var r);
+                    delivered.Enqueue(new Delivery(m, s, r!));
                     if (expectedCount is { } count ? delivered.Count >= count : Equals(m, "sentinel"))
                         done.TrySetResult(true);
                 });
@@ -318,15 +320,17 @@ namespace Akka.Remote.Tests.Artery
             ManualResetEventSlim release, TaskCompletionSource<bool> entered, ConcurrentQueue<Delivery> delivered, int laneBuffer) =>
             new(65536, 65536, Sys.Serialization, Sys.Scheduler,
                 inboundLanes: Lanes, inboundLaneBufferSize: laneBuffer, inboundContext: NewContext(true, null),
-                dispatchOrdinary: (m, s, r, _) =>
+                dispatchOrdinary: (m, frame) =>
                 {
+                    var s = frame.TryGetSenderPath(out var sp) ? sp : null;
+                    frame.TryGetRecipientPath(out var r);
                     if (r == BlockedRecipient)
                     {
                         entered.TrySetResult(true);
                         release.Wait(TimeSpan.FromSeconds(60));
                     }
 
-                    delivered.Enqueue(new Delivery(m, s, r));
+                    delivered.Enqueue(new Delivery(m, s, r!));
                 });
 
         [Fact(DisplayName = "Inbound lanes: with a full lane channel the reader parks, and after release every frame is delivered in order and none is lost")]

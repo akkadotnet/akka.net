@@ -97,5 +97,12 @@ namespace Akka.Remote.Artery
     {
         /// <inheritdoc/>
         public bool IsControl { get; } = Message is IArteryControlMessage;
+
+        /// <summary>
+        /// The decoded frame of an ordinary message decoded inline (inbound-lanes = 1), whose
+        /// <see cref="SenderPath"/> and <see cref="RecipientPath"/> are then left <see langword="null"/>:
+        /// the dispatcher decodes a path literal only when the header's ref id does not resolve it.
+        /// </summary>
+        public ArteryEnvelopeDecoded? Frame { get; init; }
     }
 }
