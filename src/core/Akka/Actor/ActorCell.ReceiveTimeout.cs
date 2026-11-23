@@ -21,6 +21,12 @@ namespace Akka.Actor
         private TimeSpan? _receiveTimeoutDuration;
         private ICancelable? _pendingReceiveTimeout;
 
+        // Written for every message by the thread that runs this actor. They are declared here, in the last
+        // ActorCell file, so the runtime places them after the fields senders read on every Tell (_self, the
+        // mailbox, Dispatcher, SystemImpl) and these writes stop invalidating the line those reads hit.
+        private object? _currentMessage;
+        private IActorRef? _sender;
+
         /// <summary>
         /// Sets the receive timeout for this actor - which will trigger a <see cref="ReceiveTimeout"/> message
         /// to be delivered into the actor's mailbox when time is up.
