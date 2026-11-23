@@ -17,15 +17,16 @@ namespace Akka.Remote
     public class AddressUidExtension : ExtensionIdProvider<AddressUid>
     {
         /// <summary>
-        /// Creates the <see cref="AddressUid"/> extension for <paramref name="system"/>, honoring the
-        /// <c>akka.remote.use-64bit-system-uids</c> config switch.
+        /// Creates the <see cref="AddressUid"/> extension for <paramref name="system"/>. The UID width is
+        /// chosen by transport: a full 64-bit UID when Artery is enabled
+        /// (<c>akka.remote.artery.enabled = on</c>), otherwise the legacy 31-bit UID that classic
+        /// DotNetty remoting needs for compatibility with v1.5 nodes.
         /// </summary>
         /// <param name="system">The actor system that owns this extension.</param>
         /// <returns>A new <see cref="AddressUid"/> instance.</returns>
         public override AddressUid CreateExtension(ExtendedActorSystem system)
         {
-            var use64BitUid = system.Settings.Config.GetBoolean("akka.remote.use-64bit-system-uids", false);
-            return new AddressUid(use64BitUid);
+            return new AddressUid(RemoteActorRefProvider.IsArteryEnabled(system.Settings.Config));
         }
 
         #region Static methods
@@ -52,7 +53,7 @@ namespace Akka.Remote
     public class AddressUid : IExtension
     {
         /// <summary>
-        /// Creates a new <see cref="AddressUid"/> using the legacy int-range (rolling-upgrade safe) generation.
+        /// Creates a new <see cref="AddressUid"/> using the legacy 31-bit (v1.5 compatible) generation.
         /// </summary>
         public AddressUid() : this(false)
         {
@@ -63,13 +64,19 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="use64BitUid">
         /// When <c>true</c>, generates a uniformly random nonzero <see cref="long"/> across the full 64-bit range
-        /// (negative values allowed). When <c>false</c> (default), generates a value in <c>[0, int.MaxValue]</c>
-        /// for rolling-upgrade compatibility with pre-v1.6 nodes.
+        /// (negative values allowed). When <c>false</c>, generates a value in <c>[1, int.MaxValue]</c>
+        /// for compatibility with v1.5 nodes.
         /// </param>
         internal AddressUid(bool use64BitUid)
         {
+            Uses64BitGenerator = use64BitUid;
             Uid = GenerateUid(use64BitUid);
         }
+
+        /// <summary>
+        /// <c>true</c> if <see cref="Uid"/> came from the full 64-bit generator, <c>false</c> if from the legacy 31-bit one.
+        /// </summary>
+        internal bool Uses64BitGenerator { get; }
 
         /// <summary>
         /// The random unique identifier for this incarnation of the ActorSystem.
