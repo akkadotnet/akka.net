@@ -86,6 +86,24 @@ public sealed class RuleSpecs
         ReminderFaultSpecs.RequireHealthyDeliveries(history);
     }
 
+    // An occurrence that comes due at the instant its reminder is replaced is still owed, unless the clock
+    // got there inside the slow call that replaced it: that write reached storage before the clock moved.
+    [Theory(DisplayName = "Should_OweTheOccurrenceDueWhenItsReminderIsReplaced_Unless_TheReplacingCallWasSlowUntilThen")]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OccurrenceDueAtTheInstantItsReminderIsReplaced(bool slowReplace)
+    {
+        var replacement = new Scheduled(2, 0, 0, T(100), null, null, ReminderScheduleResponseCode.Success);
+        var history = slowReplace
+            ? HistoryOf((0, Recurring()), (0, Sent(0)), (3.5, new Trouble(T(5), null, StorageCall.Schedule, FaultKind.Slow)), (5, replacement))
+            : HistoryOf((0, Recurring()), (0, Sent(0)), (5, replacement));
+        var model = new ReminderModel(Settings);
+        if (slowReplace)
+            model.Observe(history);
+        else
+            Assert.Contains("DeliveredOnTime", Assert.Throws<ModelViolation>(() => model.Observe(history)).Message);
+    }
+
     [Fact(DisplayName = "Should_SkipMissedSlots_When_TheSchedulerWakesAfterALag")]
     public void ModelSkipsMissedSlots()
     {

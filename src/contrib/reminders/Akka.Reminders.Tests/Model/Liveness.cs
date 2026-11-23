@@ -34,7 +34,7 @@ public static class Liveness
             if (by > model.Now)
                 return false; // not owed yet
             var arrived = slot.Deliveries.Count > 0 && slot.Deliveries[0] <= by;
-            var excused = r.InDoubt ||
+            var excused = r.InDoubt || EndedInsideSlowCall(h, r, at) ||
                           (by > at && (r.EndedAt <= by || r.Deadline(due) <= by || LostToTrouble(h, r.Entity, FirstPossibleAttempt(r, due, s), by, s))) ||
                           model.OlderCallDelivered(r, due); // not ruled: may a new schedule call deliver a due time the old one already delivered?
             if (!arrived && !excused)
@@ -44,6 +44,15 @@ public static class Liveness
         });
         return late;
     }
+
+    /// <summary>
+    /// A slow cancel or replace: the write reached storage when the call began, the clock moved inside
+    /// the call, and the reply ended the reminder when it returned. An occurrence that came due at that
+    /// very instant was already gone from storage, although the trouble is over at the same instant.
+    /// </summary>
+    private static bool EndedInsideSlowCall(History h, Reminder r, DateTimeOffset at) =>
+        r.EndedAt == at && h.Troubles.Any(t => t.Kind == FaultKind.Slow && t.At < at && t.Until == at &&
+            t.Call is StorageCall.Schedule or StorageCall.Cancel or StorageCall.CancelAll or StorageCall.Overview);
 
     /// <summary>
     /// Trouble may cost an occurrence for good, as the design documents: each send that was committed

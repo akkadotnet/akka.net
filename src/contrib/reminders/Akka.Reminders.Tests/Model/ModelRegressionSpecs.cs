@@ -348,6 +348,16 @@ public sealed class ModelRegressionSpecs
         new ScheduleRecurring(0, 0, 0, 1000, null),
         new Tick(5000));
 
+    // Checks the oracle, not the scheduler. The call that replaces a series is slow and returns exactly
+    // when the old series' next occurrence is due (found by seed 8PKJiQQ02eH7). The old series ended when
+    // the write reached storage, before the clock moved, so that occurrence is not owed.
+    [Fact(DisplayName = "Should_NotOweTheOldOccurrence_When_ASlowReplaceReturnsAtItsDueTime")]
+    public Task SlowReplaceReturningOnTheOldGridOwesNothing() => RunStrictAsync(new ModelSettings(0, 10000, 1000, 10000, 3),
+        new ScheduleRecurring(2, 1, 0, 2000, null),
+        new Tick(1000),
+        new InjectFault(StorageCall.Schedule, FaultKind.Slow, 1, 1000, false),
+        new ScheduleOnce(2, 1, 60000, null));
+
     // Checks the oracle, not the scheduler. Sends are committed but report failure while overview reads
     // are slow for 30 s each. The scheduler cannot recover while it waits on a slow read, so the
     // recovery wait must start again when the read returns.
