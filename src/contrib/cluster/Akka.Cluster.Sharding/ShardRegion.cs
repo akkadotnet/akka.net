@@ -733,7 +733,7 @@ namespace Akka.Cluster.Sharding
                         BufferMessage(shardId, message, sender);
                     else
                     {
-                        if (_shardBuffers.Contains(shardId))
+                        if (_shardBuffers.NonEmpty && _shardBuffers.Contains(shardId))
                         {
                             // Since now messages to a shard is buffered then those messages must be in right order
                             BufferMessage(shardId, message, sender);
