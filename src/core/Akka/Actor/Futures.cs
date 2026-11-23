@@ -109,7 +109,7 @@ namespace Akka.Actor
             }
             catch
             {
-                future.AskState.Cleanup();
+                future.CleanupAsk();
                 throw;
             }
             return result;
@@ -137,64 +137,13 @@ namespace Akka.Actor
             }
             catch
             {
-                future.AskState.Cleanup();
+                future.CleanupAsk();
                 throw;
             }
             return result;
         }
 
 #nullable enable
-        /// <summary>
-        /// INTERNAL API
-        ///
-        /// Timeout, cancellation and cleanup state for a single Ask.
-        /// </summary>
-        internal sealed class AskState<T>
-        {
-            public static readonly TimerCallback OnTimeout = static s =>
-            {
-                var state = (AskState<T>)s!;
-                if (state.Result.TrySetException(new AskTimeoutException($"Timeout after {state.Timeout.TotalSeconds:F2} seconds")))
-                    state.Cleanup();
-            };
-
-            public static readonly Action<object?> OnCancel = static s =>
-            {
-                var state = (AskState<T>)s!;
-                if (state.Result.TrySetCanceled())
-                    state.Cleanup();
-            };
-
-            public AskState(TaskCompletionSource<T> result, IActorRefProvider provider, ActorPath path)
-            {
-                Result = result;
-                Provider = provider;
-                Path = path;
-            }
-
-            public readonly TaskCompletionSource<T> Result;
-            public readonly IActorRefProvider Provider;
-            public readonly ActorPath Path;
-            public TimeSpan Timeout;
-            public Timer? TimeoutTimer;
-            public CancellationTokenRegistration CancellationRegistration;
-            private int _cleanedUp;
-
-            /// <summary>
-            /// Unregisters the temporary actor and releases the timeout and cancellation callbacks.
-            /// Called by whichever route completes the Ask, after it completes the task; runs at most once.
-            /// </summary>
-            public void Cleanup()
-            {
-                if (Interlocked.Exchange(ref _cleanedUp, 1) != 0)
-                    return;
-
-                Provider.UnregisterTempActor(Path);
-                TimeoutTimer?.Dispose();
-                CancellationRegistration.Dispose();
-            }
-        }
-
         private static FutureActorRef<T> BeginAsk<T>(ICanTell self, TimeSpan? timeout,
             CancellationToken cancellationToken, out Task<T> resultTask)
         {
@@ -204,8 +153,7 @@ namespace Akka.Actor
 
             var result = TaskEx.NonBlockingTaskCompletionSource<T>();
             var future = provider.CreateFutureRef(result);
-            var state = new AskState<T>(result, provider, future.Path);
-            future.AskState = state;
+            future.AskProvider = provider;
 
             // Register before arming the timeout or the cancellation callback: either can complete
             // the Ask and run its cleanup immediately (e.g. an already-canceled token).
@@ -215,14 +163,14 @@ namespace Akka.Actor
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
-                state.Timeout = timeout.Value;
+                future.AskTimeout = timeout.Value;
 
                 // Timer captures the ExecutionContext, CancelAfter did not
                 var suppressFlow = !ExecutionContext.IsFlowSuppressed();
                 var flowControl = suppressFlow ? ExecutionContext.SuppressFlow() : default;
                 try
                 {
-                    state.TimeoutTimer = new Timer(AskState<T>.OnTimeout, state, timeout.Value, Timeout.InfiniteTimeSpan);
+                    future.AskTimeoutTimer = new Timer(FutureActorRef<T>.OnAskTimeout, future, timeout.Value, Timeout.InfiniteTimeSpan);
                 }
                 finally
                 {
@@ -233,11 +181,11 @@ namespace Akka.Actor
 
             if (cancellationToken.CanBeCanceled)
             {
-                state.CancellationRegistration = cancellationToken.Register(AskState<T>.OnCancel, state);
+                future.AskCancellationRegistration = cancellationToken.Register(FutureActorRef<T>.OnAskCancel, future);
 
                 // The timeout may have completed the Ask (and run cleanup) before the registration was stored.
                 if (result.Task.IsCompleted)
-                    state.CancellationRegistration.Dispose();
+                    future.AskCancellationRegistration.Dispose();
             }
 
             resultTask = result.Task;
