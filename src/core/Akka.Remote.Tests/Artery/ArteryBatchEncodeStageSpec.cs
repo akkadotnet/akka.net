@@ -224,5 +224,54 @@ namespace Akka.Remote.Tests.Artery
             while (channel.Reader.TryRead(out var e)) kept.Add(e);
             kept.Should().Equal(envs);
         }
+
+        /// <summary>
+        /// A downstream WatchTermination completes before the encode stage's PostStop has parked the
+        /// envelopes it holds, so a restart triggered by it alone can build the next stream first.
+        /// The restart must also wait for <see cref="ArteryBatchEncodeStage.Stopped"/>.
+        /// </summary>
+        [Fact]
+        public async Task Stopped_completes_only_after_held_envelopes_are_parked()
+        {
+            for (var round = 0; round < 100; round++)
+            {
+                var channel = Channel.CreateUnbounded<IOutboundEnvelope>();
+                for (var i = 0; i < 100; i++)
+                    channel.Writer.TryWrite(Env(Payload(i, 8)));
+
+                var carried = new List<IOutboundEnvelope>();
+                var carriedAtSignal = -1;
+                var stage = new ArteryBatchEncodeStage(Ser, OriginUid, 32, 16 * 1024, null, held =>
+                {
+                    lock (carried)
+                        carried.AddRange(held);
+                });
+
+                var (watch, sub) = ChannelSource.FromReader(channel.Reader)
+                    .Via(stage)
+                    .WatchTermination(Keep.Right)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
+                    .Run(Sys.Materializer());
+
+                var restartSignal = Task.WhenAll(watch, stage.Stopped).ContinueWith(_ =>
+                {
+                    lock (carried)
+                        carriedAtSignal = carried.Count;
+                }, TaskContinuationOptions.ExecuteSynchronously);
+
+                await sub.EnsureSubscriptionAsync();
+                await sub.RequestAsync(1);
+                (await sub.ExpectNextAsync()).DisposeOwnedSegments();
+                await Task.Delay(50); // the stage now holds envelopes: downstream has no demand
+                sub.Cancel();
+
+                await restartSignal.WaitAsync(TimeSpan.FromSeconds(3));
+                lock (carried)
+                {
+                    carried.Should().NotBeEmpty();
+                    carriedAtSignal.Should().Be(carried.Count, "a restart triggered by the termination signals must already see the carry-over");
+                }
+            }
+        }
     }
 }
