@@ -919,6 +919,14 @@ namespace Akka.Remote.Artery
             lanes <= 1 ? 0 : (int)((unchecked((ulong)recipientUid * 0x9E3779B97F4A7C15UL) >> 32) % (ulong)lanes);
 
         /// <summary>
+        /// The lane for a message that carries both a sender and a recipient id, on the outbound
+        /// side and on the inbound reader alike: a mix of the two ids, so one pair's messages always
+        /// share a lane while different senders to the same recipient spread across lanes.
+        /// </summary>
+        public static int SelectPairLane(long senderId, long recipientId, int lanes) =>
+            SelectLane(unchecked(senderId * -7046029254386353131L + recipientId), lanes);
+
+        /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the CONTROL outbound stream to send.
         /// Non-blocking, same discipline as <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>. See the type-level
         /// remarks on <see cref="DefaultControlQueueCapacity"/> for the GROUP7 overflow-policy note.

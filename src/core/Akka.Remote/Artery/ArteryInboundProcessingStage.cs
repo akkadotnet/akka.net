@@ -76,19 +76,21 @@ namespace Akka.Remote.Artery
     /// <c>RemoteActorRefProvider.ResolveActorRefWithLocalAddress</c>, and the final
     /// <c>Tell</c> -- moves onto one of <see cref="InboundLanes"/> dedicated background consumer
     /// loops, each fed by its own bounded <see cref="Channel{T}"/> (capacity
-    /// <see cref="InboundLaneBufferSize"/>). A message's lane is a stable hash of its recipient path
-    /// (<see cref="ArteryLaneHash"/>) -- so all ordinary traffic to the SAME recipient stays on the SAME
-    /// lane and is delivered in send order, exactly like today's single-lane pipeline.
+    /// <see cref="InboundLaneBufferSize"/>). A message whose header carries both a sender and a
+    /// recipient id is laned by a mix of the two ids (<c>Association.SelectPairLane</c>);
+    /// any other message by a stable hash of its recipient path (<see cref="ArteryLaneHash"/>). So
+    /// all traffic of one sender-recipient pair stays on one lane and is delivered in send order,
+    /// while different senders to the same recipient may use different lanes.
     /// </para>
     ///
     /// <para>
     /// <b>What the reader does and what the lane does.</b> The reader decodes no string: it frames
     /// the bytes, decodes the fixed header, applies the control/origin/quarantine/blackhole
     /// checks, rejects compressed or missing recipient tags, and hashes the recipient literal's raw
-    /// UTF-8 bytes to choose the lane. The lane that owns the recipient then decodes the manifest,
+    /// UTF-8 bytes (or mixes the header's two ref ids) to choose the lane. The lane that owns the recipient then decodes the manifest,
     /// sender and recipient literals and deserializes the payload, so that decode cost sits on that
-    /// lane rather than on the reader. The lane is always the one a hash of the decoded recipient
-    /// string would give (<see cref="ArteryLaneHash.FromUtf8"/>). A queued lane item retains its
+    /// lane rather than on the reader. Without ref ids, the lane is always the one a hash of the
+    /// decoded recipient string would give (<see cref="ArteryLaneHash.FromUtf8"/>). A queued lane item retains its
     /// entire frame body until it is processed (bounded by lanes x lane buffer size x maximum frame
     /// length).
     /// </para>
@@ -1001,8 +1003,9 @@ namespace Akka.Remote.Artery
                 var recipientBytes = decoded.GetRecipientLiteralBytes();
 
                 // Lane choice. ActorSelectionMessage keeps its string key (BuildSelectionLaneKey + char
-                // hash); everything else hashes the recipient literal's raw bytes. Both are pure
-                // functions of the frame contents, so a given recipient always maps to one lane.
+                // hash); a message with both a sender and a recipient id takes its pair's lane; anything
+                // else hashes the recipient literal's raw bytes. All are pure functions of the frame
+                // contents, so a given sender-recipient pair always maps to one lane.
                 var laneIndex = -1;
                 if (decoded.Header.SerializerId == _stage.SelectionMessageSerializerId)
                 {
@@ -1012,7 +1015,12 @@ namespace Akka.Remote.Artery
                 }
 
                 if (laneIndex < 0)
-                    laneIndex = ArteryLaneHash.FromUtf8(recipientBytes, _stage.InboundLanes);
+                {
+                    var header = decoded.Header;
+                    laneIndex = header.SenderId != 0 && header.RecipientId != 0
+                        ? Association.SelectPairLane(header.SenderId, header.RecipientId, _stage.InboundLanes)
+                        : ArteryLaneHash.FromUtf8(recipientBytes, _stage.InboundLanes);
+                }
 
                 return TryRouteToLane(laneIndex, new LaneWorkItem(frameBody));
             }
