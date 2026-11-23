@@ -249,6 +249,80 @@ namespace Akka.Remote.Tests.Artery
             resent.SeqNo.Should().Be(2L, "the SysNack'd gap's tail (seq 2) must be resent immediately, well before the 10s resend timer would ever fire");
         }
 
+        [Fact(DisplayName = "Should_ResendOnceImmediately_When_RepeatedNacksAcknowledgeNothing")]
+        public async Task Should_ResendOnceImmediately_When_RepeatedNacksAcknowledgeNothing()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            // Long resend interval: any resend below can only come from a Nack.
+            var h = BuildHarness(materializer, resendInterval: TimeSpan.FromSeconds(30));
+            var peer = h.CompleteHandshake(remoteUid: 555L);
+
+            await h.Sub.RequestAsync(4); // two original sends plus the two-entry resend
+            await h.Pub.SendNextAsync(SystemMessageElement("m1"));
+            await h.Pub.SendNextAsync(SystemMessageElement("m2"));
+            await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3)); // seq 1
+            await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3)); // seq 2
+
+            // The first Nack(0) acknowledges nothing but still resends at once.
+            h.DeliverControlMessage(peer.Uid, new SysNack(0L, peer));
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(2))).Message).SeqNo.Should().Be(1L);
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(2))).Message).SeqNo.Should().Be(2L);
+
+            // Further no-progress Nacks are left to the resend timer, however many arrive.
+            await h.Sub.RequestAsync(10);
+            for (var i = 0; i < 20; i++)
+                h.DeliverControlMessage(peer.Uid, new SysNack(0L, peer));
+            await h.Sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+
+            // A Nack that makes progress resends the tail at once again.
+            h.DeliverControlMessage(peer.Uid, new SysNack(1L, peer));
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(2))).Message).SeqNo.Should().Be(2L);
+        }
+
+        [Fact(DisplayName = "Should_IgnoreAck_When_SeqIsBeyondNextSeqToAssign")]
+        public async Task Should_IgnoreAck_When_SeqIsBeyondNextSeqToAssign()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var h = BuildHarness(materializer, resendInterval: TimeSpan.FromSeconds(30));
+            var peer = h.CompleteHandshake(remoteUid: 666L);
+
+            await h.Sub.RequestAsync(3);
+            await h.Pub.SendNextAsync(SystemMessageElement("m1"));
+            await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3)); // seq 1, next seq to assign is 2
+
+            // Acknowledges seq 5, which was never sent: the buffer must be kept.
+            h.DeliverControlMessage(peer.Uid, new SysAck(5L, peer));
+
+            // The Nack's immediate resend proves seq 1 is still buffered.
+            h.DeliverControlMessage(peer.Uid, new SysNack(0L, peer));
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(2))).Message).SeqNo.Should().Be(1L);
+        }
+
+        [Fact(DisplayName = "Should_AllowImmediateNackResend_When_DeliveryStateWasReset")]
+        public async Task Should_AllowImmediateNackResend_When_DeliveryStateWasReset()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var h = BuildHarness(materializer, resendInterval: TimeSpan.FromSeconds(30));
+            var peer = h.CompleteHandshake(remoteUid: 880L);
+
+            await h.Sub.RequestAsync(10);
+            await h.Pub.SendNextAsync(SystemMessageElement("m1"));
+            await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3));
+
+            h.DeliverControlMessage(peer.Uid, new SysNack(0L, peer));
+            await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(2)); // the one immediate no-progress resend
+            h.DeliverControlMessage(peer.Uid, new SysNack(0L, peer));
+            await h.Sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300)); // now suppressed
+
+            // A new incarnation resets the delivery state, including the suppression.
+            var newPeer = h.CompleteHandshake(remoteUid: 881L);
+            await h.Pub.SendNextAsync(SystemMessageElement("m2"));
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message).SeqNo.Should().Be(1L);
+            h.DeliverControlMessage(newPeer.Uid, new SysNack(0L, newPeer));
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(2))).Message).SeqNo.Should().Be(1L);
+        }
+
+
         [Fact(DisplayName = "the resend timer periodically resends the whole unacknowledged window while any entry remains unacked")]
         public async Task Should_Resend_Unacked_Window_Periodically()
         {
