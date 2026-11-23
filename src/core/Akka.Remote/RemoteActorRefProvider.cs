@@ -137,6 +137,14 @@ namespace Akka.Remote
             get { return _internals; }
         }
 
+        /// <summary>
+        /// Single source of truth for whether Artery (rather than classic DotNetty remoting) is the transport.
+        /// </summary>
+        internal static bool IsArteryEnabled(Config config)
+        {
+            return config.GetBoolean("akka.remote.artery.enabled", false);
+        }
+
         private Internals CreateInternals()
         {
             // Artery TCP remoting (EXPERIMENTAL) is opt-in via `akka.remote.artery.enabled = on`;
@@ -144,7 +152,7 @@ namespace Akka.Remote
             // off `RemoteSettings.Config` rather than adding a new `RemoteSettings` property, to
             // avoid perturbing the approved public API surface (see design.md, "Provider
             // integration").
-            var arteryEnabled = RemoteSettings.Config.GetBoolean("akka.remote.artery.enabled", false);
+            var arteryEnabled = IsArteryEnabled(RemoteSettings.Config);
             RemoteTransport transport = arteryEnabled
                 ? new ArteryRemoting(_system, this)
                 : new Remoting(_system, this);

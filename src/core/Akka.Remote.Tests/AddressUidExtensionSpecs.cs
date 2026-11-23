@@ -51,32 +51,35 @@ namespace Akka.Remote.Tests
         }
 
         /// <summary>
-        /// Default uid generation (task 1.2) must stay in the legacy int range so a rolling upgrade from
-        /// v1.5 is safe (Decision 2 of the widen-system-uid-to-64bit design).
+        /// Classic DotNetty remoting (the default transport) must keep generating legacy 31-bit uids
+        /// so v1.5 nodes can still interoperate.
         /// </summary>
         [Fact]
-        public void AddressUidExtension_should_generate_a_uid_in_the_int_range_by_default()
+        public void AddressUidExtension_should_use_the_31bit_generator_for_classic_remoting()
         {
-            var uid = AddressUidExtension.Uid(Sys);
-            Assert.True(uid >= 0 && uid <= int.MaxValue);
+            var addressUid = Sys.WithExtension<AddressUid, AddressUidExtension>();
+            Assert.False(addressUid.Uses64BitGenerator);
+            Assert.InRange(addressUid.Uid, 1L, int.MaxValue);
         }
 
         /// <summary>
-        /// With <c>akka.remote.use-64bit-system-uids = on</c>, generation is opt-in full-range 64-bit
-        /// (task 1.3). A single draw could theoretically still land in the legacy int range, so this only
-        /// asserts the uid is nonzero (zero is reserved as a sentinel) - see
-        /// <see cref="AddressUid_64bit_generation_should_draw_at_least_one_uid_outside_the_int_range"/> for the
-        /// statistical full-range check.
+        /// When Artery is the transport the uid always comes from the full 64-bit generator. Asserts on the
+        /// generator choice rather than the drawn value, which could by chance land in the int range.
         /// </summary>
         [Fact]
-        public void AddressUidExtension_should_generate_a_nonzero_uid_when_64bit_uids_are_enabled()
+        public void AddressUidExtension_should_use_the_64bit_generator_when_artery_is_enabled()
         {
-            var sys2 = ActorSystem.Create("AddressUidExtensionSpecs64Bit",
-                ConfigurationFactory.ParseString("akka.remote.use-64bit-system-uids = on"));
+            var sys2 = ActorSystem.Create("AddressUidExtensionSpecsArtery",
+                ConfigurationFactory.ParseString(@"
+                    akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+                    akka.remote.artery.enabled = on
+                    akka.remote.artery.canonical.hostname = ""127.0.0.1""
+                    akka.remote.artery.canonical.port = 0"));
             try
             {
-                var uid = AddressUidExtension.Uid(sys2);
-                Assert.NotEqual(0, uid);
+                var addressUid = sys2.WithExtension<AddressUid, AddressUidExtension>();
+                Assert.True(addressUid.Uses64BitGenerator);
+                Assert.NotEqual(0, addressUid.Uid);
             }
             finally
             {
@@ -84,9 +87,18 @@ namespace Akka.Remote.Tests
             }
         }
 
+        [Fact]
+        public void AddressUid_31bit_generation_should_stay_within_1_and_int_MaxValue()
+        {
+            for (var i = 0; i < 1000; i++)
+            {
+                Assert.InRange(new AddressUid(false).Uid, 1L, int.MaxValue);
+            }
+        }
+
         /// <summary>
-        /// Statistical check that <see cref="AddressUid"/>'s full-range 64-bit generator (task 1.2) actually
-        /// draws outside the legacy <c>[0, int.MaxValue]</c> range: each draw lands in that legacy range with
+        /// Statistical check that <see cref="AddressUid"/>'s full-range 64-bit generator actually
+        /// draws outside the legacy <c>[1, int.MaxValue]</c> range: each draw lands in that legacy range with
         /// probability ~= 2^31 / 2^64 ~= 1.16e-10, so across 64 draws seeing zero out-of-range values is
         /// effectively impossible unless the generator is broken (e.g. silently clamped back to int range).
         /// </summary>
