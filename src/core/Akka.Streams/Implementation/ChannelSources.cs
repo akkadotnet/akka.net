@@ -18,9 +18,13 @@ namespace Akka.Streams.Implementation
         private readonly Outlet<T> _outlet;
         private readonly ChannelReader<T> _reader;
         private readonly Action<bool> _onValueRead;
+        private readonly Action _onDataAvailable;
+        private readonly Action _onNoMoreData;
         private readonly Action<Exception> _onValueReadFailure;
         private readonly Action<Exception> _onReaderComplete;
-        private readonly Action<Task<bool>> _onReadReady;
+        private readonly Action _onWaitCompleted;
+        // The pending WaitToReadAsync; written before its continuation is registered, read once by it.
+        private ValueTask<bool> _pendingWait;
 
         // Flag to prevent race condition between OnReaderComplete and OnValueRead
         // when channel completion and WaitToReadAsync fire simultaneously (issue #7940)
@@ -32,10 +36,13 @@ namespace Akka.Streams.Implementation
             _outlet = outlet;
             _reader = reader;
             _onValueRead = GetAsyncCallback<bool>(OnValueRead);
+            // Argument-free callbacks: the per-wait bool would otherwise be boxed on every invocation.
+            _onDataAvailable = GetAsyncCallback(() => OnValueRead(true));
+            _onNoMoreData = GetAsyncCallback(() => OnValueRead(false));
             _onValueReadFailure =
                 GetAsyncCallback<Exception>(OnValueReadFailure);
             _onReaderComplete = GetAsyncCallback<Exception>(OnReaderComplete);
-            _onReadReady = ContinueAsyncRead;
+            _onWaitCompleted = OnWaitCompleted;
             _reader.Completion.ContinueWith(t =>
             {
                 if (t.IsFaulted) _onReaderComplete(t.Exception);
@@ -112,8 +119,26 @@ namespace Akka.Streams.Implementation
                     }
                 }
                 else
-                    continuation.AsTask().ContinueWith(_onReadReady);
+                {
+                    // Await the ValueTask directly with a cached continuation instead of
+                    // AsTask().ContinueWith(...), which allocates two tasks per wait.
+                    _pendingWait = continuation;
+                    continuation.ConfigureAwait(false).GetAwaiter().OnCompleted(_onWaitCompleted);
+                }
             }
+        }
+
+        private void OnWaitCompleted()
+        {
+            var continuation = _pendingWait;
+            _pendingWait = default;
+            if (continuation.IsCompletedSuccessfully)
+            {
+                if (continuation.Result) _onDataAvailable();
+                else _onNoMoreData();
+            }
+            else
+                ContinueAsyncRead(continuation.AsTask());
         }
 
         private void ContinueAsyncRead(Task<bool> t)
