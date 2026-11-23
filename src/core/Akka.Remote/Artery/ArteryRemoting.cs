@@ -1307,24 +1307,19 @@ namespace Akka.Remote.Artery
                 var counter = recipient.TemporaryCounter;
                 var registry = (ITempIdRegistry)Provider;
 
-                // While only plain Ask futures were ever registered under this id, the path route could only
-                // find that future or nothing (neither is held by the resolve cache), so the lookup is equivalent.
-                if (registry.IsUncachedTempId(counter))
+                if (!registry.TryGetTempActor(counter, out var target))
                 {
-                    if (!registry.TryGetTempActor(counter, out var target))
-                    {
-                        // The Ask already completed: dead-letter against the empty ref the path route would resolve.
-                        if (TryResolveInboundSender(message, in refs, out sender))
-                            new EmptyLocalActorRef(Provider, Provider.RootPath / "temp" / counter.Base64Encode(), System.EventStream)
-                                .Tell(message, sender);
-                        return;
-                    }
+                    // The Ask already completed: dead-letter against the empty ref the path route would resolve.
+                    if (TryResolveInboundSender(message, in refs, out sender))
+                        new EmptyLocalActorRef(Provider, Provider.RootPath / "temp" / counter.Base64Encode(), System.EventStream)
+                            .Tell(message, sender);
+                    return;
+                }
 
-                    if (target is ITempActorRef { IsPlainFuture: true })
-                    {
-                        target.Tell(message, System.DeadLetters);
-                        return;
-                    }
+                if (target is ITempActorRef { IsPlainFuture: true })
+                {
+                    target.Tell(message, System.DeadLetters);
+                    return;
                 }
 
                 DispatchToPath(
@@ -1727,15 +1722,10 @@ namespace Akka.Remote.Artery
             }
             else
             {
-                // Lane key: see ArteryLaneKey. A temp ref has no uid, so it keys on its counter -- the same key
-                // whether the frame carries it numerically or as a literal path.
-                long laneKey;
-                if (recipient is RemoteTempActorRef tempRecipient)
-                    laneKey = ArteryLaneKey.ForTemporary(tempRecipient.TempId);
-                else if (ArteryTempRefs.TryGetTempId(recipient.Path, out var literalTempId))
-                    laneKey = ArteryLaneKey.ForTemporary(literalTempId);
-                else
-                    laneKey = recipient.Path.Uid;
+                // Lane key: see ArteryLaneKey. A numeric temp ref keys on its counter; every other recipient on its uid.
+                var laneKey = recipient is RemoteTempActorRef tempRecipient
+                    ? ArteryLaneKey.ForTemporary(tempRecipient.TempId)
+                    : recipient.Path.Uid;
 
                 computed = Association.SelectLane(laneKey, lanes);
             }

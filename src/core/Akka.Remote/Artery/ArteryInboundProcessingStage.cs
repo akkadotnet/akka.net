@@ -658,8 +658,8 @@ namespace Akka.Remote.Artery
             }
 
             /// <summary>
-            /// Reads the sender and recipient of an ordinary frame, each as a literal path, a numeric record, or
-            /// a define-flagged numeric record (resolved through its attached path, as a literal). Returns
+            /// Reads the sender and recipient of an ordinary frame, each as a literal path or a numeric record.
+            /// Returns
             /// <see langword="false"/> when the recipient is absent or not readable (COMPRESSED tag): the message
             /// cannot be delivered and the frame is dropped. A sender that is not readable degrades to "no
             /// sender", as before -- including a numeric sender whose owner is not the frame's origin, which no
@@ -971,8 +971,7 @@ namespace Akka.Remote.Artery
                 int laneIndex;
                 if (refs.RecipientRef is { } recipientRef)
                 {
-                    // Numeric recipient: the lane comes from the id, the same lane the literal form of
-                    // the same actor selects below, so per-recipient ordering holds across shapes.
+                    // Numeric recipient: the lane comes from the id.
                     laneIndex = Association.SelectLane(ArteryLaneKey.For(recipientRef), _stage.InboundLanes);
                 }
                 else
@@ -983,8 +982,6 @@ namespace Akka.Remote.Artery
                     // lane key" remarks.
                     if (decoded.Header.SerializerId == _stage.SelectionMessageSerializerId)
                         laneIndex = LaneFor(BuildSelectionLaneKey(decoded.Payload) ?? recipientPath, _stage.InboundLanes);
-                    else if (ArteryLaneKey.TrySelectTemporaryLiteral(recipientPath, _stage.InboundLanes, out var temporaryLane))
-                        laneIndex = temporaryLane;
                     else
                         laneIndex = LaneFor(recipientPath, _stage.InboundLanes);
                 }

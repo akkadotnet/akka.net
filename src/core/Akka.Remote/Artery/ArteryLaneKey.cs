@@ -13,10 +13,8 @@ namespace Akka.Remote.Artery
     /// INTERNAL API.
     ///
     /// The one function that maps a recipient to a lane (outbound: which lane queue; inbound: which lane
-    /// consumer). The key is the recipient's 64-bit id -- an actor's UID, or for a temporary ref its
-    /// counter value with <see cref="ArteryNumericRef.TemporaryNamespaceBit"/> set. A recipient has the
-    /// same key whether a frame carries it as a numeric record or as a literal path, so the same actor
-    /// always lands on the same lane and per-recipient ordering holds whichever shape a frame uses.
+    /// consumer). The key is a 64-bit id -- an actor's UID, or for a numeric temporary ref its
+    /// counter value with <see cref="ArteryNumericRef.TemporaryNamespaceBit"/> set.
     ///
     /// <para>
     /// The key is mixed before it is reduced: ids are handed out sequentially, so a plain modulus aliases
@@ -34,22 +32,6 @@ namespace Akka.Remote.Artery
 
         /// <summary>The lane key of the temporary ref whose name encodes <paramref name="counter"/>.</summary>
         public static long ForTemporary(long counter) => counter | ArteryNumericRef.TemporaryNamespaceBit;
-
-        /// <summary>
-        /// For a literal path that is a canonical temporary ref (<c>/temp/&lt;base64 counter&gt;</c>), the lane of the
-        /// numeric form of the same ref; <see langword="false"/> for every other path. Allocation-free.
-        /// </summary>
-        public static bool TrySelectTemporaryLiteral(string path, int lanes, out int lane)
-        {
-            if (ArteryTempRefs.TryGetTempIdFromLiteral(path, out var counter))
-            {
-                lane = Select(ForTemporary(counter), lanes);
-                return true;
-            }
-
-            lane = 0;
-            return false;
-        }
 
         /// <summary>Maps <paramref name="key"/> to a lane in <c>[0, lanes)</c>: multiply by an odd constant, keep the high 32 bits, scale to the lane count.</summary>
         public static int Select(long key, int lanes)

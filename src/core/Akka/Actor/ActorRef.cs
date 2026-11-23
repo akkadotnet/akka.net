@@ -859,17 +859,6 @@ namespace Akka.Actor
         // incumbent and a single entry to remove. Every other name is keyed by string in _children.
         private readonly ConcurrentDictionary<long, IInternalActorRef> _numericChildren = new();
 
-        // Ids (canonical temp names) under which a ref the receive-side resolve cache may hold has ever been
-        // registered. The cache never holds a MinimalActorRef other than a FunctionRef, so Ask futures and the
-        // PromiseActorRef of GracefulStop / WatchAsync are not recorded. Never shrinks: the cache may keep a
-        // stale entry for such a path after it is unregistered.
-        private readonly ConcurrentDictionary<long, byte> _cacheableIds = new();
-
-        // 0: no such id yet; 1: the set is non-empty; 2: the set overflowed, so every id counts as cacheable.
-        private int _cacheableState;
-
-        private const int CacheableIdCapacity = 65536;
-
         /// <summary>
         /// Initializes a container with its provider, actor path, parent reference, and logger.
         /// </summary>
@@ -940,7 +929,6 @@ namespace Akka.Actor
         {
             if (Base64Encoding.TryBase64DecodeLong(name.AsSpan(), out var id))
             {
-                NoteRegistered(id, actor);
                 AddNumeric(id, actor, name);
                 return;
             }
@@ -958,7 +946,6 @@ namespace Akka.Actor
         /// </summary>
         internal void AddChild(long id, IInternalActorRef actor)
         {
-            NoteRegistered(id, actor);
             AddNumeric(id, actor, null);
         }
 
@@ -969,36 +956,6 @@ namespace Akka.Actor
                 Log.Warning("{0} replacing child {1} ({2} -> {3})", name ?? id.Base64Encode(), actor, v, actor);
                 return v;
             });
-        }
-
-        private void NoteRegistered(long id, IInternalActorRef actor)
-        {
-            if (actor is MinimalActorRef and not FunctionRef || Volatile.Read(ref _cacheableState) == 2)
-                return;
-
-            if (_cacheableIds.Count >= CacheableIdCapacity && !_cacheableIds.ContainsKey(id))
-            {
-                if (Interlocked.Exchange(ref _cacheableState, 2) != 2)
-                    Log.Warning(
-                        "More than {0} cacheable temporary actors were registered at {1}; from now on every numerically " +
-                        "addressed reply takes the path-based delivery route.",
-                        CacheableIdCapacity, Path);
-                return;
-            }
-
-            _cacheableIds.TryAdd(id, 0);
-            Interlocked.CompareExchange(ref _cacheableState, 1, 0);
-        }
-
-        /// <summary>
-        /// INTERNAL API. <see langword="true"/> when no ref the resolve cache could hold has ever been registered
-        /// under the canonical name of <paramref name="id"/>, so looking the id up here finds exactly what
-        /// resolving its path would. With nothing recorded this is one volatile read.
-        /// </summary>
-        internal bool IsUncachedId(long id)
-        {
-            var state = Volatile.Read(ref _cacheableState);
-            return state == 0 || (state == 1 && !_cacheableIds.ContainsKey(id));
         }
 
         /// <summary>

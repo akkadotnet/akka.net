@@ -270,9 +270,6 @@ namespace Akka.Remote
             return ((ITempIdRegistry)_local).TryGetTempActor(tempId, out actorRef);
         }
 
-        /// <inheritdoc/>
-        bool ITempIdRegistry.IsUncachedTempId(long tempId) => ((ITempIdRegistry)_local).IsUncachedTempId(tempId);
-
         /// <summary>
         /// INTERNAL API. The wrapped local provider, whose temp refs this system owns.
         /// </summary>

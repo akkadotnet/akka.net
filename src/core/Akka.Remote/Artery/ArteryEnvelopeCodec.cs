@@ -476,7 +476,7 @@ namespace Akka.Remote.Artery
     ///
     /// The classification of an Artery tag (sender / recipient / manifest): tag <c>0x00000000</c> is
     /// ABSENT; a zero top byte is a LITERAL absolute byte offset; a top byte made only of the known ref
-    /// flags that includes the numeric flag is NUMERIC (or NUMERIC with the define flag); any other
+    /// flags that includes the numeric flag is NUMERIC; any other
     /// non-zero top byte is COMPRESSED (reserved).
     /// </summary>
     internal enum ArteryTagKind : byte
@@ -497,15 +497,7 @@ namespace Akka.Remote.Artery
         /// The ref is a numeric record (see <see cref="ArteryEnvelopeHeader.NumericTagFlag"/>). Only valid
         /// in the sender and recipient positions.
         /// </summary>
-        Numeric = 3,
-
-        /// <summary>
-        /// A numeric record with the define flag set: the record is followed by the ref's path as a
-        /// <c>[u16 LE length][UTF-8]</c> literal. A decoder that keeps no definitions resolves it through
-        /// that path exactly like a LITERAL (see <see cref="ArteryEnvelopeHeader.DefineTagFlag"/>), so
-        /// <c>TryGetSenderPath</c> / <c>TryGetRecipientPath</c> return the attached path. Not valid as a manifest.
-        /// </summary>
-        NumericDefine = 4
+        Numeric = 3
     }
 
     /// <summary>
@@ -552,10 +544,10 @@ namespace Akka.Remote.Artery
         /// when LITERAL. Returns <see langword="false"/> when COMPRESSED -- see
         /// <see cref="SenderCompressedIndex"/>; resolving a compressed index to a ref is future work.
         /// </summary>
-        public bool TryGetSenderPath(out string? path) => TryResolveTag(Header.SenderTag, allowRefs: true, out path);
+        public bool TryGetSenderPath(out string? path) => TryResolveTag(Header.SenderTag, out path);
 
         /// <summary>Resolves the recipient ref's path. See <see cref="TryGetSenderPath"/> for ABSENT/LITERAL/COMPRESSED semantics.</summary>
-        public bool TryGetRecipientPath(out string? path) => TryResolveTag(Header.RecipientTag, allowRefs: true, out path);
+        public bool TryGetRecipientPath(out string? path) => TryResolveTag(Header.RecipientTag, out path);
 
         /// <summary>
         /// Resolves the manifest. ABSENT decodes to <see cref="string.Empty"/> (an empty manifest is
@@ -563,7 +555,7 @@ namespace Akka.Remote.Artery
         /// </summary>
         public bool TryGetManifest(out string manifest)
         {
-            if (TryResolveTag(Header.ManifestTag, allowRefs: false, out var resolved))
+            if (TryResolveTag(Header.ManifestTag, out var resolved))
             {
                 manifest = resolved ?? string.Empty;
                 return true;
@@ -594,7 +586,7 @@ namespace Akka.Remote.Artery
             if ((flags & ~ArteryEnvelopeHeader.KnownRefFlagsMask) != 0 || (flags & ArteryEnvelopeHeader.NumericTagFlag) == 0)
                 return ArteryTagKind.Compressed;
 
-            return (flags & ArteryEnvelopeHeader.DefineTagFlag) != 0 ? ArteryTagKind.NumericDefine : ArteryTagKind.Numeric;
+            return ArteryTagKind.Numeric;
         }
 
         /// <summary>
@@ -638,19 +630,15 @@ namespace Akka.Remote.Artery
 
         private static int DecodeCompressedIndex(uint tag) => (int)(tag & ArteryEnvelopeHeader.CompressedIndexMask);
 
-        private bool TryResolveTag(uint tag, bool allowRefs, out string? value)
+        private bool TryResolveTag(uint tag, out string? value)
         {
             switch (ClassifyTag(tag))
             {
                 case ArteryTagKind.Absent:
                     value = null;
                     return true;
-                case ArteryTagKind.NumericDefine when allowRefs:
-                    value = ResolveLiteral(DefinePathTag(tag));
-                    return true;
                 case ArteryTagKind.Compressed:
                 case ArteryTagKind.Numeric:
-                case ArteryTagKind.NumericDefine:
                     // Not a string: COMPRESSED is unsupported, NUMERIC is read through TryGet*Numeric.
                     value = null;
                     return false;
@@ -658,27 +646,6 @@ namespace Akka.Remote.Artery
                     value = ResolveLiteral(tag);
                     return true;
             }
-        }
-
-        /// <summary>
-        /// The literal tag of the path attached to a define-flagged numeric record: the record's own offset
-        /// plus its length. The record itself is bounds-checked here; the literal is bounds-checked by the
-        /// literal readers.
-        /// </summary>
-        private uint DefinePathTag(uint tag)
-        {
-            var recordLength = (tag & ArteryEnvelopeHeader.OwnerPresentTagFlag) != 0
-                ? ArteryEnvelopeHeader.NumericOwnerLength + ArteryEnvelopeHeader.NumericIdLength
-                : ArteryEnvelopeHeader.NumericIdLength;
-            var offset = (long)(tag & ArteryEnvelopeHeader.TagOffsetMask);
-            if (offset < ArteryEnvelopeHeader.HeaderLength)
-                throw new ArteryEnvelopeException(
-                    $"Define record offset {offset} is inside the fixed header (must be >= {ArteryEnvelopeHeader.HeaderLength}).");
-            if (offset + recordLength > Header.PayloadOffset)
-                throw new ArteryEnvelopeException(
-                    $"Define record at offset {offset} (length {recordLength}) extends past the payload offset ({Header.PayloadOffset}).");
-
-            return (uint)(offset + recordLength);
         }
 
         /// <summary>

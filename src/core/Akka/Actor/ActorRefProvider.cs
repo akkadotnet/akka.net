@@ -179,13 +179,6 @@ namespace Akka.Actor
         /// by id or by its canonical path name.
         /// </summary>
         bool TryGetTempActor(long tempId, out IInternalActorRef actorRef);
-
-        /// <summary>
-        /// <see langword="true"/> when no ref the remote resolve cache could hold has ever been registered under
-        /// the canonical temp name of <paramref name="tempId"/>, so <see cref="TryGetTempActor"/> finds exactly what
-        /// resolving that path would.
-        /// </summary>
-        bool IsUncachedTempId(long tempId);
     }
 
     /// <summary>
@@ -457,9 +450,6 @@ namespace Akka.Actor
             // The container has one namespace: a number and its canonical name are the same key.
             return _tempContainer.TryGetChild(tempId, out actorRef);
         }
-
-        /// <inheritdoc/>
-        bool ITempIdRegistry.IsUncachedTempId(long tempId) => _tempContainer.IsUncachedId(tempId);
 
         /// <summary>
         /// Initializes the ActorRefProvider

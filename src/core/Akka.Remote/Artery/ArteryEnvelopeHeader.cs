@@ -51,7 +51,7 @@ namespace Akka.Remote.Artery
 
         /// <summary>
         /// Top-byte mask. A zero top byte is ABSENT / LITERAL; a non-zero top byte is a bit set of ref
-        /// flags (<see cref="NumericTagFlag"/>, <see cref="DefineTagFlag"/>, <see cref="OwnerPresentTagFlag"/>)
+        /// flags (<see cref="NumericTagFlag"/>, <see cref="OwnerPresentTagFlag"/>)
         /// when it uses only the known bits and includes <see cref="NumericTagFlag"/>, and otherwise COMPRESSED
         /// (reserved, unsupported).
         /// </summary>
@@ -67,20 +67,11 @@ namespace Akka.Remote.Artery
         /// </summary>
         public const uint NumericTagFlag = 0x01u << 24;
 
-        /// <summary>
-        /// Tag flag: the numeric record has a path attached -- the record (as for <see cref="NumericTagFlag"/>)
-        /// is immediately followed by <c>[u16 LE length][UTF-8 path]</c> -- for ids the receiver may not hold a
-        /// definition for yet. No sender writes it yet. A decoder that keeps no definitions resolves such a ref
-        /// through the attached path exactly as if it were a literal (ignoring the id, storing nothing, confirming
-        /// nothing), so a frame carrying it is delivered by any receiver. Valid only in the sender and recipient positions.
-        /// </summary>
-        public const uint DefineTagFlag = 0x02u << 24;
-
         /// <summary>Tag flag: the numeric record starts with an explicit <c>i64 LE ownerUid</c> (the owner is not the frame's origin).</summary>
         public const uint OwnerPresentTagFlag = 0x04u << 24;
 
         /// <summary>Top-byte bits a decoder knows. A non-zero top byte with any other bit set is COMPRESSED (reserved).</summary>
-        public const uint KnownRefFlagsMask = NumericTagFlag | DefineTagFlag | OwnerPresentTagFlag;
+        public const uint KnownRefFlagsMask = NumericTagFlag | OwnerPresentTagFlag;
 
         /// <summary>Low 24 bits of a LITERAL or NUMERIC tag: the absolute byte offset of its data.</summary>
         public const uint TagOffsetMask = 0x00FF_FFFFu;
