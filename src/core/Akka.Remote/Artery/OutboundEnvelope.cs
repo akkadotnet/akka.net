@@ -48,6 +48,17 @@ namespace Akka.Remote.Artery
         string? RecipientPath { get; }
 
         /// <summary>
+        /// When non-null, the sender is written as a numeric record and <see cref="SenderPath"/> is unused.
+        /// Only a ref owned by the sending system may be written this way; any other sender is a literal.
+        /// </summary>
+        ArteryNumericRef? SenderRef { get; }
+
+        /// <summary>
+        /// When non-null, the recipient is written as a numeric record and <see cref="RecipientPath"/> is unused (null).
+        /// </summary>
+        ArteryNumericRef? RecipientRef { get; }
+
+        /// <summary>
         /// Cheap, precomputed (at construction, not re-tested per stage) flag: <see langword="true"/>
         /// when <see cref="Message"/> is an <see cref="IArteryControlMessage"/>. Stages dispatch on
         /// this instead of re-running an <c>is</c> type-test on every element at every stage.
@@ -66,8 +77,26 @@ namespace Akka.Remote.Artery
     /// <param name="Message">The message to serialize as the envelope's payload.</param>
     /// <param name="SenderPath">The sender's wire-format path, or <see langword="null"/> for no sender.</param>
     /// <param name="RecipientPath">The recipient's wire-format path, or <see langword="null"/> for control messages.</param>
-    internal sealed record OutboundEnvelope(object Message, string? SenderPath, string? RecipientPath) : IOutboundEnvelope
+    /// <param name="Numeric">The numeric sender and/or recipient, or <see langword="null"/> when both are literal or absent.</param>
+    internal sealed record OutboundEnvelope(
+        object Message,
+        string? SenderPath,
+        string? RecipientPath,
+        NumericWireRefs? Numeric = null) : IOutboundEnvelope
     {
+        /// <summary>Creates an envelope whose sender and/or recipient are numeric.</summary>
+        public OutboundEnvelope(
+            object message, string? senderPath, string? recipientPath, ArteryNumericRef? senderRef, ArteryNumericRef? recipientRef)
+            : this(message, senderPath, recipientPath, NumericWireRefs.Of(senderRef, recipientRef))
+        {
+        }
+
+        /// <inheritdoc/>
+        public ArteryNumericRef? SenderRef => Numeric?.Sender;
+
+        /// <inheritdoc/>
+        public ArteryNumericRef? RecipientRef => Numeric?.Recipient;
+
         /// <inheritdoc/>
         public bool IsControl { get; } = Message is IArteryControlMessage;
     }

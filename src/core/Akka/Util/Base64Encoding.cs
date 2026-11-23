@@ -50,6 +50,54 @@ namespace Akka.Util
         }
 
         /// <summary>
+        /// Decodes a name produced by <see cref="Base64Encode(long)"/> back into its value. Only
+        /// canonical encodings are accepted (the exact string <see cref="Base64Encode(long)"/> would
+        /// produce for the decoded non-negative value), so the mapping between names and values is a
+        /// bijection.
+        /// </summary>
+        /// <param name="name">The encoded name.</param>
+        /// <param name="value">The decoded value, or -1 when <paramref name="name"/> is not canonical.</param>
+        /// <returns><c>true</c> if <paramref name="name"/> is the canonical encoding of a non-negative <see cref="long"/>.</returns>
+        internal static bool TryBase64DecodeLong(ReadOnlySpan<char> name, out long value)
+        {
+            value = -1;
+            // 11 characters carry 66 bits; a non-negative long needs at most 63.
+            if (name.Length == 0 || name.Length > 11)
+                return false;
+
+            long result = 0;
+            for (var i = 0; i < name.Length; i++)
+            {
+                var digit = DigitOf(name[i]);
+                if (digit < 0)
+                    return false;
+
+                // The encoder never emits a zero most-significant digit, except for the value 0 itself.
+                if (i == name.Length - 1 && digit == 0 && name.Length > 1)
+                    return false;
+
+                // The 11th digit sits at bit 60, so only 3 bits (60..62) remain for a non-negative long.
+                if (i == 10 && digit > 7)
+                    return false;
+
+                result |= (long)digit << (6 * i);
+            }
+
+            value = result;
+            return true;
+        }
+
+        private static int DigitOf(char c)
+        {
+            if (c >= 'a' && c <= 'z') return c - 'a';
+            if (c >= 'A' && c <= 'Z') return c - 'A' + 26;
+            if (c >= '0' && c <= '9') return c - '0' + 52;
+            if (c == '+') return 62;
+            if (c == '~') return 63;
+            return -1;
+        }
+
+        /// <summary>
         /// Encodes a string as a standard base64 string using UTF-8 encoding.
         /// </summary>
         /// <param name="s">The string to encode.</param>

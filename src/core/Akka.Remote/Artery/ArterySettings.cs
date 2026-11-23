@@ -102,6 +102,14 @@ namespace Akka.Remote.Artery
         public int OutboundLanes { get; }
 
         /// <summary>
+        /// <c>akka.remote.artery.advanced.numeric-refs</c>: when <see langword="true"/> (the default), a temporary
+        /// Ask ref owned by this system is sent as a numeric record instead of a path literal -- as the sender of a
+        /// request, and as the recipient of a reply addressed to a <see cref="RemoteTempActorRef"/>. Set it to
+        /// <c>off</c> to write path literals only; the decoder accepts both shapes either way.
+        /// </summary>
+        public bool NumericRefs { get; }
+
+        /// <summary>
         /// <c>akka.remote.artery.advanced.test-mode</c> (Pekko key parity): enables the
         /// failure-injection test stages (<see cref="OutboundTestStage"/> /
         /// <see cref="InboundTestStage"/>) used by the multi-node TestConductor's
@@ -340,6 +348,8 @@ namespace Akka.Remote.Artery
             if (OutboundLanes < 1)
                 throw new ConfigurationException(
                     $"akka.remote.artery.advanced.outbound-lanes must be >= 1, but was [{OutboundLanes}].");
+
+            NumericRefs = arteryConfig.GetBoolean("advanced.numeric-refs", true);
 
             HandshakeTimeout = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-timeout", TimeSpan.FromSeconds(20));
             HandshakeRetryInterval = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-retry-interval", TimeSpan.FromSeconds(1));

@@ -48,5 +48,21 @@ namespace Akka.Remote.Artery
         public ArteryEnvelopeException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
+
+        /// <summary>
+        /// Initializes a new instance for a frame whose envelope version this decoder does not understand.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        /// <param name="receivedVersion">The version byte the frame carried.</param>
+        public ArteryEnvelopeException(string message, byte receivedVersion) : base(message)
+        {
+            ReceivedVersion = receivedVersion;
+        }
+
+        /// <summary>
+        /// The envelope version the frame carried, when this exception reports an unsupported version;
+        /// <see langword="null"/> for every other envelope error.
+        /// </summary>
+        public byte? ReceivedVersion { get; }
     }
 }

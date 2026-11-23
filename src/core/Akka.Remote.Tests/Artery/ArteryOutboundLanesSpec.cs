@@ -294,13 +294,15 @@ namespace Akka.Remote.Tests.Artery
             {
                 systemHealthy.ActorOf(Props.Create(() => new Echo()), "echo");
 
-                // Explicit #uid suffixes give us deterministic, KNOWN lane placement (SelectLane(uid, 4)
-                // == uid for these small values) without needing a live peer -- the target never needs
+                // Explicit #uid suffixes give us deterministic, KNOWN lane placement (via SelectLane)
+                // without needing a live peer -- the target never needs
                 // to actually exist since this association's connection is permanently unreachable.
+                var floodUid = Enumerable.Range(1, 100).First(u => Association.SelectLane(u, lanes) == 0);
+                var quietUid = Enumerable.Range(1, 100).First(u => Association.SelectLane(u, lanes) == 1);
                 var floodTarget = (RemoteActorRef)RARP.For(systemA).Provider.ResolveActorRef(
-                    $"akka://dead-sys@127.0.0.1:{deadPort}/user/flood#0"); // uid 0 -> lane 0
+                    $"akka://dead-sys@127.0.0.1:{deadPort}/user/flood#{floodUid}"); // lane 0
                 var quietTarget = (RemoteActorRef)RARP.For(systemA).Provider.ResolveActorRef(
-                    $"akka://dead-sys@127.0.0.1:{deadPort}/user/quiet#1"); // uid 1 -> lane 1
+                    $"akka://dead-sys@127.0.0.1:{deadPort}/user/quiet#{quietUid}"); // lane 1
 
                 var droppedProbe = CreateTestProbe(systemA);
                 systemA.EventStream.Subscribe(droppedProbe.Ref, typeof(Dropped));

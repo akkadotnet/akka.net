@@ -106,7 +106,7 @@ namespace Akka.Remote
     /// INTERNAL API
     /// </summary>
     [InternalApi]
-    public class RemoteActorRefProvider : IRemoteActorRefProvider
+    public class RemoteActorRefProvider : IRemoteActorRefProvider, ITempIdRegistry
     {
         private readonly ILoggingAdapter _log;
 
@@ -251,6 +251,32 @@ namespace Akka.Remote
         {
             return _local.CreateFutureRef(tcs);
         }
+
+        /// <inheritdoc/>
+        void ITempIdRegistry.RegisterTempActor(IInternalActorRef actorRef, long tempId)
+        {
+            ((ITempIdRegistry)_local).RegisterTempActor(actorRef, tempId);
+        }
+
+        /// <inheritdoc/>
+        void ITempIdRegistry.UnregisterTempActor(long tempId)
+        {
+            ((ITempIdRegistry)_local).UnregisterTempActor(tempId);
+        }
+
+        /// <inheritdoc/>
+        bool ITempIdRegistry.TryGetTempActor(long tempId, out IInternalActorRef actorRef)
+        {
+            return ((ITempIdRegistry)_local).TryGetTempActor(tempId, out actorRef);
+        }
+
+        /// <inheritdoc/>
+        bool ITempIdRegistry.IsUncachedTempId(long tempId) => ((ITempIdRegistry)_local).IsUncachedTempId(tempId);
+
+        /// <summary>
+        /// INTERNAL API. The wrapped local provider, whose temp refs this system owns.
+        /// </summary>
+        internal LocalActorRefProvider LocalProvider => _local;
 
         private IActorRef _remotingTerminator;        
         private IActorRef _remoteWatcher;

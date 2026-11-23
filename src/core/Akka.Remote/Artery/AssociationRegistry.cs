@@ -866,28 +866,13 @@ namespace Akka.Remote.Artery
         public bool TryEnqueueOutbound(IOutboundEnvelope element, int lane) => _laneChannels[lane].Writer.TryWrite(element);
 
         /// <summary>
-        /// Deterministically selects which ordinary-outbound lane a message to
-        /// <paramref name="recipientUid"/> should ride, Pekko-faithful (<c>Association.selectQueue</c>,
-        /// <c>Association.scala:476-505</c>: <c>OrdinaryQueueIndex + math.abs(r.path.uid % outboundLanes)</c>)
-        /// -- SAME recipient always resolves to the SAME lane (preserves per-recipient ordering),
-        /// distinct recipients spread across every configured lane.
-        ///
-        /// <para>
-        /// <b>Unsigned arithmetic, not <c>Math.Abs</c> (deliberate deviation from Pekko's literal
-        /// formula).</b> Pekko's Scala <c>uid: Int</c> is 32-bit and its formula is
-        /// <c>abs(uid % lanes)</c>; this port's <see cref="Akka.Actor.ActorPath.Uid"/> is a 64-bit
-        /// <see langword="long"/>, and <c>Math.Abs(long.MinValue)</c> throws
-        /// <see cref="OverflowException"/> (the exact edge <c>Math.Abs(int.MinValue)</c> has in the
-        /// 32-bit case) -- an extremely unlikely but real uid value (actor incarnation uids are
-        /// pseudo-random <see langword="long"/>s) would crash every send to that one recipient.
-        /// Reinterpreting the signed uid's bits as <see langword="ulong"/> before the modulo sidesteps
-        /// the overflow entirely (no throw for ANY input) while still deterministically mapping every
-        /// uid into <c>[0, lanes)</c> -- functionally equivalent to "abs mod lanes" for partitioning
-        /// purposes, just crash-proof.
-        /// </para>
+        /// Deterministically selects which ordinary-lane a message to the recipient identified by
+        /// <paramref name="laneKey"/> should ride -- SAME recipient always resolves to the SAME lane
+        /// (preserves per-recipient ordering), distinct recipients spread across every configured lane.
+        /// See <see cref="ArteryLaneKey"/> for what the key is and how it is mixed; unsigned arithmetic means
+        /// no input, <see cref="long.MinValue"/> included, can throw.
         /// </summary>
-        public static int SelectLane(long recipientUid, int lanes) =>
-            lanes <= 1 ? 0 : (int)(unchecked((ulong)recipientUid) % (ulong)lanes);
+        public static int SelectLane(long laneKey, int lanes) => ArteryLaneKey.Select(laneKey, lanes);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the CONTROL outbound stream to send.

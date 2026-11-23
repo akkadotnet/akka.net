@@ -34,8 +34,11 @@ namespace Akka.Remote.Artery
         /// <summary>Length, in bytes, of the fixed envelope header (offsets 0..32).</summary>
         public const int HeaderLength = 32;
 
-        /// <summary>The only version this codec understands; the decoder rejects any other value.</summary>
-        public const byte CurrentVersion = 1;
+        /// <summary>
+        /// The only version this codec understands; the decoder rejects any other value. Version 2
+        /// adds the NUMERIC ref shape (see <see cref="NumericTagFlag"/>); the fixed header is otherwise unchanged.
+        /// </summary>
+        public const byte CurrentVersion = 2;
 
         /// <summary>Flags bit 0: a metadata section is present immediately after the fixed header.</summary>
         public const byte MetadataPresentFlag = 0b0000_0001;
@@ -46,8 +49,47 @@ namespace Akka.Remote.Artery
         /// <summary>Tag value meaning ABSENT: no sender / no recipient / empty manifest.</summary>
         public const uint AbsentTag = 0x0000_0000u;
 
-        /// <summary>Top-byte mask; a non-zero top byte marks a COMPRESSED tag.</summary>
+        /// <summary>
+        /// Top-byte mask. A zero top byte is ABSENT / LITERAL; a non-zero top byte is a bit set of ref
+        /// flags (<see cref="NumericTagFlag"/>, <see cref="DefineTagFlag"/>, <see cref="OwnerPresentTagFlag"/>)
+        /// when it uses only the known bits and includes <see cref="NumericTagFlag"/>, and otherwise COMPRESSED
+        /// (reserved, unsupported).
+        /// </summary>
         public const uint CompressedTagMask = 0xFF00_0000u;
+
+        /// <summary>
+        /// Tag flag: the ref is NUMERIC. The tag's low 24 bits (<see cref="TagOffsetMask"/>) are the absolute byte
+        /// offset of a record among the literals, before the payload offset: <c>[i64 LE ownerUid]?[i64 LE id]</c>,
+        /// the owner present only when <see cref="OwnerPresentTagFlag"/> is set. An absent owner means the frame's
+        /// origin. The id is a 64-bit value whose top bit (<see cref="Akka.Remote.Artery.ArteryNumericRef.TemporaryNamespaceBit"/>)
+        /// is the namespace: set is a temporary-ref counter, clear is reserved for the owner's own actor UIDs.
+        /// The shape says nothing about what kind of actor an id names. Valid only in the sender and recipient positions.
+        /// </summary>
+        public const uint NumericTagFlag = 0x01u << 24;
+
+        /// <summary>
+        /// Tag flag: the numeric record has a path attached -- the record (as for <see cref="NumericTagFlag"/>)
+        /// is immediately followed by <c>[u16 LE length][UTF-8 path]</c> -- for ids the receiver may not hold a
+        /// definition for yet. No sender writes it yet. A decoder that keeps no definitions resolves such a ref
+        /// through the attached path exactly as if it were a literal (ignoring the id, storing nothing, confirming
+        /// nothing), so a frame carrying it is delivered by any receiver. Valid only in the sender and recipient positions.
+        /// </summary>
+        public const uint DefineTagFlag = 0x02u << 24;
+
+        /// <summary>Tag flag: the numeric record starts with an explicit <c>i64 LE ownerUid</c> (the owner is not the frame's origin).</summary>
+        public const uint OwnerPresentTagFlag = 0x04u << 24;
+
+        /// <summary>Top-byte bits a decoder knows. A non-zero top byte with any other bit set is COMPRESSED (reserved).</summary>
+        public const uint KnownRefFlagsMask = NumericTagFlag | DefineTagFlag | OwnerPresentTagFlag;
+
+        /// <summary>Low 24 bits of a LITERAL or NUMERIC tag: the absolute byte offset of its data.</summary>
+        public const uint TagOffsetMask = 0x00FF_FFFFu;
+
+        /// <summary>Length of a numeric record's <c>i64 LE id</c>.</summary>
+        public const int NumericIdLength = sizeof(long);
+
+        /// <summary>Length of a numeric record's optional leading <c>i64 LE ownerUid</c>.</summary>
+        public const int NumericOwnerLength = sizeof(long);
 
         /// <summary>Low 16 bits of a COMPRESSED tag hold the compression-table index.</summary>
         public const uint CompressedIndexMask = 0x0000_FFFFu;
@@ -123,7 +165,7 @@ namespace Akka.Remote.Artery
             PayloadOffset = payloadOffset;
         }
 
-        /// <summary>Envelope wire-layout version. Always 1 in a successfully decoded header.</summary>
+        /// <summary>Envelope wire-layout version. Always <see cref="ArteryEnvelopeHeader.CurrentVersion"/> in a successfully decoded header.</summary>
         public byte Version { get; }
 
         /// <summary>Envelope flags byte. Bit 0 = metadata section present; bits 1-7 are reserved-must-be-zero.</summary>

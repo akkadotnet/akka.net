@@ -93,6 +93,19 @@ namespace Akka.Remote
         }
 
         /// <summary>
+        /// INTERNAL API. For subclasses that materialise <see cref="Path"/> themselves (and override it):
+        /// <c>RemoteTempActorRef</c> is created per inbound Ask request and must not format or parse a path.
+        /// </summary>
+        internal RemoteActorRef(RemoteTransport remote, Address localAddressToUse)
+        {
+            Remote = remote;
+            LocalAddressToUse = localAddressToUse;
+            _parent = ActorRefs.Nobody;
+            _props = Props.None;
+            _deploy = Deploy.None;
+        }
+
+        /// <summary>
         /// Gets the local address to use.
         /// </summary>
         /// <value>The local address to use.</value>
