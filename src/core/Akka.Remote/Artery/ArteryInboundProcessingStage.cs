@@ -733,6 +733,30 @@ namespace Akka.Remote.Artery
             }
 
             /// <summary>
+            /// Reads the next item, spinning briefly for one before giving up. Only reached after the
+            /// consumer has just processed an item: when it then parks, the reader's next write to this
+            /// lane has to wake it through the thread pool, a hand-off paid on the reader's thread.
+            /// </summary>
+            private static bool TryReadOrSpin(ChannelReader<LaneWorkItem> reader, out LaneWorkItem item)
+            {
+                if (reader.TryRead(out item))
+                    return true;
+
+                var spinner = new System.Threading.SpinWait();
+                for (var i = 0; i < LaneSpinIterations; i++)
+                {
+                    spinner.SpinOnce(sleep1Threshold: -1);
+                    if (reader.TryRead(out item))
+                        return true;
+                }
+
+                return false;
+            }
+
+            // Ten iterations stay within SpinWait's busy-spin phase (no yields): a few microseconds at most.
+            private const int LaneSpinIterations = 10;
+
+            /// <summary>
             /// One lane's long-running consumer loop (design's benchmark-locked mechanism: one
             /// bounded <see cref="Channel{T}"/> per lane, one dedicated consumer loop per lane --
             /// runs on the default .NET ThreadPool via <see cref="Task.Run(Action)"/>, no dedicated
@@ -756,7 +780,7 @@ namespace Akka.Remote.Artery
                 {
                     while (await reader.WaitToReadAsync().ConfigureAwait(false))
                     {
-                        while (reader.TryRead(out var item))
+                        while (TryReadOrSpin(reader, out var item))
                         {
                             // Decode on the lane: the reader left every literal undecoded. A
                             // malformed literal (or any other decode error) drops only this item.
