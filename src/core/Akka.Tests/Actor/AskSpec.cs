@@ -10,6 +10,7 @@ using Xunit;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
@@ -110,6 +111,18 @@ namespace Akka.Tests.Actor
 
         public sealed class DummySystemMessage : ISystemMessage
         {
+        }
+
+        public class AskingActor : ReceiveActor
+        {
+            public AskingActor(IActorRef target, IActorRef testActor)
+            {
+                ReceiveAsync<string>(async message =>
+                {
+                    var reply = await target.Ask<string>(message, TimeSpan.FromSeconds(3));
+                    testActor.Tell(reply);
+                });
+            }
         }
 
         [Fact]
@@ -273,6 +286,80 @@ namespace Akka.Tests.Actor
             await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout"));
 
             await Are_Temp_Actors_Removed(actor);
+        }
+
+        [Fact]
+        public async Task Answered_ask_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            (await actor.Ask<string>("answer", TimeSpan.FromSeconds(3))).ShouldBe("answer");
+
+            await Are_Temp_Actors_Removed(actor);
+        }
+
+        [Fact]
+        public async Task Failed_ask_should_remove_temp_actor()
+        {
+            var actor = Sys.ActorOf(act => act.ReceiveAny((_, context) =>
+            {
+                context.Sender.Tell(new Status.Failure(new Exception("failed")));
+            }));
+
+            await Assert.ThrowsAsync<Exception>(async () => await actor.Ask<string>("answer", TimeSpan.FromSeconds(3)));
+
+            await Are_Temp_Actors_Removed(actor);
+        }
+
+        [Fact]
+        public async Task Ask_from_ReceiveAsync_should_complete_and_actor_should_keep_processing()
+        {
+            var replyActor = Sys.ActorOf<ReplyActor>();
+            var asker = Sys.ActorOf(Props.Create(() => new AskingActor(replyActor, TestActor)));
+
+            asker.Tell("foo");
+            asker.Tell("foo");
+            asker.Tell("foo");
+
+            await ExpectMsgAsync("bar");
+            await ExpectMsgAsync("bar");
+            await ExpectMsgAsync("bar");
+            await Are_Temp_Actors_Removed(replyActor);
+        }
+
+        [Fact]
+        public async Task Ask_from_ReceiveAsync_should_remove_temp_actor_when_asker_stops_before_reply()
+        {
+            var target = CreateTestProbe();
+            var asker = Sys.ActorOf(Props.Create(() => new AskingActor(target.Ref, TestActor)));
+            Watch(asker);
+
+            asker.Tell("foo");
+            await target.ExpectMsgAsync("foo");
+            var future = target.LastSender;
+
+            Sys.Stop(asker);
+            await ExpectTerminatedAsync(asker);
+            future.Tell("bar");
+
+            await Are_Temp_Actors_Removed(asker);
+        }
+
+        [Fact]
+        public async Task Concurrent_asks_should_all_complete_and_remove_temp_actors()
+        {
+            const int Callers = 4;
+            const int AsksPerCaller = 1000;
+            var echo = Sys.ActorOf(act => act.ReceiveAny((message, context) => context.Sender.Tell(message)));
+
+            var callers = Enumerable.Range(0, Callers).Select(c => Task.Run(() => Task.WhenAll(
+                Enumerable.Range(c * AsksPerCaller, AsksPerCaller)
+                    .Select(i => echo.Ask<int>(i, TimeSpan.FromSeconds(10)))
+                    .ToArray())));
+            var replies = (await Task.WhenAll(callers)).SelectMany(r => r).ToArray();
+
+            replies.Should().Equal(Enumerable.Range(0, Callers * AsksPerCaller));
+            await Are_Temp_Actors_Removed(echo);
         }
 
         [Fact]
