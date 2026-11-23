@@ -190,6 +190,12 @@ namespace Akka.Remote.Artery
         // WHICH lane a given send's envelope lands in (<see cref="SelectLane"/>, cached per
         // <see cref="RemoteActorRef"/>) and which lane(s) a materialized stream reads from.
         private readonly Channel<IOutboundEnvelope>[] _laneChannels;
+
+        // Per lane: envelopes the lane's ArteryBatchEncodeStage had taken from the channel but not
+        // sent when its materialization stopped. The next materialization emits them before reading
+        // the channel, so the lane keeps its order; transport shutdown drains them with the channel.
+        // Guarded by locking the array itself.
+        private readonly Queue<IOutboundEnvelope>?[] _laneCarryOver;
         private readonly Channel<IOutboundEnvelope> _controlChannel;
 
         /// <summary>
@@ -440,6 +446,7 @@ namespace Akka.Remote.Artery
             _state = AssociationState.Create();
 
             _laneChannels = new Channel<IOutboundEnvelope>[OutboundLanes];
+            _laneCarryOver = new Queue<IOutboundEnvelope>?[OutboundLanes];
             for (var i = 0; i < OutboundLanes; i++)
             {
                 _laneChannels[i] = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
@@ -861,8 +868,54 @@ namespace Akka.Remote.Artery
         public static bool IsBestEffortControlMessage(object message) => message is
             HandshakeReq or HandshakeRsp or ArteryHeartbeat or ArteryHeartbeatRsp or Ack or Nack;
 
-        /// <summary>Whether any ordinary lane still contains accepted user traffic.</summary>
-        public bool HasQueuedOutbound => Array.Exists(_laneChannels, channel => channel.Reader.Count > 0);
+        /// <summary>Whether any ordinary lane still contains accepted user traffic, carried over or in its channel.</summary>
+        public bool HasQueuedOutbound
+        {
+            get
+            {
+                lock (_laneCarryOver)
+                    if (Array.Exists(_laneCarryOver, carried => carried is { Count: > 0 }))
+                        return true;
+                return Array.Exists(_laneChannels, channel => channel.Reader.Count > 0);
+            }
+        }
+
+        /// <summary>
+        /// Keeps <paramref name="held"/> -- envelopes a stopped encode stage of ordinary lane
+        /// <paramref name="lane"/> took from the channel and never sent, oldest first -- for the next
+        /// materialization of that lane. Returns <see langword="false"/> once the outbound stream
+        /// is shut down; the caller then reports them as dropped.
+        /// </summary>
+        public bool TryCarryOver(int lane, Queue<IOutboundEnvelope> held)
+        {
+            lock (_laneCarryOver)
+            {
+                if (_outboundShutDown)
+                    return false;
+
+                // Anything still carried was read after `held`, so it goes behind it.
+                if (_laneCarryOver[lane] is { } older)
+                    foreach (var envelope in older)
+                        held.Enqueue(envelope);
+
+                _laneCarryOver[lane] = held;
+                return true;
+            }
+        }
+
+        /// <summary>Whether ordinary lane <paramref name="lane"/> has carried-over envelopes.</summary>
+        public bool HasCarryOver(int lane)
+        {
+            lock (_laneCarryOver)
+                return _laneCarryOver[lane] is { Count: > 0 };
+        }
+
+        /// <summary>Takes the oldest carried-over envelope of ordinary lane <paramref name="lane"/>, or <see langword="null"/>.</summary>
+        public IOutboundEnvelope? TakeCarryOver(int lane)
+        {
+            lock (_laneCarryOver)
+                return _laneCarryOver[lane] is { Count: > 0 } carried ? carried.Dequeue() : null;
+        }
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> onto ordinary-outbound LANE 0. Non-blocking
@@ -1088,9 +1141,23 @@ namespace Akka.Remote.Artery
         /// </summary>
         public void DrainOutboundToDropped(Action<IOutboundEnvelope> onDrained)
         {
-            foreach (var laneChannel in _laneChannels)
-                while (laneChannel.Reader.TryRead(out var envelope))
+            for (var lane = 0; lane < _laneChannels.Length; lane++)
+            {
+                // Carried-over envelopes are older than the channel's, so they are reported first.
+                Queue<IOutboundEnvelope>? carried;
+                lock (_laneCarryOver)
+                {
+                    carried = _laneCarryOver[lane];
+                    _laneCarryOver[lane] = null;
+                }
+
+                if (carried is not null)
+                    foreach (var envelope in carried)
+                        onDrained(envelope);
+
+                while (_laneChannels[lane].Reader.TryRead(out var envelope))
                     onDrained(envelope);
+            }
         }
 
         /// <summary>

@@ -605,11 +605,7 @@ namespace Akka.Remote.Artery
             foreach (var association in associations)
             {
                 var remoteAddress = association.RemoteAddress;
-                association.DrainOutboundToDropped(envelope => System.EventStream.Publish(new Dropped(
-                    envelope.Message,
-                    $"Outbound Artery queue to [{remoteAddress}] drained on transport shutdown",
-                    ActorRefs.NoSender,
-                    System.DeadLetters)));
+                association.DrainOutboundToDropped(envelope => PublishOutboundDrained(remoteAddress, envelope));
                 association.DrainControlToDropped(envelope => System.EventStream.Publish(new Dropped(
                     envelope.Message,
                     $"Outbound Artery CONTROL queue to [{remoteAddress}] drained on transport shutdown",
@@ -1962,6 +1958,46 @@ namespace Akka.Remote.Artery
                 System.DeadLetters));
         }
 
+        private void PublishOutboundDrained(Address remoteAddress, IOutboundEnvelope envelope) =>
+            System.EventStream.Publish(new Dropped(
+                envelope.Message,
+                $"Outbound Artery queue to [{remoteAddress}] drained on transport shutdown",
+                ActorRefs.NoSender,
+                System.DeadLetters));
+
+        /// <summary>
+        /// Hands the envelopes a stopped <see cref="ArteryBatchEncodeStage"/> still held to the next
+        /// materialization of ordinary lane <paramref name="lane"/> (see <see cref="OrdinaryLaneSource"/>),
+        /// or, once the transport has drained its queues for shutdown, reports each one as dropped
+        /// exactly like that drain does.
+        /// </summary>
+        private void CarryOverHeldEnvelopes(Address remoteAddress, Association association, int lane, Queue<IOutboundEnvelope> held)
+        {
+            if (association.TryCarryOver(lane, held))
+                return;
+
+            foreach (var envelope in held)
+                PublishOutboundDrained(remoteAddress, envelope);
+        }
+
+        /// <summary>
+        /// The source of ordinary lane <paramref name="lane"/>: the lane's channel, preceded by any
+        /// envelopes the previous materialization's encode stage carried over, so they are sent first.
+        /// Carried-over envelopes are taken one per pull, so any not yet taken when this
+        /// materialization stops stay carried over.
+        /// </summary>
+        private static Source<IOutboundEnvelope, NotUsed> OrdinaryLaneSource(Association association, int lane)
+        {
+            var channel = ChannelSource.FromReader(association.LaneReader(lane));
+            if (!association.HasCarryOver(lane))
+                return channel;
+
+            return Source.Unfold(lane, l => association.TakeCarryOver(l) is { } envelope
+                    ? Option<(int, IOutboundEnvelope)>.Create((l, envelope))
+                    : Option<(int, IOutboundEnvelope)>.None)
+                .Concat(channel);
+        }
+
         /// <summary>
         /// Materializes this association's ORDINARY outbound stream. GATE B: at
         /// <c>association.OutboundLanes &lt;= 1</c> (the shipping default) this is EXACTLY today's
@@ -1992,15 +2028,15 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Materializes this association's ORDINARY outbound stream when <c>outbound-lanes &gt; 1</c>:
         /// N independent lane chains --
-        /// <c>ChannelSource.FromReader(laneReader) -&gt; OutboundHandshakeStage -&gt; ArteryEncodeStage</c>,
+        /// <c>ChannelSource.FromReader(laneReader) -&gt; OutboundHandshakeStage -&gt; ArteryBatchEncodeStage</c>,
         /// each with its OWN <see cref="OutboundHandshakeStage"/> instance (Pekko does this too --
         /// <c>ArteryTransport.scala:791-812</c>) and its OWN dedicated encode buffer pool
         /// (<see cref="_laneEncodeBufferPools"/>) -- merged via <see cref="MergeHub"/> into the
         /// SAME preamble/kill-switch/<c>Tcp.OutgoingConnection</c> tail
         /// <see cref="MaterializeOutboundStream"/> uses for the single-lane case: ONE socket per
         /// association, regardless of lane count. Frame atomicity is inherent -- <see cref="MergeHub"/>
-        /// merges whole elements, and each <see cref="ArteryEncodeStage"/> element is one complete
-        /// framed message, so interleaving happens only at frame boundaries.
+        /// merges whole elements, and each <see cref="ArteryBatchEncodeStage"/> element is one or more
+        /// complete framed messages, so interleaving happens only at frame boundaries.
         ///
         /// <para>
         /// <b>One restartable unit (Pekko's <c>streamKillSwitch</c> semantics,
@@ -2199,8 +2235,10 @@ namespace Akka.Remote.Artery
                         _settings.InjectHandshakeInterval, isControlStream: false, forceReqOnStart: isRestart,
                         timeProvider: System.Scheduler);
 
-                    var encodeStage = new ArteryEncodeStage(
-                        System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i]);
+                    var encodeStage = new ArteryBatchEncodeStage(
+                        System.Serialization, _localUniqueAddress.Uid, OrdinaryEncodeBatchMaxFrames,
+                        LaneWriteBatchMaxBytes, _laneEncodeBufferPools![i],
+                        held => CarryOverHeldEnvelopes(remoteAddress, association, lane, held));
 
                     // RecoverWithRetries sits AFTER WatchTermination -- the ordering is load-bearing:
                     // the termination task (upstream of the recovery) must still observe the lane's
@@ -2209,7 +2247,7 @@ namespace Akka.Remote.Artery
                     // graceful completion and never logs "Upstream producer failed" for a fault the
                     // assembly is already handling. Pekko does exactly this ("recover to avoid error
                     // logging by MergeHub", Association.scala's lane construction).
-                    var laneSource = ChannelSource.FromReader(association.LaneReader(i))
+                    var laneSource = OrdinaryLaneSource(association, lane)
                         .Via(laneKillSwitch.Flow<IOutboundEnvelope>());
 
                     // advanced.test-mode failure injection: per-lane OutboundTestStage UPSTREAM of
@@ -2453,10 +2491,19 @@ namespace Akka.Remote.Artery
 
             // Large-message stream (task 10.2) rents from its OWN dedicated, large-sized pool --
             // see _largeEncodeBufferPool's remarks.
-            var encodeStage = new ArteryEncodeStage(
-                System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
+            // The ordinary stream may hand several frames downstream per element (see
+            // ArteryBatchEncodeStage); control and large streams encode one frame per element.
+            var encodeStage = streamId == ArteryStreamId.Ordinary
+                ? (IGraph<FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>, NotUsed>)new ArteryBatchEncodeStage(
+                    System.Serialization, _localUniqueAddress.Uid, OrdinaryEncodeBatchMaxFrames,
+                    LaneWriteBatchMaxBytes, _encodeBufferPool,
+                    held => CarryOverHeldEnvelopes(remoteAddress, association, 0, held))
+                : new ArteryEncodeStage(
+                    System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
 
-            var source = ChannelSource.FromReader(reader);
+            var source = streamId == ArteryStreamId.Ordinary
+                ? OrdinaryLaneSource(association, 0)
+                : ChannelSource.FromReader(reader);
 
             // advanced.test-mode failure injection, ORDINARY/LARGE placement: the
             // OutboundTestStage sits UPSTREAM of the handshake stage (Pekko Association.scala's
@@ -2961,6 +3008,13 @@ namespace Akka.Remote.Artery
         private const long LaneWriteBatchMaxBytes = 16 * 1024;
 
         /// <summary>
+        /// Most envelopes an ordinary-stream <see cref="ArteryBatchEncodeStage"/> holds while
+        /// downstream is busy, and so the most frames it hands downstream as one element (each such
+        /// element is also capped at <see cref="LaneWriteBatchMaxBytes"/>).
+        /// </summary>
+        private const int OrdinaryEncodeBatchMaxFrames = 32;
+
+        /// <summary>
         /// Aggregate operation used by <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail (see
         /// <see cref="MaterializeOrdinaryOutboundWithLanes"/>): chains every segment of
         /// <paramref name="frame"/> onto the tail of <paramref name="batch"/>'s segment chain --
@@ -2977,8 +3031,8 @@ namespace Akka.Remote.Artery
         /// <para>
         /// <b>Invariant (throws if violated).</b> Both inputs are always
         /// <see cref="OwnedSequenceSegment"/>-backed. Every element on this path is pushed by
-        /// <see cref="ArteryEncodeStage"/> as <c>OwnedSequenceSegment.Create(owner)</c> -- a
-        /// single-segment, owner-carrying, segment-backed sequence -- and reaches the batch stage
+        /// <see cref="ArteryBatchEncodeStage"/> as a chain of one or more owner-carrying
+        /// <see cref="OwnedSequenceSegment"/>s, one per frame, and reaches the batch stage
         /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
         /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
         /// INSIDE the downstream restart factory, so it never passes through this stage. The batch
@@ -2999,13 +3053,13 @@ namespace Akka.Remote.Artery
                 throw new InvalidOperationException(
                     "Artery lane frame batching requires OwnedSequenceSegment-backed batches, got " +
                     $"[{batch.Start.GetObject()?.GetType().ToString() ?? "null"}]: every ordinary-lanes " +
-                    "element must originate from ArteryEncodeStage.");
+                    "element must originate from ArteryBatchEncodeStage.");
 
             if (frame.Start.GetObject() is not ReadOnlySequenceSegment<byte> startObject)
                 throw new InvalidOperationException(
                     "Artery lane frame batching requires segment-backed frames, got a memory-backed " +
                     $"sequence of [{frame.Length}] bytes: every ordinary-lanes element must originate " +
-                    "from ArteryEncodeStage.");
+                    "from ArteryBatchEncodeStage.");
 
             // Same bounded, slice-aware walk as AppendToWriteBuffer: never run past the tail this
             // sequence actually references, and honor the frame's own start/end offsets on the
