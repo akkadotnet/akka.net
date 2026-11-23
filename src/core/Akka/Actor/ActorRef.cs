@@ -128,10 +128,41 @@ namespace Akka.Actor
         /// </summary>
         public override IActorRefProvider Provider => _provider;
 
+        // INTERNAL API: timeout, cancellation and cleanup state of the Ask that created this reference, kept
+        // here instead of in a separate object per Ask. AskProvider is null when no Ask owns this reference.
+        internal IActorRefProvider AskProvider;
+        internal TimeSpan AskTimeout;
+        internal ITimer AskTimeoutTimer;
+        internal CancellationTokenRegistration AskCancellationRegistration;
+        private int _askCleanedUp;
+
+        internal static readonly TimerCallback OnAskTimeout = static s =>
+        {
+            var future = (FutureActorRef<T>)s;
+            if (future._result.TrySetException(new AskTimeoutException($"Timeout after {future.AskTimeout.TotalSeconds:F2} seconds")))
+                future.CleanupAsk();
+        };
+
+        internal static readonly Action<object> OnAskCancel = static s =>
+        {
+            var future = (FutureActorRef<T>)s;
+            if (future._result.TrySetCanceled())
+                future.CleanupAsk();
+        };
+
         /// <summary>
-        /// INTERNAL API: set by Ask; its cleanup runs once the task is completed.
+        /// INTERNAL API: unregisters the Ask's temporary actor and releases its timeout and cancellation callbacks.
+        /// Called by whichever route completes the Ask, after it completes the task; runs at most once.
         /// </summary>
-        internal Futures.AskState<T> AskState;
+        internal void CleanupAsk()
+        {
+            if (AskProvider is null || Interlocked.Exchange(ref _askCleanedUp, 1) != 0)
+                return;
+
+            AskProvider.UnregisterTempActor(_path);
+            AskTimeoutTimer?.Dispose();
+            AskCancellationRegistration.Dispose();
+        }
 
         /// <summary>
         /// Completes the task for a compatible ordinary reply and faults it for system messages, failure replies, or incompatible reply types.
@@ -171,7 +202,7 @@ namespace Akka.Actor
             }
 
             if (_result.Task.IsCompleted)
-                AskState?.Cleanup();
+                CleanupAsk();
 
             //ignore canceled ask and put unhandled answers into deadletter
             if (!handled && !_result.Task.IsCanceled)
@@ -203,7 +234,7 @@ namespace Akka.Actor
             {
                 // TODO: blow up the caller here by just throwing the exception at the callsite?
                 if (_result.TrySetException(new InvalidOperationException($"system message of type '{message.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}")))
-                    AskState?.Cleanup();
+                    CleanupAsk();
             }
         }
 
