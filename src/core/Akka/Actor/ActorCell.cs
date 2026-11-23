@@ -87,7 +87,7 @@ namespace Akka.Actor
         /// <remarks>
         /// Will be set to <c>null</c> when not processing any message.
         /// </remarks>
-        public object? CurrentMessage { get; internal set; }
+        public object? CurrentMessage { get => _currentMessage; internal set => _currentMessage = value; }
         
         /// <summary>
         /// This actor's mailbox instance.
@@ -165,7 +165,7 @@ namespace Akka.Actor
         /// <remarks>
         /// Will be <c>null</c> when we are not processing messages.
         /// </remarks>
-        public IActorRef? Sender { get; private set; }
+        public IActorRef? Sender { get => _sender; private set => _sender = value; }
         
         /// <summary>
         /// Will return <c>true</c> if <see cref="NumberOfMessages"/> is greater than zero.
