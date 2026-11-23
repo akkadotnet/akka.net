@@ -1292,7 +1292,8 @@ namespace Akka.Cluster.Sharding
 
         private IActorRef GetShard(ShardId id)
         {
-            if (_startingShards.Contains(id))
+            // in steady state no shard is starting, so skip hashing the shard id
+            if (_startingShards.Count > 0 && _startingShards.Contains(id))
                 return ActorRefs.Nobody;
 
             if (_shards.TryGetValue(id, out var shard)) return shard ?? ActorRefs.Nobody;
