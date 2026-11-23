@@ -154,6 +154,22 @@ namespace Akka.Dispatch
         /// </exception>
         public static void RunTask(Func<Task> asyncAction)
         {
+            var actorScheduler = BeginRunTask();
+            OnTaskStarted(actorScheduler, Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler));
+        }
+
+        /// <summary>
+        /// INTERNAL API: <see cref="RunTask(Func{Task})"/> with the operation's argument passed as task state,
+        /// so a caller that reuses <paramref name="asyncAction"/> allocates no closure per call.
+        /// </summary>
+        internal static void RunTask(Func<object, Task> asyncAction, object state)
+        {
+            var actorScheduler = BeginRunTask();
+            OnTaskStarted(actorScheduler, Task<Task>.Factory.StartNew(asyncAction, state, CancellationToken.None, TaskCreationOptions.None, actorScheduler));
+        }
+
+        private static ActorTaskScheduler BeginRunTask()
+        {
             var context = ActorCell.Current;
 
             if (context == null)
@@ -166,10 +182,12 @@ namespace Akka.Dispatch
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
             actorScheduler.OnBeforeTaskStarted();
-            
-            Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
-                              .Unwrap()
-                              .ContinueWith(actorScheduler._onTaskCompleted, null, actorScheduler);
+            return actorScheduler;
+        }
+
+        private static void OnTaskStarted(ActorTaskScheduler actorScheduler, Task<Task> started)
+        {
+            started.Unwrap().ContinueWith(actorScheduler._onTaskCompleted, null, actorScheduler);
         }
 
         private void OnTaskCompleted(Task parent, object state)

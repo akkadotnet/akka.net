@@ -111,12 +111,9 @@ namespace Akka.Actor
 
         private static Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
         {
-            return m =>
-            {
-                ActorTaskScheduler.RunTask(Wrap);
-                return;
-                Task Wrap() => asyncHandler(m);
-            };
+            // One delegate per registration; the message travels as task state instead of in a per-message closure.
+            Func<object, Task> run = m => asyncHandler((T)m);
+            return m => ActorTaskScheduler.RunTask(run, m);
         }
 
         /// <summary>
