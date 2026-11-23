@@ -162,7 +162,7 @@ namespace Akka.Remote.Artery
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
-        /// loop, once per deserialized ordinary message, as <c>(message, senderPath, recipientPath)</c>
+        /// loop, once per deserialized ordinary message, as <c>(message, senderPath, recipientPath, originUid)</c>
         /// -- mirrors <c>ArteryRemoting.DispatchOrdinaryMessage</c> exactly (the same resolve-and-Tell
         /// logic <c>ArteryRemoting.DispatchInbound</c> uses for the lanes=1/non-lane path).
         /// </param>
@@ -187,7 +187,7 @@ namespace Akka.Remote.Artery
             int inboundLanes = 1,
             int inboundLaneBufferSize = 0,
             IInboundContext? inboundContext = null,
-            Action<object, string?, string>? dispatchOrdinary = null,
+            Action<object, string?, string, long>? dispatchOrdinary = null,
             Action<int>? onLanesInitialized = null,
             SharedTestState? testState = null)
         {
@@ -266,7 +266,7 @@ namespace Akka.Remote.Artery
         public IInboundContext? InboundContext { get; }
 
         /// <summary>See the constructor parameter of the same name. <see langword="null"/> when <see cref="InboundLanes"/> is 1.</summary>
-        public Action<object, string?, string>? DispatchOrdinary { get; }
+        public Action<object, string?, string, long>? DispatchOrdinary { get; }
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public Action<int>? OnLanesInitialized { get; }
@@ -325,13 +325,14 @@ namespace Akka.Remote.Artery
         /// </summary>
         private readonly struct LaneWorkItem
         {
-            public LaneWorkItem(ReadOnlySequence<byte> payload, int serializerId, string manifest, string? senderPath, string recipientPath)
+            public LaneWorkItem(ReadOnlySequence<byte> payload, int serializerId, string manifest, string? senderPath, string recipientPath, long originUid)
             {
                 Payload = payload;
                 SerializerId = serializerId;
                 Manifest = manifest;
                 SenderPath = senderPath;
                 RecipientPath = recipientPath;
+                OriginUid = originUid;
             }
 
             public ReadOnlySequence<byte> Payload { get; }
@@ -339,6 +340,7 @@ namespace Akka.Remote.Artery
             public string Manifest { get; }
             public string? SenderPath { get; }
             public string RecipientPath { get; }
+            public long OriginUid { get; }
         }
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
@@ -724,7 +726,7 @@ namespace Akka.Remote.Artery
             private static async Task RunLaneConsumer(
                 ChannelReader<LaneWorkItem> reader,
                 Akka.Serialization.Serialization serialization,
-                Action<object, string?, string> dispatch,
+                Action<object, string?, string, long> dispatch,
                 ILoggingAdapter log)
             {
                 try
@@ -736,7 +738,7 @@ namespace Akka.Remote.Artery
                             try
                             {
                                 var message = serialization.Deserialize(item.Payload, item.SerializerId, item.Manifest);
-                                dispatch(message, item.SenderPath, item.RecipientPath);
+                                dispatch(message, item.SenderPath, item.RecipientPath, item.OriginUid);
                             }
                             catch (Exception ex)
                             {
@@ -920,7 +922,7 @@ namespace Akka.Remote.Artery
 
                 var laneIndex = LaneFor(laneKey, _stage.InboundLanes);
 
-                return TryRouteToLane(laneIndex, new LaneWorkItem(decoded.Payload, decoded.Header.SerializerId, manifest, senderPath, recipientPath));
+                return TryRouteToLane(laneIndex, new LaneWorkItem(decoded.Payload, decoded.Header.SerializerId, manifest, senderPath, recipientPath, decoded.Header.OriginUid));
             }
 
             /// <summary>
