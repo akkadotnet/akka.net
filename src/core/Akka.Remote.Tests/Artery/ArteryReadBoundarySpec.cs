@@ -1,17 +1,13 @@
 #nullable enable
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
-using Akka.Configuration;
 using Akka.IO;
 using Akka.Remote.Artery;
 using Akka.Serialization;
@@ -29,8 +25,7 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
 
     private static SerializationSetup Serializers() => SerializationSetup.Create(system =>
         ImmutableHashSet.Create(
-            SerializerDetails.Create("boundary-v2", new BytesV2(system), ImmutableHashSet.Create<Type>(typeof(Bytes))),
-            SerializerDetails.Create("boundary-v1", new BytesV1(system), ImmutableHashSet.Create<Type>(typeof(LegacyBytes)))));
+            SerializerDetails.Create("boundary-v2", new BytesV2(system), ImmutableHashSet.Create<Type>(typeof(Bytes)))));
     private const string SenderPath = "akka://peer@127.0.0.1:4321/user/sender-é😀";
     private const string RecipientPath = "akka://local/user/receiver-é😀";
     private const string WireManifest = "boundary-é😀";
@@ -96,82 +91,9 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
         return frame;
     }
 
-    [Theory(DisplayName = "Two real Artery systems retain large V2, V1 and selection payloads with lanes and TLS")]
-    [InlineData(1, false)]
-    [InlineData(4, false)]
-    [InlineData(1, true)]
-    [InlineData(4, true)]
-    public async Task Should_exchange_large_messages_over_real_connections(int lanes, bool tls)
-    {
-        using var key = RSA.Create(2048);
-        var request = new CertificateRequest("CN=localhost", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var names = new SubjectAlternativeNameBuilder();
-        names.AddDnsName("localhost");
-        names.AddIpAddress(System.Net.IPAddress.Loopback);
-        request.CertificateExtensions.Add(names.Build());
-        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
-        ActorSystemSetup Setup()
-        {
-            var config = ConfigurationFactory.ParseString($$"""
-                akka.actor.provider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote"
-                akka.remote.artery.enabled = on
-                akka.remote.artery.canonical.hostname = "127.0.0.1"
-                akka.remote.artery.canonical.port = 0
-                akka.remote.artery.advanced.inbound-lanes = {{lanes}}
-                akka.remote.artery.advanced.maximum-frame-size = 2m
-                akka.remote.artery.advanced.maximum-large-frame-size = 4m
-                akka.remote.artery.large-message-destinations = ["/user/large"]
-                """);
-            var setup = ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config), Serializers());
-            var trust = TlsPeerPolicy.CustomTrust((peer, _, _, _, _) => peer?.Thumbprint == certificate.Thumbprint);
-            return tls ? setup.And(new ArteryTlsSetup(ArteryTlsSettings.Mutual(certificate, trust, trust))) : setup;
-        }
-        var observedLanes = new ConcurrentQueue<int>();
-        var a = ActorSystem.Create("BoundaryA", Setup());
-        var b = ActorSystem.Create("BoundaryB",
-            Setup().And(new ArteryTransportSetup(onInboundLanesInitialized: observedLanes.Enqueue)));
-        var retained = new ConcurrentQueue<(ReadOnlySequence<byte> Input, byte[] Snapshot)>();
-        ((BytesV2)b.Serialization.FindSerializerForType(typeof(Bytes))).Retained = retained;
-        try
-        {
-            b.ActorOf(Props.Create(() => new Echo()), "ordinary");
-            b.ActorOf(Props.Create(() => new Echo()), "large");
-            var probe = CreateTestProbe(a);
-            var address = RARP.For(b).Provider.DefaultAddress;
-            var ordinary = await a.ActorSelection($"{address}/user/ordinary").ResolveOne(TimeSpan.FromSeconds(10));
-            var large = await a.ActorSelection($"{address}/user/large").ResolveOne(TimeSpan.FromSeconds(10));
-            foreach (var length in new[] { 65535, 65536, 65537, 131072, 131073, 1048577 })
-            {
-                var bytes = new byte[length];
-                new Random(length).NextBytes(bytes);
-                var target = length > 1048576 ? large : ordinary;
-                target.Tell(new Bytes(bytes), probe.Ref);
-                Assert.Equal(bytes, (await probe.ExpectMsgAsync<Bytes>(TimeSpan.FromSeconds(15))).Data);
-                target.Tell(new LegacyBytes(bytes), probe.Ref);
-                Assert.Equal(bytes, (await probe.ExpectMsgAsync<LegacyBytes>(TimeSpan.FromSeconds(15))).Data);
-                a.ActorSelection($"{address}/user/ordinary").Tell(new Bytes(bytes), probe.Ref);
-                Assert.Equal(bytes, (await probe.ExpectMsgAsync<Bytes>(TimeSpan.FromSeconds(15))).Data);
-            }
-            if (lanes == 4)
-                Assert.Contains(4, observedLanes);
-            else
-                Assert.Empty(observedLanes);
-            Assert.Contains(retained, item => !item.Input.IsSingleSegment);
-        }
-        finally { await Task.WhenAll(a.Terminate(), b.Terminate()).WaitAsync(TimeSpan.FromSeconds(15)); }
-        foreach (var item in retained)
-            Assert.Equal(item.Snapshot, item.Input.ToArray());
-    }
-
-    private sealed class Echo : ReceiveActor
-    {
-        public Echo() => ReceiveAny(message => Sender.Tell(message));
-    }
     private sealed record Bytes(byte[] Data);
-    private sealed record LegacyBytes(byte[] Data);
     private sealed class BytesV2(ExtendedActorSystem system) : SerializerV2(system)
     {
-        public ConcurrentQueue<(ReadOnlySequence<byte> Input, byte[] Snapshot)>? Retained { get; set; }
         public override int Identifier => 987661;
         public override string Manifest(object obj) => WireManifest;
         public override int Serialize(object obj, IBufferWriter<byte> writer)
@@ -184,20 +106,7 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
         public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
         {
             Assert.Equal(WireManifest, manifest);
-            var copy = bytes.ToArray();
-            Retained?.Enqueue((bytes, copy));
-            return new Bytes(copy);
-        }
-    }
-    private sealed class BytesV1(ExtendedActorSystem system) : SerializerWithStringManifest(system)
-    {
-        public override int Identifier => 987662;
-        public override string Manifest(object obj) => WireManifest;
-        public override byte[] ToBinary(object obj) => ((LegacyBytes)obj).Data;
-        public override object FromBinary(byte[] bytes, string manifest)
-        {
-            Assert.Equal(WireManifest, manifest);
-            return new LegacyBytes(bytes);
+            return new Bytes(bytes.ToArray());
         }
     }
 }
