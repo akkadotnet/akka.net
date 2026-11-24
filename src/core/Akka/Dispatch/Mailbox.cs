@@ -665,7 +665,9 @@ namespace Akka.Dispatch
         /// <inheritdoc cref="MailboxType"/>
         public override IMessageQueue Create(IActorRef owner, ActorSystem system)
         {
-            return new UnboundedMessageQueue();
+            // Not an UnboundedMessageQueue: an internal queue with the same semantics that relies on a mailbox
+            // having one consumer at a time. UnboundedMessageQueue itself is unchanged for anyone creating one.
+            return MpscUnboundedMessageQueue.Create();
         }
 
 
