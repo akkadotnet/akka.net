@@ -88,17 +88,38 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: PipeReader.ReadAsync completed with data.
         /// </summary>
+        /// <remarks>
+        /// <see cref="PipeReadToActor"/> sends the same instance for every read of its connection. It refills it only
+        /// for the next read, and the connection starts the next read only after it has handled this one.
+        /// </remarks>
         internal sealed class PipeReadCompleted : INoSerializationVerificationNeeded
         {
-            public ReadOnlySequence<byte> Data { get; }
-            public bool IsCompleted { get; }
-            public bool IsCanceled { get; }
+            public ReadOnlySequence<byte> Data { get; private set; }
+            public bool IsCompleted { get; private set; }
+            public bool IsCanceled { get; private set; }
 
             public PipeReadCompleted(ReadOnlySequence<byte> data, bool isCompleted, bool isCanceled)
+            {
+                Set(data, isCompleted, isCanceled);
+            }
+
+            internal PipeReadCompleted Set(ReadOnlySequence<byte> data, bool isCompleted, bool isCanceled)
             {
                 Data = data;
                 IsCompleted = isCompleted;
                 IsCanceled = isCanceled;
+                return this;
+            }
+
+            /// <summary>
+            /// Returns <see cref="Data"/> and drops this message's reference to it, so the reused message does not
+            /// keep the last read's array alive.
+            /// </summary>
+            internal ReadOnlySequence<byte> TakeData()
+            {
+                var data = Data;
+                Data = ReadOnlySequence<byte>.Empty;
+                return data;
             }
         }
 
@@ -940,7 +961,7 @@ namespace Akka.IO
         private void HandlePipeRead(PipeReadCompleted msg)
         {
             _readPending = false;
-            var data = msg.Data;
+            var data = msg.TakeData();
 
             if (data.Length > 0)
             {
@@ -1021,6 +1042,9 @@ namespace Akka.IO
             private readonly Action _onCompleted;
             private ValueTask<ReadResult> _pending;
 
+            // Sent for every read; see PipeReadCompleted's remarks for why reusing it is safe.
+            private readonly PipeReadCompleted _completed = new(ReadOnlySequence<byte>.Empty, false, false);
+
             public PipeReadToActor(PipeReader reader, CancellationToken ct, IActorRef self)
             {
                 _reader = reader;
@@ -1076,7 +1100,7 @@ namespace Akka.IO
                         {
                             // Must be the last statement: once the actor sees this it may call Start() immediately,
                             // reusing this instance and overwriting _pending on another thread.
-                            _self.Tell(new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled));
+                            _self.Tell(_completed.Set(data, result.IsCompleted, result.IsCanceled));
                             return;
                         }
                     }
