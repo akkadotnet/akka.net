@@ -63,11 +63,105 @@ namespace Akka.Dispatch
 #if NETSTANDARD
             ThreadPool.UnsafeQueueUserWorkItem(Executor, run);
 #else
+            // Research prototype (trampoline): scheduled from inside a mailbox run that this executor
+            // type started on this thread, the runnable is parked in the thread's single slot and runs
+            // on this thread after the current run returns, instead of costing a pool wake. The newest
+            // runnable takes the slot; one it displaces goes to the pool as before. A run that has
+            // already lasted ParkWindowTicks no longer parks, and a mailbox rescheduling itself (its
+            // throughput spent) always goes to the pool, so throughput still yields to other actors.
+            var chain = _chain;
+            if (chain is { Active: true } && !ReferenceEquals(run, chain.Current)
+                && System.Diagnostics.Stopwatch.GetTimestamp() - chain.RunStart < ParkWindowTicks)
+            {
+                var displaced = chain.Parked;
+                chain.Parked = run;
+                if (displaced is null)
+                    return;
+                run = displaced;
+            }
+
             // use native .NET 6 APIs here to reduce allocations
             // preferLocal to help reduce context switching
             ThreadPool.UnsafeQueueUserWorkItem(run, true);
 #endif
         }
+
+#if !NETSTANDARD
+        /// <summary>Most mailbox runs one pool work item chains before handing the rest to the pool.</summary>
+        internal const int MaxChainedRuns = 8;
+
+        /// <summary>Longest a chain of runs lasts (0.5 ms) before handing the rest to the pool.</summary>
+        internal static readonly long ChainBudgetTicks = System.Diagnostics.Stopwatch.Frequency / 2000;
+
+        /// <summary>A run that has lasted this long (100 us) no longer parks what it schedules.</summary>
+        internal static readonly long ParkWindowTicks = System.Diagnostics.Stopwatch.Frequency / 10000;
+
+        [ThreadStatic] private static ChainState _chain;
+
+        private sealed class ChainState
+        {
+            public bool Active;
+            public IRunnable Current;
+            public IRunnable Parked;
+            public long RunStart;
+        }
+
+        /// <summary>
+        /// Entry point of a pool work item that runs a mailbox queued by this executor type: runs it,
+        /// then whatever it parked, on this thread, bounded by <see cref="MaxChainedRuns"/> and
+        /// <see cref="ChainBudgetTicks"/>. A parked runnable starts only after the previous run has
+        /// fully returned (no re-entrancy).
+        /// </summary>
+        internal static void RunChained(IRunnable first)
+        {
+            var chain = _chain ??= new ChainState();
+            if (chain.Active)
+            {
+                // Not reachable through the pool (a work item never starts inside another); never nest a chain.
+                first.Run();
+                return;
+            }
+
+            chain.Active = true;
+            var chainStart = System.Diagnostics.Stopwatch.GetTimestamp();
+            var current = first;
+            try
+            {
+                for (var runs = 1; ; runs++)
+                {
+                    chain.Current = current;
+                    chain.RunStart = System.Diagnostics.Stopwatch.GetTimestamp();
+                    current.Run();
+
+                    var next = chain.Parked;
+                    if (next is null)
+                        return;
+                    chain.Parked = null;
+
+                    if (runs >= MaxChainedRuns
+                        || System.Diagnostics.Stopwatch.GetTimestamp() - chainStart >= ChainBudgetTicks)
+                    {
+                        // Bound spent: yield behind other pool work rather than to this thread's local queue.
+                        ThreadPool.UnsafeQueueUserWorkItem(next, preferLocal: false);
+                        return;
+                    }
+
+                    current = next;
+                }
+            }
+            finally
+            {
+                chain.Active = false;
+                chain.Current = null;
+                if (chain.Parked is { } leftover)
+                {
+                    // Only reached when a run threw: never lose a scheduled mailbox.
+                    chain.Parked = null;
+                    ThreadPool.UnsafeQueueUserWorkItem(leftover, true);
+                }
+            }
+        }
+#endif
 
         /// <summary>
         /// Creates a thread-pool executor service with the supplied identifier.
