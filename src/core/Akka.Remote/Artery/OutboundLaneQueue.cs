@@ -35,7 +35,7 @@ namespace Akka.Remote.Artery
     /// <c>_waiting</c>, then looks again. A writer enqueues, then checks <c>_waiting</c>. Both the
     /// set and the enqueue are full fences, so at least one side sees the other: either the source
     /// finds the envelope, or the writer finds the flag. Whoever clears the flag owns the wake-up,
-    /// so it happens at most once; a wake-up that finds nothing to do is harmless.
+    /// so each waiting registration is claimed once; surplus wake-ups are harmless.
     /// </para>
     ///
     /// <para>
@@ -65,7 +65,7 @@ namespace Akka.Remote.Artery
 
         // Runs the wake-up on the thread pool, as a channel's waiting reader is resumed, so a
         // writer never pays for scheduling the stream and a woken stream finds what was written
-        // meanwhile. One instance, because at most one wake-up is outstanding.
+        // meanwhile. Reuse one work item; delayed or concurrent surplus wakes are harmless.
         private readonly WakeUp _wakeUp;
 
         public OutboundLaneQueue(int capacity)
@@ -77,7 +77,11 @@ namespace Akka.Remote.Artery
         /// <summary>Most envelopes the queue accepts from producers.</summary>
         public int Capacity { get; }
 
-        /// <summary>Envelopes currently queued by producers (carried-over envelopes excluded).</summary>
+        /// <summary>
+        /// Producer reservations, including unpublished envelopes; excludes carried-over envelopes.
+        /// A rejected reservation can transiently raise this to capacity + 1 (or higher when
+        /// several producers reserve concurrently) before it is rolled back.
+        /// </summary>
         public int Count => Volatile.Read(ref _count);
 
         /// <summary>Whether anything, queued or carried over, is waiting to be read.</summary>
@@ -103,7 +107,14 @@ namespace Akka.Remote.Artery
 
             if (Interlocked.Increment(ref _count) > Capacity)
             {
-                Interlocked.Decrement(ref _count);
+                ReleaseReservation();
+                return false;
+            }
+
+            // Completion may have won after the first check, before this reservation.
+            if (_completed)
+            {
+                ReleaseReservation();
                 return false;
             }
 
@@ -124,44 +135,57 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Takes the oldest envelope. If there is none and the queue is not completed,
+        /// Takes the oldest envelope. If there is none and writes or reservations remain,
         /// <paramref name="wake"/> is registered and invoked, once, by the next write or by
         /// <see cref="Complete"/>.
         /// </summary>
         public bool TryReadOrWait(Action wake, [NotNullWhen(true)] out IOutboundEnvelope? envelope)
         {
-            while (true)
+            lock (_consumerLock)
             {
-                if (TryRead(out envelope))
-                    return true;
-                if (_completed)
-                    return false;
+                while (true)
+                {
+                    if (TryDequeue(out envelope))
+                        return true;
+                    if (_completed && Count == 0)
+                        return false;
 
-                _wake = wake;
-                Interlocked.Exchange(ref _waiting, 1);
-                if (_items.IsEmpty && !_completed)
-                    return false;
+                    _wake = wake;
+                    Interlocked.Exchange(ref _waiting, 1);
+                    // Completed reservations still need a publication (or rollback) wake.
+                    if (_items.IsEmpty && (!_completed || Count > 0))
+                        return false;
 
-                // Something arrived meanwhile. If a writer already claimed the wake-up it will
-                // call back; otherwise take the flag back and read again.
-                if (Interlocked.Exchange(ref _waiting, 0) == 0)
-                    return false;
+                    // Something arrived meanwhile. If a writer already claimed the wake-up it
+                    // will call back; otherwise take the flag back and read again.
+                    if (Interlocked.Exchange(ref _waiting, 0) == 0)
+                        return false;
+                }
             }
         }
 
         /// <summary>
-        /// The reading stream has stopped: withdraws its wake-up. After <see cref="DrainToDropped"/>
+        /// The reading stream has stopped: withdraws only the registration owned by
+        /// <paramref name="wake"/> (null if it never registered). After <see cref="DrainToDropped"/>
         /// nothing will read the queue again, so whatever is left is reported as drained.
         /// </summary>
-        public void ReleaseConsumer()
+        public void ReleaseConsumer(Action? wake)
         {
-            Interlocked.Exchange(ref _waiting, 0);
-            _wake = null;
+            lock (_consumerLock)
+            {
+                // Registration and release share the consumer lock, so an old PostStop cannot
+                // clear a replacement's callback or its waiting flag.
+                if (ReferenceEquals(_wake, wake))
+                {
+                    Interlocked.Exchange(ref _waiting, 0);
+                    _wake = null;
+                }
+            }
             if (_onDrained is not null)
                 ReportLeftovers();
         }
 
-        /// <summary>Refuses further writes; envelopes already queued can still be read.</summary>
+        /// <summary>Refuses further writes; existing reservations can still publish and be read.</summary>
         public void Complete()
         {
             _completed = true;
@@ -240,6 +264,14 @@ namespace Akka.Remote.Artery
                     onDrained(envelope);
         }
 
+        private void ReleaseReservation()
+        {
+            Interlocked.Decrement(ref _count);
+            // A completed reader may be waiting for the last reservation to resolve.
+            if (_completed)
+                WakeConsumer();
+        }
+
         private void WakeConsumer()
         {
             // Enqueue and Complete's volatile write come first; Exchange is a full fence.
@@ -294,7 +326,7 @@ namespace Akka.Remote.Artery
 
             public override void OnPull() => PushOrWait();
 
-            public override void PostStop() => _stage._queue.ReleaseConsumer();
+            public override void PostStop() => _stage._queue.ReleaseConsumer(_wake);
 
             private void OnWake()
             {
