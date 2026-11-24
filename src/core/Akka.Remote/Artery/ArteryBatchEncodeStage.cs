@@ -135,9 +135,11 @@ namespace Akka.Remote.Artery
                 {
                     do
                     {
-                        var owner = Encode(_held.Dequeue());
-                        tail = tail is null ? head = new OwnedSequenceSegment(owner.Memory, owner) : tail.Append(owner.Memory, owner);
-                        bytes += owner.Memory.Length;
+                        var frame = Encode(_held.Dequeue());
+                        // A whole segment is linked as is (it comes back as the new tail).
+                        tail = OwnedSequenceSegment.MoveLink(tail, frame, frame.Memory, false);
+                        head ??= tail;
+                        bytes += frame.Memory.Length;
                     }
                     while (bytes < _stage._maxBytes && _held.Count > 0);
                 }
@@ -170,10 +172,19 @@ namespace Akka.Remote.Artery
                     Pull(_stage.In);
             }
 
-            private IMemoryOwner<byte> Encode(IOutboundEnvelope envelope) =>
-                ArteryEnvelopeCodec.Encode(
+            // One writer for the life of the stage: each encode detaches its buffer into a segment that owns it,
+            // and the next encode re-arms the writer, so a frame allocates its segment only.
+            private Akka.Serialization.PooledPayloadWriter? _writer;
+
+            private OwnedSequenceSegment Encode(IOutboundEnvelope envelope)
+            {
+                var writer = ArteryEnvelopeCodec.Encode(
                     _stage._serialization, _stage._originUid, envelope.SenderPath, envelope.RecipientPath,
-                    envelope.Message, _stage._pool, envelope.SenderId, envelope.RecipientId, envelope.RecipientPathUtf8).Detach();
+                    envelope.Message, _stage._pool, envelope.SenderId, envelope.RecipientId, envelope.RecipientPathUtf8,
+                    _writer);
+                _writer = writer;
+                return writer.DetachSegment();
+            }
         }
     }
 }

@@ -248,12 +248,22 @@ namespace Akka.Serialization
         /// </summary>
         internal ReadOnlySequence<byte> DetachSequence()
         {
+            var segment = DetachSegment();
+            return new ReadOnlySequence<byte>(segment, 0, segment, segment.Memory.Length);
+        }
+
+        /// <summary>
+        /// INTERNAL API. Like <see cref="DetachSequence"/>, but returns the segment itself, for a caller that
+        /// chains several frames into one sequence. The writer is spent afterwards.
+        /// </summary>
+        internal Akka.IO.OwnedSequenceSegment DetachSegment()
+        {
             ThrowIfSpent();
 
             var segment = new Akka.IO.OwnedSequenceSegment(_buffer!, _written, _pool);
             _buffer = null;
             _detached = true;
-            return new ReadOnlySequence<byte>(segment, 0, segment, segment.Memory.Length);
+            return segment;
         }
 
         /// <summary>
