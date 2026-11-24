@@ -1015,6 +1015,9 @@ namespace Akka.IO
         /// </summary>
         internal sealed class PipeReadToActor
         {
+            // Fresh receiver-owned arrays stay well below the 85,000-byte LOH threshold, including headers.
+            internal const int ReadCopyChunkSize = 64 * 1024;
+
             private readonly PipeReader _reader;
             private readonly CancellationToken _ct;
             private readonly IActorRef _self;
@@ -1059,7 +1062,27 @@ namespace Akka.IO
                         // Tell is asynchronous, so consumers must own stable bytes before AdvanceTo
                         // returns the pipe's segments to its pool. Keep this copy on the ordinary TCP path.
                         ReadOnlySequence<byte> data;
-                        if (buffer.Length > 0)
+                        if (buffer.Length > ReadCopyChunkSize)
+                        {
+                            OwnedSequenceSegment? head = null;
+                            OwnedSequenceSegment? tail = null;
+                            while (!buffer.IsEmpty)
+                            {
+                                var length = (int)Math.Min(buffer.Length, ReadCopyChunkSize);
+                                var array = new byte[length];
+                                buffer.Slice(0, length).CopyTo(array);
+                                // No pool or disposable owner: these fresh arrays belong to the receiver indefinitely.
+                                var segment = new OwnedSequenceSegment(array);
+                                if (tail is null)
+                                    head = segment;
+                                else
+                                    tail.Chain(segment);
+                                tail = segment;
+                                buffer = buffer.Slice(length);
+                            }
+                            data = new ReadOnlySequence<byte>(head!, 0, tail!, tail!.Memory.Length);
+                        }
+                        else if (buffer.Length > 0)
                         {
                             var array = new byte[checked((int)buffer.Length)];
                             buffer.CopyTo(array);

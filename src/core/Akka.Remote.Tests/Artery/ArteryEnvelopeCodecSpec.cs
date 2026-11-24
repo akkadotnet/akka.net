@@ -13,6 +13,10 @@ using System.Buffers.Binary;
 using System.Linq;
 using System.Text;
 using Akka.Actor;
+using Akka.IO;
+using System.IO.Pipelines;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Remote.Artery;
 using Akka.Serialization;
 using Akka.TestKit;
@@ -27,10 +31,52 @@ namespace Akka.Remote.Tests.Artery
     /// every documented rejection. The V2 single-pass overload is covered separately in
     /// <see cref="ArteryEnvelopeCodecV2Spec"/> because it needs a live <c>ActorSystem</c>.
     /// </summary>
-    public class ArteryEnvelopeCodecSpec
+    public class ArteryEnvelopeCodecSpec : AkkaSpec
     {
+        public ArteryEnvelopeCodecSpec(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int FrameLengthFieldLength = 4;
         private const int HeaderLength = ArteryEnvelopeHeader.HeaderLength;
+
+        [Theory(DisplayName = "Artery should round trip frames through owned TCP chunks with split length header, envelope header and payload")]
+        [InlineData(2)]
+        [InlineData(14)]
+        [InlineData(120)]
+        public async Task Should_decode_frames_straddling_owned_tcp_chunks(int bytesBeforeBoundary)
+        {
+            var chunkSize = TcpConnection.PipeReadToActor.ReadCopyChunkSize;
+            var payload = new byte[chunkSize + 123];
+            new Random(42).NextBytes(payload);
+            var leadingPayload = new byte[chunkSize - bytesBeforeBoundary - FrameLengthFieldLength - HeaderLength];
+            var (leading, _) = EncodeToFrame(1, 17, null, null, "", leadingPayload);
+            var (frame, _) = EncodeToFrame(99, 17, null, null, "", payload);
+            var wire = leading.Concat(frame).ToArray();
+            var pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 0));
+            var receiver = CreateTestProbe();
+            await pipe.Writer.WriteAsync(wire);
+            var reader = new TcpConnection.PipeReadToActor(pipe.Reader, CancellationToken.None, receiver.Ref);
+            reader.Start();
+            var completed = await receiver.ExpectMsgAsync<TcpConnection.PipeReadCompleted>();
+            var data = completed.Data;
+            Assert.False(data.IsSingleSegment);
+            var parser = new ArteryFrameParser(4 * chunkSize);
+            foreach (var segment in data)
+                parser.Append(segment);
+            Assert.True(parser.TryReadFrame(out var first));
+            Assert.Equal(leadingPayload, ArteryEnvelopeCodec.Decode(first).Payload.ToArray());
+            Assert.True(parser.TryReadFrame(out var body));
+            Assert.False(body.IsSingleSegment);
+            var decoded = ArteryEnvelopeCodec.Decode(body);
+            Assert.Equal(99, decoded.Header.OriginUid);
+            Assert.Equal(17, decoded.Header.SerializerId);
+            Assert.False(decoded.Payload.IsSingleSegment);
+            Assert.Equal(payload, decoded.Payload.ToArray());
+            Assert.False(parser.TryReadFrame(out _));
+            await pipe.Writer.CompleteAsync();
+            await pipe.Reader.CompleteAsync();
+        }
 
         // ===================== round trip: explicit parts =====================
 

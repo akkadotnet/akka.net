@@ -40,6 +40,7 @@ add `Wire` when the bytes on the wire change.
 
 | Status | PR | Component | Type | Change | Migration |
 |--------|----|-----------|------|--------|-----------|
+| Proposed | Local prototype | `Akka.IO` | Behavior | TCP reads larger than 64 KiB now deliver one multi-segment `Tcp.Received.Data` sequence backed by fresh receiver-owned arrays, each at most 64 KiB. | Consume all segments or use sequence operations; do not assume `Data.First` contains the entire read. Arrays remain safe to retain indefinitely. |
 | Proposed | [#8856](https://github.com/akkadotnet/akka.net/issues/8856) | `Akka.Serialization.V2` | Source | AKKASG047 now warns when a type declares `[AkkaField]` properties without `[AkkaSerializable]`, including public and nested payload types. Builds that treat warnings as errors now reject these ignored annotations. | Add `[AkkaSerializable]` to opt into generated serialization, remove unused annotations when a custom formatter handles the type, or suppress AKKASG047. |
 | Merged | link | `Akka.Xyz` | Behavior | one-line summary | what users must do |
 
