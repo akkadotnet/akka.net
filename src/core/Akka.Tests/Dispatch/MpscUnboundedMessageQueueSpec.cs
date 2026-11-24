@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -22,9 +24,9 @@ namespace Akka.Tests.Dispatch
     /// <summary>
     /// Drives the default mailbox's queue (<see cref="MpscUnboundedMessageQueue{TIndex}"/>, in both cache-line
     /// layouts) the way a mailbox does: many producers enqueue and then try to
-    /// set a Scheduled flag; whoever sets it queues a run on the thread pool, so the single consumer hops between
-    /// threads. A run dequeues up to a throughput budget, clears the flag and reschedules itself if HasMessages is
-    /// still true. A lost message, a duplicate, a reordering within one producer, two runs at once, or a lost
+    /// set a Scheduled flag; whoever sets it schedules a run on two dedicated threads that strictly alternate,
+    /// so the single consumer changes threads after every run. A run dequeues up to a throughput budget, clears
+    /// the flag and reschedules itself if HasMessages is still true. A lost message, a duplicate, a reordering within one producer, two runs at once, or a lost
     /// wake-up (HasMessages false while a completed enqueue is in the queue) fails the test.
     /// </summary>
     public class MpscUnboundedMessageQueueSpec
@@ -35,7 +37,7 @@ namespace Akka.Tests.Dispatch
             ? new MpscUnboundedMessageQueue<PaddedIndex128>()
             : new MpscUnboundedMessageQueue<PaddedIndex64>();
 
-        private sealed class MailboxModel
+        private sealed class MailboxModel : IDisposable
         {
             private readonly IMessageQueue _queue;
             private readonly int[] _next;
@@ -43,11 +45,17 @@ namespace Akka.Tests.Dispatch
             private readonly int _maxThroughput;
             private readonly ConcurrentDictionary<int, bool> _consumerThreads = new();
             private readonly TaskCompletionSource<bool> _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            private readonly object _consumerGate = new();
+            private readonly Thread[] _consumers;
+            private bool _runScheduled;
+            private bool _running;
+            private bool _stopping;
+            private int _nextConsumer;
             private int _status; // 0 = idle, 1 = scheduled
             private int _inRun;
             private long _received;
             private long _runs;
-            private volatile string _failure;
+            private volatile string? _failure;
 
             public MailboxModel(IMessageQueue queue, int producers, long total, int maxThroughput)
             {
@@ -55,6 +63,13 @@ namespace Akka.Tests.Dispatch
                 _next = new int[producers];
                 _total = total;
                 _maxThroughput = maxThroughput;
+                _consumers = new Thread[2];
+                for (var i = 0; i < _consumers.Length; i++)
+                {
+                    var consumer = i;
+                    _consumers[i] = new Thread(() => Consume(consumer)) { IsBackground = true };
+                    _consumers[i].Start();
+                }
             }
 
             public IMessageQueue Queue => _queue;
@@ -62,7 +77,7 @@ namespace Akka.Tests.Dispatch
             public long Runs => Volatile.Read(ref _runs);
             public int ConsumerThreads => _consumerThreads.Count;
             public Task Done => _done.Task;
-            public string Failure => _failure;
+            public string? Failure => _failure;
 
             public void Send(int producer, int seq)
             {
@@ -71,7 +86,64 @@ namespace Akka.Tests.Dispatch
                     Schedule();
             }
 
-            private void Schedule() => ThreadPool.UnsafeQueueUserWorkItem(static m => m.Run(), this, preferLocal: false);
+            private void Schedule()
+            {
+                lock (_consumerGate)
+                {
+                    _runScheduled = true;
+                    Monitor.PulseAll(_consumerGate);
+                }
+            }
+
+            private void Consume(int consumer)
+            {
+                while (true)
+                {
+                    lock (_consumerGate)
+                    {
+                        while (!_stopping && (!_runScheduled || _nextConsumer != consumer))
+                            Monitor.Wait(_consumerGate);
+                        if (_stopping) return;
+                        _runScheduled = false;
+                        _running = true;
+                    }
+
+                    Run();
+
+                    lock (_consumerGate)
+                    {
+                        // Transfer the turn only after Run has returned, including its idle/reschedule edge.
+                        // A producer may already have scheduled another run, but it cannot start early.
+                        _running = false;
+                        _nextConsumer = 1 - consumer;
+                        Monitor.PulseAll(_consumerGate);
+                    }
+                }
+            }
+
+            public bool WaitForIdle(TimeSpan timeout)
+            {
+                var sw = Stopwatch.StartNew();
+                lock (_consumerGate)
+                {
+                    while (_runScheduled || _running)
+                    {
+                        var remaining = timeout - sw.Elapsed;
+                        if (remaining <= TimeSpan.Zero || !Monitor.Wait(_consumerGate, remaining)) return false;
+                    }
+                    return true;
+                }
+            }
+
+            public void Dispose()
+            {
+                lock (_consumerGate)
+                {
+                    _stopping = true;
+                    Monitor.PulseAll(_consumerGate);
+                }
+                foreach (var consumer in _consumers) consumer.Join();
+            }
 
             private void Fail(string why)
             {
@@ -84,6 +156,7 @@ namespace Akka.Tests.Dispatch
                 try
                 {
                     RunCore();
+                    if (Received == _total) _done.TrySetResult(true);
                 }
                 catch (Exception ex)
                 {
@@ -103,7 +176,7 @@ namespace Akka.Tests.Dispatch
                     if (m.Seq != _next[m.Producer])
                         Fail($"producer {m.Producer}: expected seq {_next[m.Producer]}, got {m.Seq}");
                     _next[m.Producer] = m.Seq + 1;
-                    if (Interlocked.Increment(ref _received) == _total) _done.TrySetResult(true);
+                    Interlocked.Increment(ref _received);
                 }
 
                 Volatile.Write(ref _inRun, 0);
@@ -124,7 +197,7 @@ namespace Akka.Tests.Dispatch
 
         private static async Task RunModel(bool lines128, int producers, int perProducer, int maxThroughput, Action<int, int, MailboxModel> produce)
         {
-            var model = new MailboxModel(NewQueue(lines128), producers, (long)producers * perProducer, maxThroughput);
+            using var model = new MailboxModel(NewQueue(lines128), producers, (long)producers * perProducer, maxThroughput);
             using var start = new Barrier(producers);
             var stopObserver = false;
             // a third party reading Count and HasMessages concurrently, as diagnostics do
@@ -206,23 +279,19 @@ namespace Akka.Tests.Dispatch
         public async Task Single_producer_waiting_for_each_message_crosses_the_parked_consumer_edge_every_time(bool lines128)
         {
             const int count = 50_000;
-            var model = new MailboxModel(NewQueue(lines128), 1, count, 30);
-            var t = new Thread(() =>
+            using var model = new MailboxModel(NewQueue(lines128), 1, count, 30);
+            for (var i = 0; i < count; i++)
             {
-                var sw = Stopwatch.StartNew();
-                for (var i = 0; i < count; i++)
-                {
-                    model.Send(0, i);
-                    while (model.Received <= i && sw.Elapsed < TimeSpan.FromSeconds(60)) Thread.SpinWait(4);
-                }
-            });
-            t.Start();
-            t.Join();
+                model.Send(0, i);
+                model.WaitForIdle(TimeSpan.FromSeconds(60)).Should().BeTrue("the consumer must finish each run before the next send");
+            }
             var finished = await Task.WhenAny(model.Done, Task.Delay(TimeSpan.FromSeconds(5)));
             model.Failure.Should().BeNull();
             finished.Should().Be(model.Done, "received {0} of {1}", model.Received, count);
             model.AssertAllDelivered(count);
             model.Runs.Should().BeGreaterThan(count / 10, "most messages should have found the consumer parked");
+            model.Runs.Should().Be(count, "each send must find the consumer parked");
+            model.ConsumerThreads.Should().BeGreaterThan(1, "the consumer must hop between threads");
         }
 
         [Theory]
@@ -308,12 +377,10 @@ namespace Akka.Tests.Dispatch
         {
             var q = new MpscUnboundedMessageQueue<PaddedIndex64>();
             const int firstSegment = 32;
-            var model = new MailboxModel(q, 1, firstSegment + 1, 30);
+            using var model = new MailboxModel(q, 1, firstSegment + 1, 30);
             for (var i = 0; i < firstSegment; i++) model.Send(0, i);
-            var sw = Stopwatch.StartNew();
-            while ((model.Received < firstSegment || q.HasMessages) && sw.Elapsed < TimeSpan.FromSeconds(10)) Thread.Sleep(1);
+            model.WaitForIdle(TimeSpan.FromSeconds(10)).Should().BeTrue("the last run must go idle before freezing the segment");
             model.Received.Should().Be(firstSegment);
-            await Task.Delay(50); // let the last run go idle
 
             // Play the producer that found the first segment full: it holds the segment's lock, has frozen the
             // segment, and has not linked the next one yet (for example it was preempted, or is allocating it).
