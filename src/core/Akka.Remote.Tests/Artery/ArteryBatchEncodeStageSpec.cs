@@ -190,7 +190,7 @@ namespace Akka.Remote.Tests.Artery
             // everything after it is kept for the next materialization. Only the poison one is lost.
             Frames(element).Should().BeEquivalentTo(envs.Take(5).Select(Reference), o => o.WithStrictOrdering());
             carried.Should().Equal(envs.Skip(6));
-            pool.Outstanding.Should().Be(5, "only the buffers handed downstream are outstanding");
+            pool.Outstanding.Should().Be(1, "only the one buffer holding the frames handed downstream is outstanding");
             element.DisposeOwnedSegments();
             pool.Outstanding.Should().Be(0, "buffers rented for envelopes 0..4 must be returned");
         }

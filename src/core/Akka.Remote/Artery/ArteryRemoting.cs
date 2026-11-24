@@ -3028,7 +3028,7 @@ namespace Akka.Remote.Artery
         /// <b>Invariant (throws if violated).</b> Both inputs are always
         /// <see cref="OwnedSequenceSegment"/>-backed. Every element on this path is pushed by
         /// <see cref="ArteryBatchEncodeStage"/> as a chain of one or more owner-carrying
-        /// <see cref="OwnedSequenceSegment"/>s, one per frame, and reaches the batch stage
+        /// <see cref="OwnedSequenceSegment"/>s holding whole frames, and reaches the batch stage
         /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
         /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
         /// INSIDE the downstream restart factory, so it never passes through this stage. The batch

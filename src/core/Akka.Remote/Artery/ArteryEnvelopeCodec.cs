@@ -164,6 +164,11 @@ namespace Akka.Remote.Artery
         /// <c>ToSerializationFormatWithAddress(senderAddress)</c> formats it, and <paramref name="senderPath"/> is ignored.
         /// </param>
         /// <param name="senderAddress">The address <paramref name="senderActorPath"/> is formatted with; required with it.</param>
+        /// <param name="append">
+        /// <see langword="true"/> to append this frame after the frames <paramref name="reuse"/> already holds
+        /// (it must not be detached) instead of re-arming it. If this encode fails, the writer is cut back to
+        /// the frames before this one rather than disposed.
+        /// </param>
         /// <returns>
         /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
         /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
@@ -184,7 +189,8 @@ namespace Akka.Remote.Artery
             byte[]? recipientPathUtf8 = null,
             Akka.Serialization.PooledPayloadWriter? reuse = null,
             Akka.Actor.ActorPath? senderActorPath = null,
-            Akka.Actor.Address? senderAddress = null)
+            Akka.Actor.Address? senderAddress = null,
+            bool append = false)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -192,9 +198,11 @@ namespace Akka.Remote.Artery
                 throw new ArgumentNullException(nameof(message));
             if (senderActorPath is not null && senderAddress is null)
                 throw new ArgumentNullException(nameof(senderAddress), "A sender given as a path needs the address to format it with.");
+            if (append && reuse is null)
+                throw new ArgumentNullException(nameof(reuse), "Appending a frame needs the writer to append it to.");
 
             return Akka.Serialization.Serialization.WithTransport(serialization.System,
-                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8, reuse, senderActorPath, senderAddress), static state =>
+                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8, reuse, senderActorPath, senderAddress, append), static state =>
             {
                 // A sender given as a path is formatted into chars on the stack (or, if unusually long, a
                 // rented array) and written from there: no sender path string is built per message.
@@ -225,11 +233,20 @@ namespace Akka.Remote.Artery
                 if (payloadSizeHint != Akka.Serialization.SerializerV2.UnknownSize)
                     capacityHint += payloadSizeHint;
 
+                // The frame starts where the writer's earlier frames end (at 0 unless appending); every
+                // offset in it is relative to its own envelope body, which starts after its length field.
                 var writer = state.reuse;
+                var frameStart = 0;
                 if (writer is null)
                     writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: state.pool);
+                else if (state.append)
+                {
+                    frameStart = writer.WrittenCount;
+                    writer.GetSpan(capacityHint);
+                }
                 else
                     writer.Rearm(capacityHint);
+                var bodyStart = frameStart + ArteryEnvelopeHeader.FrameLengthFieldLength;
                 try
                 {
                     // Reserve the frame-length field + fixed header; both are back-patched below
@@ -237,29 +254,29 @@ namespace Akka.Remote.Artery
                     writer.GetSpan(reservedPrefixLength);
                     writer.Advance(reservedPrefixLength);
 
-                    var senderTag = WriteLiteral(writer, senderPath, senderByteCount);
+                    var senderTag = WriteLiteral(writer, bodyStart, senderPath, senderByteCount);
 
                     // A failure before this point leaves a rented sender array to the GC, which is harmless.
                     if (rentedSenderChars is not null)
                         ArrayPool<char>.Shared.Return(rentedSenderChars);
 
                     var recipientTag = state.recipientPathUtf8 is { } recipientBytes
-                        ? WriteLiteral(writer, recipientBytes)
-                        : WriteLiteral(writer, state.recipientPath, recipientByteCount);
-                    var manifestTag = WriteLiteral(writer, manifest, manifestByteCount);
+                        ? WriteLiteral(writer, bodyStart, recipientBytes)
+                        : WriteLiteral(writer, bodyStart, state.recipientPath, recipientByteCount);
+                    var manifestTag = WriteLiteral(writer, bodyStart, manifest, manifestByteCount);
 
-                    var payloadOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
+                    var payloadOffset = writer.WrittenCount - bodyStart;
 
                     // Single-pass: the payload streams directly into the SAME growable buffer --
                     // no intermediate byte[] copy.
                     serializer.Serialize(state.message, writer);
 
-                    var frameLength = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
+                    var frameLength = writer.WrittenCount - bodyStart;
 
                     BinaryPrimitives.WriteUInt32LittleEndian(
-                        writer.GetPatchSpan(0, ArteryEnvelopeHeader.FrameLengthFieldLength), (uint)frameLength);
+                        writer.GetPatchSpan(frameStart, ArteryEnvelopeHeader.FrameLengthFieldLength), (uint)frameLength);
                     WriteFixedHeader(
-                        writer.GetPatchSpan(ArteryEnvelopeHeader.FrameLengthFieldLength, ArteryEnvelopeHeader.HeaderLength),
+                        writer.GetPatchSpan(bodyStart, ArteryEnvelopeHeader.HeaderLength),
                         serializer.Identifier, state.originUid, senderTag, recipientTag, manifestTag, payloadOffset,
                         state.senderId, state.recipientId);
 
@@ -267,7 +284,10 @@ namespace Akka.Remote.Artery
                 }
                 catch
                 {
-                    writer.Dispose();
+                    if (state.append)
+                        writer.Truncate(frameStart);
+                    else
+                        writer.Dispose();
                     throw;
                 }
             });
@@ -411,10 +431,10 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a growable <see cref="Akka.Serialization.PooledPayloadWriter"/>.</summary>
-        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, string? value, int byteCount) =>
-            WriteLiteral(writer, value.AsSpan(), byteCount);
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, int bodyStart, string? value, int byteCount) =>
+            WriteLiteral(writer, bodyStart, value.AsSpan(), byteCount);
 
-        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, ReadOnlySpan<char> value, int byteCount)
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, int bodyStart, ReadOnlySpan<char> value, int byteCount)
         {
             if (value.IsEmpty)
                 return ArteryEnvelopeHeader.AbsentTag;
@@ -425,7 +445,7 @@ namespace Akka.Remote.Artery
             if (byteCount > ArteryEnvelopeHeader.MaxLiteralByteLength)
                 throw new ArteryEnvelopeException(
                     $"Literal exceeds the maximum encodable length of {ArteryEnvelopeHeader.MaxLiteralByteLength} UTF-8 bytes (was {byteCount}).");
-            var tagOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
+            var tagOffset = writer.WrittenCount - bodyStart;
 
             var lengthSpan = writer.GetSpan(ArteryEnvelopeHeader.LiteralLengthPrefixSize);
             BinaryPrimitives.WriteUInt16LittleEndian(lengthSpan, (ushort)byteCount);
@@ -441,12 +461,12 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>Writes an already UTF-8 encoded LITERAL into a growable <see cref="Akka.Serialization.PooledPayloadWriter"/>.</summary>
-        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, byte[] utf8)
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, int bodyStart, byte[] utf8)
         {
             if (utf8.Length > ArteryEnvelopeHeader.MaxLiteralByteLength)
                 throw new ArteryEnvelopeException(
                     $"Literal exceeds the maximum encodable length of {ArteryEnvelopeHeader.MaxLiteralByteLength} UTF-8 bytes (was {utf8.Length}).");
-            var tagOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
+            var tagOffset = writer.WrittenCount - bodyStart;
 
             BinaryPrimitives.WriteUInt16LittleEndian(writer.GetSpan(ArteryEnvelopeHeader.LiteralLengthPrefixSize), (ushort)utf8.Length);
             writer.Advance(ArteryEnvelopeHeader.LiteralLengthPrefixSize);
