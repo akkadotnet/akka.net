@@ -1018,6 +1018,21 @@ namespace Akka.IO
             // Fresh receiver-owned arrays stay well below the 85,000-byte LOH threshold, including headers.
             internal const int ReadCopyChunkSize = 64 * 1024;
 
+            // Links are set only while building a delivery, before it is published to the receiver.
+            // Keep these separate from write-owned segments: write coalescing must wrap, never move them.
+            private sealed class ReadSequenceSegment : ReadOnlySequenceSegment<byte>
+            {
+                public ReadSequenceSegment(ReadOnlyMemory<byte> memory, ReadSequenceSegment? previous)
+                {
+                    Memory = memory;
+                    if (previous is not null)
+                    {
+                        RunningIndex = previous.RunningIndex + previous.Memory.Length;
+                        previous.Next = this;
+                    }
+                }
+            }
+
             private readonly PipeReader _reader;
             private readonly CancellationToken _ct;
             private readonly IActorRef _self;
@@ -1064,19 +1079,16 @@ namespace Akka.IO
                         ReadOnlySequence<byte> data;
                         if (buffer.Length > ReadCopyChunkSize)
                         {
-                            OwnedSequenceSegment? head = null;
-                            OwnedSequenceSegment? tail = null;
+                            ReadSequenceSegment? head = null;
+                            ReadSequenceSegment? tail = null;
                             while (!buffer.IsEmpty)
                             {
                                 var length = (int)Math.Min(buffer.Length, ReadCopyChunkSize);
                                 var array = new byte[length];
                                 buffer.Slice(0, length).CopyTo(array);
                                 // No pool or disposable owner: these fresh arrays belong to the receiver indefinitely.
-                                var segment = new OwnedSequenceSegment(array);
-                                if (tail is null)
-                                    head = segment;
-                                else
-                                    tail.Chain(segment);
+                                var segment = new ReadSequenceSegment(array, tail);
+                                head ??= segment;
                                 tail = segment;
                                 buffer = buffer.Slice(length);
                             }
