@@ -9,6 +9,7 @@
 
 using System;
 using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace Akka.IO
 {
@@ -38,17 +39,6 @@ namespace Akka.IO
         /// most once. Disposal is single-threaded — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
         /// </summary>
         void DisposeOwner();
-
-        /// <summary>
-        /// Returns the owner carried by this segment and clears the segment's own reference to it,
-        /// so a subsequent <see cref="DisposeOwner"/> call on THIS segment becomes a no-op. Used when
-        /// one owner-carrying segment's memory is re-wrapped into another segment (e.g. write
-        /// coalescing chaining a producer's frame into its own buffer) so that exactly one segment
-        /// ends up responsible for eventually disposing the owner — ownership TRANSFERS to the
-        /// caller, it does not dispose anything itself. Single-threaded, same pattern as
-        /// <see cref="DisposeOwner"/> — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
-        /// </summary>
-        IMemoryOwner<byte>? DetachOwner();
     }
 
     /// <summary>
@@ -92,7 +82,69 @@ namespace Akka.IO
     /// </summary>
     internal sealed class OwnedSequenceSegment : ReadOnlySequenceSegment<byte>, IOwnedSequenceSegment
     {
-        private IMemoryOwner<byte>? _owner;
+        // What this segment owns: an IMemoryOwner<byte>, or the ArrayPool<byte> that this segment's own rented
+        // array (the array under Memory) goes back to. Holding the pool directly means a pooled frame needs no
+        // owner object besides its segment.
+        private object? _owner;
+
+        /// <summary>
+        /// A segment over the first <paramref name="length"/> bytes of <paramref name="rented"/> that returns
+        /// the array to <paramref name="pool"/> when its owner is disposed.
+        /// </summary>
+        internal OwnedSequenceSegment(byte[] rented, int length, ArrayPool<byte> pool)
+        {
+            Memory = new ReadOnlyMemory<byte>(rented, 0, length);
+            _owner = pool;
+        }
+
+        /// <summary>A borrowed link that owns nothing, for a chain mixing owned and borrowed memory.</summary>
+        internal OwnedSequenceSegment(ReadOnlyMemory<byte> memory)
+        {
+            Memory = memory;
+        }
+
+        /// <summary>
+        /// A segment over <paramref name="memory"/> (a slice of <paramref name="from"/>'s memory) that takes
+        /// over <paramref name="from"/>'s ownership, leaving <paramref name="from"/> owning nothing.
+        /// </summary>
+        internal OwnedSequenceSegment(ReadOnlyMemory<byte> memory, OwnedSequenceSegment from)
+        {
+            Memory = memory;
+            _owner = from._owner;
+            from._owner = null;
+        }
+
+        /// <summary>Links <paramref name="next"/> after this segment, setting its running index.</summary>
+        internal void Chain(OwnedSequenceSegment next)
+        {
+            next.RunningIndex = RunningIndex + Memory.Length;
+            Next = next;
+        }
+
+        /// <summary>
+        /// Moves one link of a sequence onto a chain whose tail is <paramref name="tail"/> (or starts one when it
+        /// is <see langword="null"/>) and returns the new tail. A whole owned segment is linked as is, so no
+        /// segment is allocated; a sliced or foreign link is wrapped, taking over the owner of an owned one.
+        /// </summary>
+        /// <param name="tail">The chain's current tail, or <see langword="null"/> for an empty chain.</param>
+        /// <param name="segment">The link being moved.</param>
+        /// <param name="memory">The part of <paramref name="segment"/>'s memory the sequence covers.</param>
+        /// <param name="isLast">Whether <paramref name="segment"/> is the sequence's last link.</param>
+        internal static OwnedSequenceSegment MoveLink(OwnedSequenceSegment? tail, ReadOnlySequenceSegment<byte> segment,
+            ReadOnlyMemory<byte> memory, bool isLast)
+        {
+            var owned = segment as OwnedSequenceSegment;
+            // A last link still chained to further segments is a slice of a longer chain; it is wrapped so the
+            // new chain does not run on into links that are not part of the sequence.
+            var next = owned is not null && memory.Equals(owned.Memory) && !(isLast && owned.Next is not null)
+                ? owned
+                : owned is not null ? new OwnedSequenceSegment(memory, owned) : new OwnedSequenceSegment(memory);
+            if (tail is null)
+                next.RunningIndex = 0;
+            else
+                tail.Chain(next);
+            return next;
+        }
 
         /// <summary>
         /// Creates a segment exposing <paramref name="memory"/> and owning <paramref name="owner"/>.
@@ -149,15 +201,16 @@ namespace Akka.IO
         {
             var owner = _owner;
             _owner = null;
-            owner?.Dispose();
-        }
-
-        /// <inheritdoc />
-        public IMemoryOwner<byte>? DetachOwner()
-        {
-            var owner = _owner;
-            _owner = null;
-            return owner;
+            if (owner is ArrayPool<byte> pool)
+            {
+                // Memory may have been sliced since, but it still refers to the rented array.
+                if (MemoryMarshal.TryGetArray(Memory, out var rented))
+                    pool.Return(rented.Array!);
+            }
+            else
+            {
+                ((IMemoryOwner<byte>?)owner)?.Dispose();
+            }
         }
 
         /// <summary>
