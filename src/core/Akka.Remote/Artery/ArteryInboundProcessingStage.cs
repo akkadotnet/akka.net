@@ -250,7 +250,7 @@ namespace Akka.Remote.Artery
             // SerializerId-based check and ProcessFrameLaneMode's classification must be updated
             // together, or lane mode will silently stop treating IsControl the same way the
             // non-lane path does for the affected type.
-            if (inboundLanes > 1)
+            if (dispatchOrdinary is not null)
             {
                 ControlMessageSerializerId = serialization.FindSerializerForType(typeof(HandshakeReq))?.Identifier ?? int.MinValue;
                 SelectionMessageSerializerId = serialization.FindSerializerForType(typeof(ActorSelectionMessage))?.Identifier ?? int.MinValue;
@@ -408,6 +408,9 @@ namespace Akka.Remote.Artery
             /// </summary>
             private bool _laneModeActive;
 
+            /// <summary>The remote-sender cache of <see cref="DispatchInline"/>; used only by this stage's thread.</summary>
+            private readonly ArteryRemoteSenderCache _inlineSenders = new();
+
             /// <summary>One bounded channel per lane; created once, lazily, by <see cref="InitLanes"/>.</summary>
             private Channel<LaneWorkItem>[]? _lanes;
 
@@ -475,6 +478,12 @@ namespace Akka.Remote.Artery
 
             public void OnPull()
             {
+                // Lane mode stops draining at a control frame until the stages below have handled
+                // it (see ProcessFrameLaneMode); this pull means they have, so resume with the
+                // frames that followed it.
+                if (_pending.Count == 0 && _laneModeActive && !_writeInFlight)
+                    DrainReadyFramesLaneMode();
+
                 if (_pending.Count > 0)
                 {
                     Push(_stage.Out, _pending.Dequeue());
@@ -497,12 +506,21 @@ namespace Akka.Remote.Artery
 
             public void OnUpstreamFinish()
             {
-                if (_pending.Count == 0 && !_writeInFlight)
+                if (NothingLeftToEmit)
                     CompleteInputStage();
 
-                // else: swallow the termination and let OnPull (non-lane path) / OnLaneWriteAvailable
-                // (lane path) drain the remainder, completing once both are empty/clear.
+                // else: swallow the termination and let OnPull (non-lane path, or lane mode behind a
+                // control frame) / OnLaneWriteAvailable (lane path) drain the remainder, completing
+                // once both are empty/clear.
             }
+
+            /// <summary>
+            /// No queued envelope, no item parked on a lane, and no control envelope still on its way
+            /// through the stages below -- lane mode resumes draining the frames behind one only on
+            /// the next <see cref="OnPull"/>.
+            /// </summary>
+            private bool NothingLeftToEmit =>
+                _pending.Count == 0 && !_writeInFlight && (!_laneModeActive || IsAvailable(_stage.Out));
 
             private void CompleteInputStage()
             {
@@ -584,14 +602,15 @@ namespace Akka.Remote.Artery
                     ? new ArteryFrameParser(_stage.MaxLargeFrameLength)
                     : new ArteryFrameParser(_stage.MaxFrameLength);
 
-                // GATE A: only an Ordinary-stream connection, and only when lanes are actually
-                // configured, ever enters lane mode -- every Control/Large connection, and EVERY
-                // connection at the InboundLanes=1 default, is untouched from here on (see the
-                // type-level remarks).
-                if (streamId == ArteryStreamId.Ordinary && _stage.InboundLanes > 1)
+                // GATE A: only an Ordinary-stream connection ever enters lane mode -- every
+                // Control/Large connection is untouched from here on (see the type-level remarks).
+                // With InboundLanes = 1 there are no lanes: the checked ordinary frames are
+                // dispatched inline (see DispatchInline).
+                if (streamId == ArteryStreamId.Ordinary && _stage.DispatchOrdinary is not null)
                 {
                     _laneModeActive = true;
-                    InitLanes();
+                    if (_stage.InboundLanes > 1)
+                        InitLanes();
                 }
 
                 _preambleParsed = true;
@@ -843,7 +862,7 @@ namespace Akka.Remote.Artery
                     }
 
                     if (!handled)
-                        return; // parked -- stop draining further frames until lane capacity frees up.
+                        return; // parked on a lane, or a control frame must pass the stages below first.
                 }
             }
 
@@ -877,10 +896,12 @@ namespace Akka.Remote.Artery
                     // connection (see the type-level remarks) -- deserialize INLINE exactly as the
                     // non-lane path does and push it through the ordinary Out pipeline so
                     // InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound still see it.
+                    // Draining stops here until those stages have handled it, so a later frame of the
+                    // same read is checked only after, e.g., a handshake has registered its origin.
                     decoded.TryGetManifest(out manifest);
                     var controlPayload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
                     _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest));
-                    return true;
+                    return false;
                 }
 
                 // Mirrors InboundHandshakeStage.IsKnownOrigin gating exactly (same shared-registry
@@ -905,6 +926,27 @@ namespace Akka.Remote.Artery
                     }
 
                     return true;
+                }
+
+                // advanced.test-mode failure injection for the lane path (lane-routed traffic
+                // bypasses the connection sink's InboundTestStage) -- the same known-origin
+                // blackhole check that stage performs, keyed identically as
+                // (localAddress, originAddress), and like that stage it runs before the quarantine
+                // check, so a blackholed origin gets no quarantine notice. Unknown origins never
+                // reach here (dropped by the IsKnownOrigin gate above, test-mode or not), so the
+                // InboundTestStage's pre-handshake HandshakeReq special case has no lane-path
+                // analog. See TestState's property remarks for the off-mode cost rationale.
+                if (_stage.TestState is { } testState)
+                {
+                    var origin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
+                    if (origin is not null &&
+                        testState.IsBlackhole(_stage.InboundContext!.LocalAddress.Address, origin))
+                    {
+                        Log.Debug(
+                            "dropping inbound lane-routed message from [{0}] with UID [{1}] because of blackhole",
+                            origin, decoded.Header.OriginUid);
+                        return true;
+                    }
                 }
 
                 // The quarantine check for the lane path. It does what InboundQuarantineCheckStage
@@ -952,26 +994,6 @@ namespace Akka.Remote.Artery
                     return true;
                 }
 
-                // advanced.test-mode failure injection for the lane path (lane-routed traffic
-                // bypasses the connection sink's InboundTestStage) -- the same known-origin
-                // blackhole check that stage performs, keyed identically as
-                // (localAddress, originAddress). Unknown origins never reach here (dropped by the
-                // IsKnownOrigin gate above, test-mode or not), so the InboundTestStage's
-                // pre-handshake HandshakeReq special case has no lane-path analog. See
-                // TestState's property remarks for the off-mode cost rationale.
-                if (_stage.TestState is { } testState)
-                {
-                    var origin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
-                    if (origin is not null &&
-                        testState.IsBlackhole(_stage.InboundContext!.LocalAddress.Address, origin))
-                    {
-                        Log.Debug(
-                            "dropping inbound lane-routed message from [{0}] with UID [{1}] because of blackhole",
-                            origin, decoded.Header.OriginUid);
-                        return true;
-                    }
-                }
-
                 return RouteByRecipientBytes(decoded, frameBody);
             }
 
@@ -1000,6 +1022,9 @@ namespace Akka.Remote.Artery
                     return true;
                 }
 
+                if (_lanes is null)
+                    return DispatchInline(decoded);
+
                 var recipientBytes = decoded.GetRecipientLiteralBytes();
 
                 // Lane choice. ActorSelectionMessage keeps its string key (BuildSelectionLaneKey + char
@@ -1023,6 +1048,19 @@ namespace Akka.Remote.Artery
                 }
 
                 return TryRouteToLane(laneIndex, new LaneWorkItem(frameBody));
+            }
+
+            /// <summary>
+            /// InboundLanes = 1: deserializes and dispatches a checked ordinary frame right here, on
+            /// this stage's own thread, as a lane consumer would. A deserialization failure throws
+            /// to the drain loop, which logs it and drops only this frame.
+            /// </summary>
+            private bool DispatchInline(in ArteryEnvelopeDecoded decoded)
+            {
+                decoded.TryGetManifest(out var manifest);
+                var message = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
+                _stage.DispatchOrdinary!(message, decoded, _inlineSenders);
+                return true;
             }
 
             /// <summary>
@@ -1128,7 +1166,7 @@ namespace Akka.Remote.Artery
                 DrainReadyFramesLaneMode();
                 DeliverOrPull();
 
-                if (_pending.Count == 0 && !_writeInFlight && IsClosed(_stage.In))
+                if (NothingLeftToEmit && IsClosed(_stage.In))
                     CompleteInputStage();
             }
 

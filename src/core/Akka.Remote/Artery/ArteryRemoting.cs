@@ -1008,25 +1008,18 @@ namespace Akka.Remote.Artery
             // element that is not a SystemMessageEnvelope, so composing it unconditionally here
             // (rather than only for control-preamble connections) is correct and simpler.
             //
-            // GATE A / conditional topology (inbound lanes): at the InboundLanes=1 default, this
-            // constructs the stage EXACTLY as before -- the 3-arg overload, no lane machinery ever
-            // materialized. Only when InboundLanes > 1 does construction take the lanes-aware
-            // overload, handing it the shared IInboundContext (reused for its own IsKnownOrigin
-            // gate on an Ordinary connection's lane path -- see that stage's remarks) and
-            // DispatchOrdinaryMessage (the SAME resolve-and-Tell logic DispatchInbound's ordinary
-            // branch uses, invoked directly by each lane's consumer loop instead of via this
-            // Sink.ForEach). InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound below are
-            // NEVER modified for lanes -- a lane-enabled Ordinary connection's own ordinary traffic
-            // never reaches them at all (dispatched directly from the lane), while any (should
-            // never happen) control-classified frame on that same connection, and everything on
-            // every Control/Large connection, still flows through them completely unchanged.
-            var processingStage = _settings.InboundLanes > 1
-                ? new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
-                    _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
-                    _onInboundLanesInitialized, _testState)
-                : new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler);
+            // GATE A (inbound lanes): on an Ordinary connection the stage itself applies the
+            // known-origin, quarantine and test-mode blackhole checks to each ordinary frame and
+            // dispatches it through DispatchOrdinaryMessage -- the SAME resolve-and-Tell logic
+            // DispatchInbound's ordinary branch uses -- on one of InboundLanes lane consumers, or,
+            // at the InboundLanes=1 default, inline on this connection's own stage thread. That
+            // traffic never reaches InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound
+            // below; any (should never happen) control-classified frame on that same connection,
+            // and everything on every Control/Large connection, still flows through them unchanged.
+            var processingStage = new ArteryInboundProcessingStage(
+                _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
+                _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
+                _onInboundLanesInitialized, _testState);
 
             var decoded = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
