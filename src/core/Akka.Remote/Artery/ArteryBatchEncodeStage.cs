@@ -10,6 +10,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams;
 using Akka.Streams.Stage;
@@ -45,6 +46,8 @@ namespace Akka.Remote.Artery
         private readonly long _maxBytes;
         private readonly ArrayPool<byte>? _pool;
         private readonly Action<Queue<IOutboundEnvelope>> _onStopHolding;
+        private readonly TaskCompletionSource<NotUsed> _stopped =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <param name="serialization">The sending actor system's serialization extension.</param>
         /// <param name="originUid">The sending system's UID, stamped into every encoded envelope's fixed header.</param>
@@ -73,6 +76,14 @@ namespace Akka.Remote.Artery
         private Outlet<ReadOnlySequence<byte>> Out { get; } = new("ArteryBatchEncode.out");
 
         public override FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>> Shape { get; }
+
+        /// <summary>
+        /// Completes at the very end of PostStop, after the held envelopes were handed to
+        /// <c>onStopHolding</c>. A downstream <c>WatchTermination</c> completes before upstream stages
+        /// have stopped, so a restart that must see the carry-over awaits this as well. An instance
+        /// belongs to one materialization, so create a new stage for every stream attempt.
+        /// </summary>
+        public Task Stopped => _stopped.Task;
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -123,8 +134,15 @@ namespace Akka.Remote.Artery
 
             public override void PostStop()
             {
-                if (_held.Count > 0)
-                    _stage._onStopHolding(_held);
+                try
+                {
+                    if (_held.Count > 0)
+                        _stage._onStopHolding(_held);
+                }
+                finally
+                {
+                    _stage._stopped.TrySetResult(NotUsed.Instance);
+                }
             }
 
             private void PushBatch()

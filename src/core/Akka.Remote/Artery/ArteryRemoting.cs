@@ -2259,7 +2259,9 @@ namespace Akka.Remote.Artery
                         .ToMaterialized(mergeSink, Keep.Both)
                         .Run(_materializer!);
 
-                    laneTerminations[i] = laneTermination;
+                    // The termination watch completes before this lane's encode stage has stopped and
+                    // parked what it holds; a restart must not build the next stream before that.
+                    laneTerminations[i] = Task.WhenAll(laneTermination, encodeStage.Stopped);
                 }
             }
             catch (Akka.Pattern.IllegalStateException) when (IsTransportTerminating())
@@ -2485,11 +2487,14 @@ namespace Akka.Remote.Artery
             // see _largeEncodeBufferPool's remarks.
             // The ordinary stream may hand several frames downstream per element (see
             // ArteryBatchEncodeStage); control and large streams encode one frame per element.
-            var encodeStage = streamId == ArteryStreamId.Ordinary
-                ? (IGraph<FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>, NotUsed>)new ArteryBatchEncodeStage(
+            var batchEncodeStage = streamId == ArteryStreamId.Ordinary
+                ? new ArteryBatchEncodeStage(
                     System.Serialization, _localUniqueAddress.Uid, OrdinaryEncodeBatchMaxFrames,
                     LaneWriteBatchMaxBytes, _encodeBufferPool,
                     held => CarryOverHeldEnvelopes(remoteAddress, association, 0, held))
+                : null;
+            var encodeStage = batchEncodeStage is not null
+                ? (IGraph<FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>, NotUsed>)batchEncodeStage
                 : new ArteryEncodeStage(
                     System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
 
@@ -2718,6 +2723,11 @@ namespace Akka.Remote.Artery
                 _log.Debug("Artery {0} outbound stream to [{1}] not materialized: actor system is terminating.", streamId, remoteAddress);
                 return;
             }
+
+            // The watch completes before the batch encode stage has stopped and parked what it holds;
+            // the restart below must see that carry-over, so it waits for the stage as well.
+            if (batchEncodeStage is not null)
+                terminationWatch = Task.WhenAll(terminationWatch, batchEncodeStage.Stopped);
 
             // Publish the write-side watch as this stream's "finished writing" signal, so a
             // graceful Shutdown() can wait on it while flushing -- see Shutdown's flush remarks
