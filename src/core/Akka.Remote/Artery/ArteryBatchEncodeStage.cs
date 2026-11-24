@@ -45,6 +45,7 @@ namespace Akka.Remote.Artery
         private readonly long _maxBytes;
         private readonly ArrayPool<byte>? _pool;
         private readonly Action<Queue<IOutboundEnvelope>> _onStopHolding;
+        private readonly Akka.Actor.Address? _localAddress;
 
         /// <param name="serialization">The sending actor system's serialization extension.</param>
         /// <param name="originUid">The sending system's UID, stamped into every encoded envelope's fixed header.</param>
@@ -52,13 +53,15 @@ namespace Akka.Remote.Artery
         /// <param name="maxBytes">No further frame is added to a pushed element once it holds this many bytes.</param>
         /// <param name="pool">Encode buffer pool; <see langword="null"/> means <see cref="ArrayPool{T}.Shared"/>.</param>
         /// <param name="onStopHolding">Invoked once from PostStop with the envelopes still held, oldest first, if any.</param>
+        /// <param name="localAddress">The address a sender given as a path is formatted with.</param>
         public ArteryBatchEncodeStage(
             Akka.Serialization.Serialization serialization,
             long originUid,
             int maxFrames,
             long maxBytes,
             ArrayPool<byte>? pool,
-            Action<Queue<IOutboundEnvelope>> onStopHolding)
+            Action<Queue<IOutboundEnvelope>> onStopHolding,
+            Akka.Actor.Address? localAddress = null)
         {
             _serialization = serialization;
             _originUid = originUid;
@@ -66,6 +69,7 @@ namespace Akka.Remote.Artery
             _maxBytes = maxBytes;
             _pool = pool;
             _onStopHolding = onStopHolding;
+            _localAddress = localAddress;
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 
@@ -181,7 +185,7 @@ namespace Akka.Remote.Artery
                 var writer = ArteryEnvelopeCodec.Encode(
                     _stage._serialization, _stage._originUid, envelope.SenderPath, envelope.RecipientPath,
                     envelope.Message, _stage._pool, envelope.SenderId, envelope.RecipientId, envelope.RecipientPathUtf8,
-                    _writer);
+                    _writer, envelope.SenderActorPath, _stage._localAddress);
                 _writer = writer;
                 return writer.DetachSegment();
             }

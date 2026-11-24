@@ -603,58 +603,67 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
     /// <returns> System.String. </returns>
     private string Join(ReadOnlySpan<char> prefix, long? uid = null)
     {
-        void AppendUidSpan(ref Span<char> writeable, int startPos, int sizeHint)
+        var totalLength = JoinedLength(prefix.Length, uid);
+        var buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
+        JoinInto(prefix, uid, buffer);
+        return buffer.ToString(); //todo use string.Create() when available
+    }
+
+    /// <summary>
+    /// The number of characters <see cref="Join"/> produces for a prefix of <paramref name="prefixLength"/> characters.
+    /// </summary>
+    private int JoinedLength(int prefixLength, long? uid)
+    {
+        if (_depth == 0)
+            return prefixLength + 1;
+
+        var totalLength = prefixLength;
+        var p = this;
+        while (p!._depth > 0)
         {
-            if (uid == null) return;
-            writeable[startPos] = '#';
-            SpanHacks.TryFormat(uid.Value, startPos+1, ref writeable, sizeHint);
+            totalLength += p.Name.Length + 1;
+            p = p.Parent;
         }
 
+        // 1 extra character for the '#'
+        if (uid != null)
+            totalLength += SpanHacks.Int64SizeInCharacters(uid.Value) + 1;
+
+        return totalLength;
+    }
+
+    /// <summary>
+    /// Writes the characters of <see cref="Join"/> into <paramref name="buffer"/>, which must be exactly
+    /// <see cref="JoinedLength"/> characters long.
+    /// </summary>
+    private void JoinInto(ReadOnlySpan<char> prefix, long? uid, Span<char> buffer)
+    {
+        prefix.CopyTo(buffer);
         if (_depth == 0)
         {
-            var buffer = prefix.Length < 1024 ? stackalloc char[prefix.Length + 1] : new char[prefix.Length + 1];
-            prefix.CopyTo(buffer);
             buffer[buffer.Length - 1] = '/';
-            return buffer.ToString(); //todo use string.Create() when available
+            return;
         }
-        else
+
+        var uidSizeHint = uid != null ? SpanHacks.Int64SizeInCharacters(uid.Value) + 1 : 0;
+        var offset = buffer.Length - uidSizeHint;
+
+        // append UID span first
+        if (uid != null)
         {
-            // Resolve length of final string
-            var totalLength = prefix.Length;
-            var p = this;
-            while (p!._depth > 0)
-            {
-                totalLength += p.Name.Length + 1;
-                p = p.Parent;
-            }
+            buffer[offset] = '#';
+            SpanHacks.TryFormat(uid.Value, offset + 1, ref buffer, uidSizeHint - 1); // -1 for the '#'
+        }
 
-            // UID calculation
-            var uidSizeHint = 0;
-            if (uid != null)
-            {
-                // 1 extra character for the '#'
-                uidSizeHint = SpanHacks.Int64SizeInCharacters(uid.Value) + 1;
-                totalLength += uidSizeHint;
-            }
-
-            // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            var buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
-            prefix.CopyTo(buffer);
-
-            var offset = buffer.Length - uidSizeHint;
-            // append UID span first
-            AppendUidSpan(ref buffer, offset, uidSizeHint-1); // -1 for the '#'
-
-            p = this;
-            while (p!._depth > 0)
-            {
-                var name = p.Name.AsSpan();
-                offset -= name.Length + 1;
-                buffer[offset] = '/';
-                name.CopyTo(buffer.Slice(offset + 1, name.Length));
-                p = p.Parent;
-            }
-            return buffer.ToString(); //todo use string.Create() when available
+        // Concatenate segments (in reverse order) into buffer with '/' prefixes
+        var p = this;
+        while (p!._depth > 0)
+        {
+            var name = p.Name.AsSpan();
+            offset -= name.Length + 1;
+            buffer[offset] = '/';
+            name.CopyTo(buffer.Slice(offset + 1, name.Length));
+            p = p.Parent;
         }
     }
 
@@ -769,6 +778,43 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
         }
         var result = ToStringWithAddress(address, true);
         return result;
+    }
+
+    /// <summary>
+    /// INTERNAL API. The number of characters in <see cref="ToSerializationFormatWithAddress(Address)"/>.
+    /// </summary>
+    internal int SerializationFormatWithAddressLength(Address address)
+    {
+        var prefix = SerializationFormatPrefix(address, out var uid);
+        return JoinedLength(prefix.Length, uid);
+    }
+
+    /// <summary>
+    /// INTERNAL API. Writes the characters of <see cref="ToSerializationFormatWithAddress(Address)"/> into
+    /// <paramref name="destination"/> without creating the string. <paramref name="destination"/> must be exactly
+    /// <see cref="SerializationFormatWithAddressLength"/> characters long.
+    /// </summary>
+    internal void FormatSerializationWithAddress(Address address, Span<char> destination)
+    {
+        var prefix = SerializationFormatPrefix(address, out var uid);
+        JoinInto(prefix.AsSpan(), uid, destination);
+    }
+
+    /// <summary>
+    /// The address prefix and uid that <see cref="ToSerializationFormatWithAddress(Address)"/> joins with the path elements.
+    /// </summary>
+    private string SerializationFormatPrefix(Address address, out long? uid)
+    {
+        uid = null;
+
+        // we never change address for IgnoreActorRef, and its string form has no uid
+        if (IgnoreActorRef.IsIgnoreRefPath(this))
+            return Address.ToString();
+
+        if (Uid != ActorCell.UndefinedUid)
+            uid = Uid;
+
+        return Address is { Host: not null, Port: not null } ? Address.ToString() : address.ToString();
     }
 
     private string AppendUidFragment(string withAddress)

@@ -159,6 +159,11 @@ namespace Akka.Remote.Artery
         /// A writer from an earlier call that has since been detached, re-armed instead of allocating a new
         /// one; it must use <paramref name="pool"/>. <see langword="null"/> allocates a new writer.
         /// </param>
+        /// <param name="senderActorPath">
+        /// The sender's path; when not <see langword="null"/> it is formatted straight into the frame, exactly as
+        /// <c>ToSerializationFormatWithAddress(senderAddress)</c> formats it, and <paramref name="senderPath"/> is ignored.
+        /// </param>
+        /// <param name="senderAddress">The address <paramref name="senderActorPath"/> is formatted with; required with it.</param>
         /// <returns>
         /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
         /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
@@ -177,23 +182,37 @@ namespace Akka.Remote.Artery
             long senderId = 0,
             long recipientId = 0,
             byte[]? recipientPathUtf8 = null,
-            Akka.Serialization.PooledPayloadWriter? reuse = null)
+            Akka.Serialization.PooledPayloadWriter? reuse = null,
+            Akka.Actor.ActorPath? senderActorPath = null,
+            Akka.Actor.Address? senderAddress = null)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
             if (message is null)
                 throw new ArgumentNullException(nameof(message));
+            if (senderActorPath is not null && senderAddress is null)
+                throw new ArgumentNullException(nameof(senderAddress), "A sender given as a path needs the address to format it with.");
 
             return Akka.Serialization.Serialization.WithTransport(serialization.System,
-                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8, reuse), static state =>
+                (serialization, originUid, senderPath, recipientPath, message, pool, senderId, recipientId, recipientPathUtf8, reuse, senderActorPath, senderAddress), static state =>
             {
+                // A sender given as a path is formatted into chars on the stack (or, if unusually long, a
+                // rented array) and written from there: no sender path string is built per message.
+                var senderCharCount = state.senderActorPath?.SerializationFormatWithAddressLength(state.senderAddress!) ?? 0;
+                var rentedSenderChars = senderCharCount > MaxStackSenderPathChars ? ArrayPool<char>.Shared.Rent(senderCharCount) : null;
+                Span<char> senderChars = rentedSenderChars is null
+                    ? stackalloc char[senderCharCount]
+                    : rentedSenderChars.AsSpan(0, senderCharCount);
+                state.senderActorPath?.FormatSerializationWithAddress(state.senderAddress!, senderChars);
+                ReadOnlySpan<char> senderPath = state.senderActorPath is null ? state.senderPath.AsSpan() : senderChars;
+
                 var serializer = state.serialization.FindSerializerV2For(state.message);
                 var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, state.message) ?? string.Empty;
 
                 const int reservedPrefixLength = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
                 var recipientByteCount = 0;
                 var capacityHint = reservedPrefixLength
-                    + LiteralWireSize(state.senderPath, out var senderByteCount)
+                    + LiteralWireSize(senderPath, out var senderByteCount)
                     + (state.recipientPathUtf8 is { } recipientUtf8
                         ? ArteryEnvelopeHeader.LiteralLengthPrefixSize + recipientUtf8.Length
                         : LiteralWireSize(state.recipientPath, out recipientByteCount))
@@ -218,7 +237,12 @@ namespace Akka.Remote.Artery
                     writer.GetSpan(reservedPrefixLength);
                     writer.Advance(reservedPrefixLength);
 
-                    var senderTag = WriteLiteral(writer, state.senderPath, senderByteCount);
+                    var senderTag = WriteLiteral(writer, senderPath, senderByteCount);
+
+                    // A failure before this point leaves a rented sender array to the GC, which is harmless.
+                    if (rentedSenderChars is not null)
+                        ArrayPool<char>.Shared.Return(rentedSenderChars);
+
                     var recipientTag = state.recipientPathUtf8 is { } recipientBytes
                         ? WriteLiteral(writer, recipientBytes)
                         : WriteLiteral(writer, state.recipientPath, recipientByteCount);
@@ -248,6 +272,9 @@ namespace Akka.Remote.Artery
                 }
             });
         }
+
+        /// <summary>Longest sender path, in characters, formatted on the stack rather than into a rented array.</summary>
+        private const int MaxStackSenderPathChars = 512;
 
         /// <summary>
         /// Decodes envelope metadata from <paramref name="frameBody"/> -- the envelope WITHOUT the
@@ -384,9 +411,12 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a growable <see cref="Akka.Serialization.PooledPayloadWriter"/>.</summary>
-        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, string? value, int byteCount)
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, string? value, int byteCount) =>
+            WriteLiteral(writer, value.AsSpan(), byteCount);
+
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, ReadOnlySpan<char> value, int byteCount)
         {
-            if (string.IsNullOrEmpty(value))
+            if (value.IsEmpty)
                 return ArteryEnvelopeHeader.AbsentTag;
 
             // Strings are immutable snapshots captured before SizeHint. Reuse the raw count,
@@ -403,7 +433,7 @@ namespace Akka.Remote.Artery
 
             if (byteCount > 0)
             {
-                Encoding.UTF8.GetBytes(value.AsSpan(), writer.GetSpan(byteCount));
+                Encoding.UTF8.GetBytes(value, writer.GetSpan(byteCount));
                 writer.Advance(byteCount);
             }
 
@@ -439,9 +469,11 @@ namespace Akka.Remote.Artery
         private static int LiteralWireSize(string? value) =>
             string.IsNullOrEmpty(value) ? 0 : ArteryEnvelopeHeader.LiteralLengthPrefixSize + Encoding.UTF8.GetByteCount(value);
 
-        private static int LiteralWireSize(string? value, out int byteCount)
+        private static int LiteralWireSize(string? value, out int byteCount) => LiteralWireSize(value.AsSpan(), out byteCount);
+
+        private static int LiteralWireSize(ReadOnlySpan<char> value, out int byteCount)
         {
-            if (string.IsNullOrEmpty(value))
+            if (value.IsEmpty)
             {
                 byteCount = 0;
                 return 0;
