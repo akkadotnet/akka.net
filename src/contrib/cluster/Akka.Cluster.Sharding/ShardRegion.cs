@@ -412,9 +412,10 @@ namespace Akka.Cluster.Sharding
         private IImmutableDictionary<IActorRef, IImmutableSet<ShardId>> _regions =
             ImmutableDictionary<IActorRef, IImmutableSet<ShardId>>.Empty;
 
-        private IImmutableDictionary<ShardId, IActorRef> _regionByShard = ImmutableDictionary<ShardId, IActorRef>.Empty;
+        // mutable: looked up for every routed message and only ever touched from the actor thread
+        private readonly Dictionary<ShardId, IActorRef> _regionByShard = new();
         private readonly MessageBufferMap<ShardId> _shardBuffers = new();
-        private IImmutableDictionary<ShardId, IActorRef> _shards = ImmutableDictionary<ShardId, IActorRef>.Empty;
+        private readonly Dictionary<ShardId, IActorRef> _shards = new();
         private IImmutableDictionary<IActorRef, ShardId> _shardsByRef = ImmutableDictionary<IActorRef, ShardId>.Empty;
         private IImmutableSet<ShardId> _startingShards = ImmutableHashSet<ShardId>.Empty;
         private IImmutableSet<IActorRef> _handingOff = ImmutableHashSet<IActorRef>.Empty;
@@ -733,7 +734,7 @@ namespace Akka.Cluster.Sharding
                         BufferMessage(shardId, message, sender);
                     else
                     {
-                        if (_shardBuffers.Contains(shardId))
+                        if (_shardBuffers.NonEmpty && _shardBuffers.Contains(shardId))
                         {
                             // Since now messages to a shard is buffered then those messages must be in right order
                             BufferMessage(shardId, message, sender);
@@ -1069,9 +1070,11 @@ namespace Akka.Cluster.Sharding
 
             var tasks = _shards.Select(entity => (Entity: entity.Key, Task: entity.Value.Ask<T>(message, timeout)))
                 .ToImmutableList();
+            // read on the actor thread; the continuation below runs elsewhere
+            var shardCount = _shards.Count;
             return Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(_ =>
             {
-                var qr = ShardsQueryResult<T>.Create(tasks, _shards.Count, timeout);
+                var qr = ShardsQueryResult<T>.Create(tasks, shardCount, timeout);
                 if (qr.Failed.Count > 0)
                     _log.Warning("{0}: {1}", _typeName, qr);
                 return qr;
@@ -1118,7 +1121,7 @@ namespace Akka.Cluster.Sharding
                     {
                         var shard = hs.Shard;
                         _log.Debug("{0}: Host shard [{1}]", _typeName, shard);
-                        _regionByShard = _regionByShard.SetItem(shard, Self);
+                        _regionByShard[shard] = Self;
                         UpdateRegionShards(Self, shard);
 
                         // Start the shard, if already started this does nothing
@@ -1141,7 +1144,7 @@ namespace Akka.Cluster.Sharding
                         }
                     }
 
-                    _regionByShard = _regionByShard.SetItem(home.Shard, home.Ref);
+                    _regionByShard[home.Shard] = home.Ref;
                     UpdateRegionShards(home.Ref, home.Shard);
 
                     if (!home.Ref.Equals(Self))
@@ -1178,7 +1181,7 @@ namespace Akka.Cluster.Sharding
                             ? _regions.Remove(regionRef)
                             : _regions.SetItem(regionRef, updatedShards);
 
-                        _regionByShard = _regionByShard.Remove(shard);
+                        _regionByShard.Remove(shard);
                     }
 
                     Sender.Tell(new ShardCoordinator.BeginHandOffAck(shard));
@@ -1292,7 +1295,8 @@ namespace Akka.Cluster.Sharding
 
         private IActorRef GetShard(ShardId id)
         {
-            if (_startingShards.Contains(id))
+            // in steady state no shard is starting, so skip hashing the shard id
+            if (_startingShards.Count > 0 && _startingShards.Contains(id))
                 return ActorRefs.Nobody;
 
             if (_shards.TryGetValue(id, out var shard)) return shard ?? ActorRefs.Nobody;
@@ -1315,7 +1319,7 @@ namespace Akka.Cluster.Sharding
                 .WithDispatcher(Context.Props.Dispatcher), name));
 
             _shardsByRef = _shardsByRef.SetItem(shardRef, id);
-            _shards = _shards.SetItem(id, shardRef);
+            _shards[id] = shardRef;
             _startingShards = _startingShards.Add(id);
             return shardRef;
         }
@@ -1386,7 +1390,8 @@ namespace Akka.Cluster.Sharding
             }
             else if (_regions.TryGetValue(terminated.ActorRef, out var shards))
             {
-                _regionByShard = _regionByShard.RemoveRange(shards);
+                foreach (var s in shards)
+                    _regionByShard.Remove(s);
                 _regions = _regions.Remove(terminated.ActorRef);
 
                 if (_log.IsDebugEnabled)
@@ -1404,7 +1409,7 @@ namespace Akka.Cluster.Sharding
             else if (_shardsByRef.TryGetValue(terminated.ActorRef, out var shard))
             {
                 _shardsByRef = _shardsByRef.Remove(terminated.ActorRef);
-                _shards = _shards.Remove(shard);
+                _shards.Remove(shard);
                 _startingShards = _startingShards.Remove(shard);
                 if (_handingOff.Contains(terminated.ActorRef))
                 {
