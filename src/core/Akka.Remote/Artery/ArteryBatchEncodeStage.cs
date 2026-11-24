@@ -85,6 +85,10 @@ namespace Akka.Remote.Artery
             private readonly Queue<IOutboundEnvelope> _held;
             private Exception? _failure;
 
+            // Created once: a lambda capturing the exception in PushBatch's catch would be allocated on
+            // every PushBatch call, because the compiler creates its closure when the method is entered.
+            private Action<Exception>? _failLater;
+
             public Logic(ArteryBatchEncodeStage stage) : base(stage.Shape)
             {
                 _stage = stage;
@@ -93,7 +97,11 @@ namespace Akka.Remote.Artery
                 SetHandler(stage.Out, this);
             }
 
-            public override void PreStart() => Pull(_stage.In);
+            public override void PreStart()
+            {
+                _failLater = GetAsyncCallback<Exception>(FailStage);
+                Pull(_stage.In);
+            }
 
             public void OnPush()
             {
@@ -155,7 +163,7 @@ namespace Akka.Remote.Artery
                     if (encoded > 0)
                         Push(_stage.Out, _writer!.DetachSequence());
                     _failure = e;
-                    GetAsyncCallback(() => FailStage(e))();
+                    _failLater!(e);
                     return;
                 }
 
