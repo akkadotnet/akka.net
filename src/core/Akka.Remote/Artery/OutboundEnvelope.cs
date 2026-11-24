@@ -84,6 +84,8 @@ namespace Akka.Remote.Artery
     {
         // One field holds the recipient as either its path string or its UTF-8 bytes. A send sets one of
         // the two; if both are set, the UTF-8 bytes win (the encoder prefers them anyway).
+        // NOTE: once this project targets .NET 11, replace this object-typed field with a union of
+        // string and byte[] so the two cases are expressed in the type instead of by type tests.
         private object? _recipient = RecipientPath;
 
         /// <inheritdoc/>
