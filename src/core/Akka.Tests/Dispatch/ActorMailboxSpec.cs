@@ -126,7 +126,9 @@ akka.actor.deployment {
         [Fact(DisplayName = @"Actors get an unbounded mailbox by default")]
         public async Task Actors_get_unbounded_mailbox_by_default()
         {
-            await CheckMailBoxType(Props.Create<MailboxReportingActor>(), "default-default", new[] { typeof(UnboundedMessageQueue) });
+            // the default mailbox uses an internal single-consumer queue with the same semantics as UnboundedMessageQueue
+            var queue = await CheckMailBoxType(Props.Create<MailboxReportingActor>(), "default-default", new[] { typeof(IUnboundedMessageQueueSemantics) });
+            Assert.Equal(typeof(MpscUnboundedMessageQueue<>), queue.GetType().GetGenericTypeDefinition());
         }
 
         [Fact(DisplayName = @"Actors get an unbounded deque message queue when it is only configured on the props")]
@@ -169,8 +171,9 @@ akka.actor.deployment {
         [Fact(DisplayName = "get an unbounded message queue with a task dispatcher")]
         public async Task Actors_gets_unbounded_mailbox_with_task_dispatcher()
         {
-            await CheckMailBoxType(Props.Create<MailboxReportingActor>().WithDispatcher("task-dispatcher"),
-                "unbounded-tasks", new[] { typeof(UnboundedMessageQueue) });
+            var queue = await CheckMailBoxType(Props.Create<MailboxReportingActor>().WithDispatcher("task-dispatcher"),
+                "unbounded-tasks", new[] { typeof(IUnboundedMessageQueueSemantics) });
+            Assert.Equal(typeof(MpscUnboundedMessageQueue<>), queue.GetType().GetGenericTypeDefinition());
         }
         
         #endregion
