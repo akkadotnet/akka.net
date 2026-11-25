@@ -44,7 +44,7 @@ namespace Akka.Remote.Artery
         private readonly long _maxBytes;
         private readonly ArrayPool<byte>? _pool;
         private readonly Action<Queue<IOutboundEnvelope>> _onStopHolding;
-        private readonly Akka.Actor.Address? _localAddress;
+        private readonly Akka.Actor.Address _localAddress;
 
         /// <param name="serialization">The sending actor system's serialization extension.</param>
         /// <param name="originUid">The sending system's UID, stamped into every encoded envelope's fixed header.</param>
@@ -60,7 +60,7 @@ namespace Akka.Remote.Artery
             long maxBytes,
             ArrayPool<byte>? pool,
             Action<Queue<IOutboundEnvelope>> onStopHolding,
-            Akka.Actor.Address? localAddress = null)
+            Akka.Actor.Address localAddress)
         {
             _serialization = serialization;
             _originUid = originUid;
@@ -68,7 +68,7 @@ namespace Akka.Remote.Artery
             _maxBytes = maxBytes;
             _pool = pool;
             _onStopHolding = onStopHolding;
-            _localAddress = localAddress;
+            _localAddress = localAddress ?? throw new ArgumentNullException(nameof(localAddress));
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 

@@ -2494,8 +2494,8 @@ namespace Akka.Remote.Artery
                     LaneWriteBatchMaxBytes, _encodeBufferPool,
                     held => CarryOverHeldEnvelopes(remoteAddress, association, 0, held), DefaultAddress)
                 : new ArteryEncodeStage(
-                    System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool,
-                    DefaultAddress);
+                    System.Serialization, _localUniqueAddress.Uid, DefaultAddress,
+                    isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
 
             var source = streamId == ArteryStreamId.Ordinary
                 ? OrdinaryLaneSource(association, 0)
