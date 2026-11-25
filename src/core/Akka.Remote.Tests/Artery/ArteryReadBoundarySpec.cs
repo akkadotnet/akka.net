@@ -30,6 +30,61 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
     private const string RecipientPath = "akka://local/user/receiver-é😀";
     private const string WireManifest = "boundary-é😀";
 
+    [Fact(DisplayName = "Artery frames match contiguous decoding at every field byte and nearby TCP chunk offset")]
+    public async Task Should_match_contiguous_decoding_across_chunk_boundary_sweep()
+    {
+        var probe = CreateTestProbe();
+        foreach (var size in new[] { 0, 1, 65535, 65536, 65537, 131073, 1024 * 1024 })
+        {
+            var payload = new byte[size];
+            new Random(size).NextBytes(payload);
+            var target = Frame(RecipientPath, payload);
+            var payloadStart = target.Length - size;
+            // Sweeping every header/literal byte also covers every field start/end at -8..+8.
+            var offsets = Enumerable.Range(-8, payloadStart + 17)
+                .Concat(Enumerable.Range(target.Length - 8, 17)).Distinct();
+            foreach (var offset in offsets)
+            {
+                var empty = Frame(RecipientPath, Array.Empty<byte>());
+                var boundary = ((offset + empty.Length + 65535) / 65536) * 65536;
+                var padding = Frame(RecipientPath, new byte[boundary - offset - empty.Length]);
+                var wire = padding.Concat(target).Concat(empty).ToArray();
+                var pipe = new System.IO.Pipelines.Pipe(new System.IO.Pipelines.PipeOptions(pauseWriterThreshold: 0));
+                await pipe.Writer.WriteAsync(wire);
+                new TcpConnection.PipeReadToActor(pipe.Reader, CancellationToken.None, probe.Ref).Start();
+                var split = (await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>()).Data;
+                var baseline = new ArteryFrameParser(4 * 1024 * 1024);
+                var chunked = new ArteryFrameParser(4 * 1024 * 1024);
+                baseline.Append(wire);
+                foreach (var memory in split) chunked.Append(memory);
+                for (var frame = 0; frame < 3; frame++)
+                {
+                    Assert.True(baseline.TryReadFrame(out var contiguous));
+                    Assert.True(chunked.TryReadFrame(out var segmented));
+                    Assert.Equal(contiguous.ToArray(), segmented.ToArray());
+                    var expected = ArteryEnvelopeCodec.Decode(contiguous);
+                    var actual = ArteryEnvelopeCodec.Decode(segmented);
+                    Assert.Equal(expected.Header, actual.Header);
+                    Assert.True(expected.TryGetSenderPath(out var sender));
+                    Assert.True(actual.TryGetSenderPath(out var actualSender));
+                    Assert.Equal(sender, actualSender);
+                    Assert.True(expected.TryGetRecipientPath(out var recipient));
+                    Assert.True(actual.TryGetRecipientPath(out var actualRecipient));
+                    Assert.Equal(recipient, actualRecipient);
+                    Assert.True(expected.TryGetManifest(out var manifest));
+                    Assert.True(actual.TryGetManifest(out var actualManifest));
+                    Assert.Equal(manifest, actualManifest);
+                    Assert.Equal(expected.Payload.ToArray(), actual.Payload.ToArray());
+                }
+                Assert.False(chunked.TryReadFrame(out _));
+                Assert.False(baseline.HasBufferedBytes);
+                Assert.False(chunked.HasBufferedBytes);
+                await pipe.Writer.CompleteAsync();
+                await pipe.Reader.CompleteAsync();
+            }
+        }
+    }
+
     [Theory(DisplayName = "Artery inbound lanes decode every fixed-header and literal byte split through real TCP copying")]
     [InlineData(1)]
     [InlineData(4)]
