@@ -670,7 +670,11 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
-                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, string.Empty) { Frame = decoded };
+                {
+                    // Control messages are rare and are not dispatched from their frame, so they keep the string.
+                    decoded.TryGetManifest(out var controlManifest);
+                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, controlManifest);
+                }
 
                 var recipientKind = decoded.RecipientKind;
                 if (recipientKind == ArteryTagKind.Compressed)
@@ -898,7 +902,8 @@ namespace Akka.Remote.Artery
                     // same read is checked only after, e.g., a handshake has registered its origin.
                     decoded.TryGetManifestBytes(out manifest);
                     var controlPayload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
-                    _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, string.Empty) { Frame = decoded });
+                    decoded.TryGetManifest(out var controlManifest);
+                    _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, controlManifest));
                     return false;
                 }
 
