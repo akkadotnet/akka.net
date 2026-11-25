@@ -97,6 +97,8 @@ namespace Akka.Tests.IO
 
             reader.Start();
             var first = await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>();
+            // The reader sends the same message instance for every read, so keep the data, not the message.
+            var firstData = first.Data;
             first.Data.Length.Should().Be(length);
             first.Data.ToArray().Should().Equal(expected);
             first.Data.IsSingleSegment.Should().Be(length <= TcpConnection.PipeReadToActor.ReadCopyChunkSize);
@@ -130,7 +132,7 @@ namespace Akka.Tests.IO
                 MemoryMarshal.TryGetArray(memory, out var owned).Should().BeTrue();
                 arrays.Contains(owned.Array!).Should().BeFalse("receiver arrays must never be reused");
             }
-            first.Data.ToArray().Should().Equal(expected, "retained bytes must survive the next pipe read");
+            firstData.ToArray().Should().Equal(expected, "retained bytes must survive the next pipe read");
             await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             await pipe.Writer.CompleteAsync();
             await pipe.Reader.CompleteAsync();
