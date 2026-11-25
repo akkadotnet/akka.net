@@ -591,6 +591,24 @@ namespace Akka.Remote.Artery
             return false;
         }
 
+        /// <summary>
+        /// Resolves a manifest to borrowed UTF-8 bytes without copying or decoding. ABSENT is empty;
+        /// COMPRESSED returns false because compression tables are not implemented. The bytes must not
+        /// be retained beyond the lifetime of this frame.
+        /// </summary>
+        public bool TryGetManifestBytes(out ReadOnlySequence<byte> manifest)
+        {
+            manifest = ReadOnlySequence<byte>.Empty;
+            if (ManifestKind == ArteryTagKind.Compressed)
+                return false;
+            if (ManifestKind == ArteryTagKind.Literal)
+            {
+                ReadLiteralBounds(Header.ManifestTag, out var dataStart, out var length);
+                manifest = _frameBody.Slice(dataStart, length);
+            }
+            return true;
+        }
+
         /// <summary>The compression-table index for a COMPRESSED sender tag. Only meaningful when <see cref="SenderKind"/> is <see cref="ArteryTagKind.Compressed"/>.</summary>
         public int SenderCompressedIndex => DecodeCompressedIndex(Header.SenderTag);
 

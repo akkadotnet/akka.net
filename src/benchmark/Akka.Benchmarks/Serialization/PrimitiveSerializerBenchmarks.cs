@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Text;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
@@ -34,6 +35,7 @@ namespace Akka.Benchmarks.Serialization
         private string _manifest = null!;
         private byte[] _bytes = null!;
         private ReadOnlySequence<byte> _sequence;
+        private ReadOnlySequence<byte> _manifestBytes;
 
         [Params("String16", "String1K", "Int32", "Int64")]
         public string Kind { get; set; } = "String16";
@@ -56,6 +58,7 @@ namespace Akka.Benchmarks.Serialization
             _v2 = _system.Serialization.FindSerializerV2For(_value);
             _serializer = _system.Serialization.FindSerializerFor(_value);
             _manifest = _serializer.Manifest(_value);
+            _manifestBytes = new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(_manifest));
             _bytes = _serializer.ToBinary(_value);
             _sequence = new ReadOnlySequence<byte>(_bytes);
             _writer = new ArrayBufferWriter<byte>(2048);
@@ -79,6 +82,12 @@ namespace Akka.Benchmarks.Serialization
 
         [Benchmark]
         public object DeserializeFromSequence() => _v2.Deserialize(_sequence, _manifest);
+
+        [Benchmark]
+        public object DeserializeWithManifestDecode() => _v2.Deserialize(_sequence, Encoding.UTF8.GetString(in _manifestBytes));
+
+        [Benchmark]
+        public object DeserializeWithManifestBytes() => _v2.Deserialize(_sequence, _manifestBytes);
 
         [Benchmark]
         public object FromBinary() => _serializer.FromBinary(_bytes, _manifest);

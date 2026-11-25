@@ -177,6 +177,30 @@ namespace Akka.Remote.Serialization
             }
         }
 
+        /// <inheritdoc />
+        public override object Deserialize(ReadOnlySequence<byte> bytes, ReadOnlySequence<byte> manifest)
+        {
+            if (Matches(manifest, "S"u8) || Matches(manifest, "System.String, System.Private.CoreLib"u8) || Matches(manifest, "System.String, mscorlib"u8))
+                return ReadString(bytes);
+            if (Matches(manifest, "I"u8) || Matches(manifest, "System.Int32, System.Private.CoreLib"u8) || Matches(manifest, "System.Int32, mscorlib"u8))
+                return ReadInt32(bytes);
+            if (Matches(manifest, "L"u8) || Matches(manifest, "System.Int64, System.Private.CoreLib"u8) || Matches(manifest, "System.Int64, mscorlib"u8))
+                return ReadInt64(bytes);
+
+            return base.Deserialize(bytes, manifest);
+        }
+
+        private static bool Matches(ReadOnlySequence<byte> manifest, ReadOnlySpan<byte> expected)
+        {
+            if (manifest.Length != expected.Length)
+                return false;
+            if (manifest.IsSingleSegment)
+                return manifest.FirstSpan.SequenceEqual(expected);
+
+            var reader = new SequenceReader<byte>(manifest);
+            return reader.IsNext(expected);
+        }
+
         private static string ReadString(in ReadOnlySequence<byte> bytes)
         {
             return bytes.IsSingleSegment

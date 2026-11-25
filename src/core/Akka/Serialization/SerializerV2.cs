@@ -7,6 +7,7 @@
 
 #nullable enable
 using System.Buffers;
+using System.Text;
 using Akka.Actor;
 
 namespace Akka.Serialization
@@ -56,6 +57,18 @@ namespace Akka.Serialization
         /// Deserializes <paramref name="bytes"/> using a serializer manifest.
         /// </summary>
         public abstract object Deserialize(ReadOnlySequence<byte> bytes, string manifest);
+
+        /// <summary>
+        /// Deserializes a sequence-backed payload using a UTF-8 manifest. An empty sequence means an empty manifest.
+        /// </summary>
+        /// <remarks>
+        /// The manifest is borrowed for this call only and must not be retained. Override to match bytes
+        /// directly; the default decodes UTF-8 using replacement fallback and calls the string overload.
+        /// </remarks>
+        public virtual object Deserialize(ReadOnlySequence<byte> bytes, ReadOnlySequence<byte> manifest)
+        {
+            return Deserialize(bytes, Encoding.UTF8.GetString(in manifest));
+        }
 
         /// <summary>
         /// Serializes the given object into a byte array for compatibility boundaries.

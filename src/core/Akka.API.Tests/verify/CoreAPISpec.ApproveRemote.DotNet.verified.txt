@@ -477,6 +477,7 @@ namespace Akka.Remote.Serialization
     {
         public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override int Identifier { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, System.Buffers.ReadOnlySequence<byte> manifest) { }
         public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
