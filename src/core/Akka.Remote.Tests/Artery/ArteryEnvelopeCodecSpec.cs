@@ -274,6 +274,46 @@ namespace Akka.Remote.Tests.Artery
 
         // ===================== rejections =====================
 
+        [Fact(DisplayName = "Should_borrow_manifest_bytes_When_literals_span_segments")]
+        public void Manifest_bytes_preserve_wire_slices_and_tag_semantics()
+        {
+            var utf8 = Encoding.UTF8.GetBytes("System.String, System.Private.CoreLib");
+            var body = BodyWithSharedLiteral(utf8);
+            for (var split = 1; split < body.Length; split++)
+            {
+                var decoded = ArteryEnvelopeCodec.Decode(TwoSegment(body, split));
+                Assert.True(decoded.TryGetManifestBytes(out var raw));
+                Assert.Equal(utf8, raw.ToArray());
+                var serializer = new Akka.Remote.Serialization.PrimitiveSerializers(null!,
+                    Akka.Configuration.ConfigurationFactory.ParseString("use-legacy-behavior = on"));
+                Assert.Equal("hello", serializer.Deserialize(new ReadOnlySequence<byte>("hello"u8.ToArray()), raw));
+                var envelope = new InboundEnvelope("hello", null, null, 0, 17, string.Empty) { Frame = decoded };
+                Assert.Equal(Encoding.UTF8.GetString(utf8), envelope.Manifest);
+            }
+
+            foreach (var tag in new[] { 0u, ArteryEnvelopeHeader.CompressedTagMask | 7u, 10u, (uint)HeaderLength })
+            {
+                var header = BuildRawHeader(version: ArteryEnvelopeHeader.CurrentVersion, flags: 0, originUid: 0,
+                    serializerId: 17, senderTag: 0, recipientTag: 0, manifestTag: tag, payloadOffset: HeaderLength);
+                var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(header));
+                if (tag == 0)
+                {
+                    Assert.True(decoded.TryGetManifestBytes(out var raw));
+                    Assert.True(raw.IsEmpty);
+                }
+                else if ((tag & ArteryEnvelopeHeader.CompressedTagMask) != 0)
+                {
+                    Assert.False(decoded.TryGetManifestBytes(out _));
+                    Assert.Equal(7, decoded.ManifestCompressedIndex);
+                }
+                else
+                {
+                    Assert.Throws<ArteryEnvelopeException>(() => decoded.TryGetManifest(out _));
+                    Assert.Throws<ArteryEnvelopeException>(() => decoded.TryGetManifestBytes(out _));
+                }
+            }
+        }
+
         [Fact(DisplayName = "Should_throw_ArteryEnvelopeException_When_the_version_is_not_1")]
         public void Should_throw_ArteryEnvelopeException_When_the_version_is_not_1()
         {

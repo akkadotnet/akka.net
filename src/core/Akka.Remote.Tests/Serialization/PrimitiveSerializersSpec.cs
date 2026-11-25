@@ -185,6 +185,18 @@ namespace Akka.Remote.Tests.Serialization
 
             serializer.FromBinary(bytes, manifest).Should().Be(expected);
             serializer.Deserialize(new ReadOnlySequence<byte>(bytes), manifest).Should().Be(expected);
+            var utf8 = Encoding.UTF8.GetBytes(manifest);
+            Check(new ReadOnlySequence<byte>(utf8));
+            for (var split = 0; split <= utf8.Length; split++)
+                Check(Segments(utf8, split));
+
+            void Check(ReadOnlySequence<byte> raw)
+            {
+                serializer.FromBinary(bytes, raw).Should().Be(expected);
+                serializer.Deserialize(Segments(bytes, bytes.Length / 2), raw).Should().Be(expected);
+                Sys.Serialization.Deserialize(bytes, serializer.Identifier, raw).Should().Be(expected);
+                Sys.Serialization.Deserialize(new ReadOnlySequence<byte>(bytes), serializer.Identifier, raw).Should().Be(expected);
+            }
         }
 
         [Theory(DisplayName = "Should_ReadLegacyBytes_When_ReadingGoldenCorpus")]
@@ -212,6 +224,31 @@ namespace Akka.Remote.Tests.Serialization
                 .WithMessage("Unimplemented deserialization of message with manifest [bogus] in *");
             deserialize.Should().Throw<ArgumentException>()
                 .WithMessage("Unimplemented deserialization of message with manifest [bogus] in *");
+        }
+
+        [Theory(DisplayName = "Should_preserve_unknown_manifest_errors_When_using_bytes")]
+        [InlineData("")]
+        [InlineData("bogus-Ω")]
+        [InlineData("S-extra")]
+        [InlineData("System.String, System.Private.CoreLib-extra")]
+        [InlineData("System.Int32, mscorlib-extra")]
+        public void Unknown_byte_manifests_preserve_errors(string manifest)
+        {
+            var serializer = Sys.Serialization.FindSerializerV2For("x");
+            var bytes = new byte[] { 1, 2, 3, 4 };
+            var utf8 = Encoding.UTF8.GetBytes(manifest);
+            Check(new ReadOnlySequence<byte>(utf8));
+            for (var split = 0; split <= utf8.Length; split++)
+                Check(Segments(utf8, split));
+            Check(Segments(new byte[] { 0xE2, 0x82, 0x28 }, 1));
+
+            void Check(ReadOnlySequence<byte> raw)
+            {
+                var text = Encoding.UTF8.GetString(in raw);
+                var expected = Assert.Throws<ArgumentException>(() => serializer.FromBinary(bytes, text));
+                Assert.Equal(expected.Message, Assert.Throws<ArgumentException>(() => serializer.FromBinary(bytes, raw)).Message);
+                Assert.Equal(expected.Message, Assert.Throws<ArgumentException>(() => serializer.Deserialize(new ReadOnlySequence<byte>(bytes), raw)).Message);
+            }
         }
 
         [Fact(DisplayName = "Should_DecodeString_When_SplitAtEveryByteOffset")]

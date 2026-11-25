@@ -661,7 +661,7 @@ namespace Akka.Remote.Artery
             {
                 var decoded = ArteryEnvelopeCodec.Decode(frameBody);
 
-                if (!decoded.TryGetManifest(out var manifest))
+                if (!decoded.TryGetManifestBytes(out var manifest))
                 {
                     Log.Warning("Dropping inbound Artery frame: COMPRESSED manifest tag (ref/manifest compression is not implemented at G2).");
                     return null;
@@ -670,7 +670,7 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
-                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, string.Empty) { Frame = decoded };
 
                 var recipientKind = decoded.RecipientKind;
                 if (recipientKind == ArteryTagKind.Compressed)
@@ -689,7 +689,7 @@ namespace Akka.Remote.Artery
                 }
 
                 // The dispatcher decodes the sender and recipient literals, and only when needed.
-                return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest)
+                return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, string.Empty)
                 {
                     Frame = decoded
                 };
@@ -808,11 +808,11 @@ namespace Akka.Remote.Artery
                             // The dispatcher decodes the sender and recipient literals, and only
                             // when needed.
                             ArteryEnvelopeDecoded decoded;
-                            string manifest;
+                            ReadOnlySequence<byte> manifest;
                             try
                             {
                                 decoded = ArteryEnvelopeCodec.Decode(item.FrameBody);
-                                decoded.TryGetManifest(out manifest);
+                                decoded.TryGetManifestBytes(out manifest);
                             }
                             catch (Exception ex)
                             {
@@ -831,7 +831,7 @@ namespace Akka.Remote.Artery
                                     ex,
                                     "Transient error deserializing/dispatching an inbound Artery lane message " +
                                     "(serializer id [{0}], manifest [{1}]); connection remains live.",
-                                    decoded.Header.SerializerId, manifest);
+                                    decoded.Header.SerializerId, Encoding.UTF8.GetString(in manifest));
                             }
                         }
                     }
@@ -880,10 +880,8 @@ namespace Akka.Remote.Artery
             {
                 var decoded = ArteryEnvelopeCodec.Decode(frameBody);
 
-                // The manifest string is NOT decoded here: only its tag kind is checked. It is decoded
-                // below, only on the rare branches that need it (control-classified frame,
-                // quarantined origin), and otherwise on the lane.
-                var manifest = string.Empty;
+                // Resolve borrowed manifest bytes only on the thread that deserializes this frame.
+                var manifest = ReadOnlySequence<byte>.Empty;
                 if (decoded.ManifestKind == ArteryTagKind.Compressed)
                 {
                     Log.Warning("Dropping inbound Artery frame: COMPRESSED manifest tag (ref/manifest compression is not implemented at G2).");
@@ -898,9 +896,9 @@ namespace Akka.Remote.Artery
                     // InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound still see it.
                     // Draining stops here until those stages have handled it, so a later frame of the
                     // same read is checked only after, e.g., a handshake has registered its origin.
-                    decoded.TryGetManifest(out manifest);
+                    decoded.TryGetManifestBytes(out manifest);
                     var controlPayload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
-                    _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest));
+                    _pending.Enqueue(new InboundEnvelope(controlPayload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, string.Empty) { Frame = decoded });
                     return false;
                 }
 
@@ -965,7 +963,7 @@ namespace Akka.Remote.Artery
                     object quarantinedMessage;
                     try
                     {
-                        decoded.TryGetManifest(out manifest);
+                        decoded.TryGetManifestBytes(out manifest);
                         quarantinedMessage = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
                     }
                     catch (Exception ex)
@@ -1057,7 +1055,7 @@ namespace Akka.Remote.Artery
             /// </summary>
             private bool DispatchInline(in ArteryEnvelopeDecoded decoded)
             {
-                decoded.TryGetManifest(out var manifest);
+                decoded.TryGetManifestBytes(out var manifest);
                 var message = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
                 _stage.DispatchOrdinary!(message, decoded, _inlineSenders);
                 return true;
