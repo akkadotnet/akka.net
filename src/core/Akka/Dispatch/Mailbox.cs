@@ -580,7 +580,8 @@ namespace Akka.Dispatch
 #if !NETSTANDARD
         public void Execute()
         {
-            Run();
+            // Only the default thread-pool executor queues a mailbox as a pool work item.
+            FullThreadPoolExecutorServiceImpl.RunChained(this);
         }
 #endif
     }
