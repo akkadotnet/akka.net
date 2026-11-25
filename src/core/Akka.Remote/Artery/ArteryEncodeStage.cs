@@ -61,6 +61,7 @@ namespace Akka.Remote.Artery
         /// </summary>
         /// <param name="serialization">The sending actor system's <see cref="Akka.Serialization.Serialization"/> extension.</param>
         /// <param name="originUid">The sending system's UID, stamped into every encoded envelope's fixed header.</param>
+        /// <param name="localAddress">The address a sender given as a path is formatted with.</param>
         /// <param name="pool">
         /// The <see cref="ArrayPool{T}"/> every encode call rents its buffer from (and downstream
         /// later returns it to). <see langword="null"/> (the default -- always the production value)
@@ -68,17 +69,22 @@ namespace Akka.Remote.Artery
         /// substitute a pool that scribbles over a returned array -- the "poison pool" regression
         /// suite -- turning a lifetime-safety bug into a loud, deterministic assertion failure.
         /// </param>
-        public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid, ArrayPool<byte>? pool = null)
+        public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid,
+            Akka.Actor.Address localAddress, ArrayPool<byte>? pool = null)
         {
             Serialization = serialization ?? throw new ArgumentNullException(nameof(serialization));
             OriginUid = originUid;
             Pool = pool;
+            LocalAddress = localAddress ?? throw new ArgumentNullException(nameof(localAddress));
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 
         public Akka.Serialization.Serialization Serialization { get; }
         public long OriginUid { get; }
         public ArrayPool<byte>? Pool { get; }
+
+        /// <summary>The address an envelope's <see cref="IOutboundEnvelope.SenderActorPath"/> is formatted with.</summary>
+        public Akka.Actor.Address LocalAddress { get; }
 
         public Inlet<IOutboundEnvelope> In { get; } = new("ArteryEncode.in");
         public Outlet<ReadOnlySequence<byte>> Out { get; } = new("ArteryEncode.out");
@@ -112,7 +118,7 @@ namespace Akka.Remote.Artery
                 // behavior of failing the whole outbound stream on an encode error).
                 var writer = ArteryEnvelopeCodec.Encode(
                     _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool,
-                    elem.SenderId, elem.RecipientId, elem.RecipientPathUtf8, _writer);
+                    elem.SenderId, elem.RecipientId, elem.RecipientPathUtf8, _writer, elem.SenderActorPath, _stage.LocalAddress);
                 _writer = writer;
 
                 // DetachSequence moves the encoded, pooled buffer into one OwnedSequenceSegment that
