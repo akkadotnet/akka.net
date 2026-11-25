@@ -8,6 +8,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -429,8 +430,16 @@ channel-executor.priority = normal");
         /// </summary>
         public MessageDispatcherConfigurator Configurator { get; private set; }
 
-        private long _inhabitantsDoNotCallMeDirectly;
-        private int _shutdownScheduleDoNotCallMeDirectly;
+        // Written on every actor start and stop. Padded so these writes do not invalidate the line holding
+        // Throughput and ThroughputDeadlineTime, which every mailbox run on every thread reads.
+        [StructLayout(LayoutKind.Explicit, Size = 3 * 64)]
+        private struct PaddedCounters
+        {
+            [FieldOffset(64)] public long Inhabitants;
+            [FieldOffset(72)] public int ShutdownSchedule;
+        }
+
+        private PaddedCounters _countersDoNotCallMeDirectly;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MessageDispatcher" /> class.
@@ -483,12 +492,12 @@ channel-executor.priority = normal");
         /// <summary>
         /// The number of actors attached to this <see cref="MessageDispatcher"/>
         /// </summary>
-        protected long Inhabitants => Volatile.Read(ref _inhabitantsDoNotCallMeDirectly);
+        protected long Inhabitants => Volatile.Read(ref _countersDoNotCallMeDirectly.Inhabitants);
 
         private long AddInhabitants(long add)
         {
             // Interlocked.Add returns the NEW value, not the previous one - which is why this line is different from the JVM
-            var ret = Interlocked.Add(ref _inhabitantsDoNotCallMeDirectly, add);
+            var ret = Interlocked.Add(ref _countersDoNotCallMeDirectly.Inhabitants, add);
             if (ret < 0)
             {
                 // We haven't succeeded in decreasing the inhabitants yet but the simple fact that we're trying to
@@ -502,11 +511,11 @@ channel-executor.priority = normal");
             return ret;
         }
 
-        private int ShutdownSchedule => Volatile.Read(ref _shutdownScheduleDoNotCallMeDirectly);
+        private int ShutdownSchedule => Volatile.Read(ref _countersDoNotCallMeDirectly.ShutdownSchedule);
 
         private bool UpdateShutdownSchedule(int expected, int update)
         {
-            return Interlocked.CompareExchange(ref _shutdownScheduleDoNotCallMeDirectly, update, expected) == expected;
+            return Interlocked.CompareExchange(ref _countersDoNotCallMeDirectly.ShutdownSchedule, update, expected) == expected;
         }
 
         /// <summary>

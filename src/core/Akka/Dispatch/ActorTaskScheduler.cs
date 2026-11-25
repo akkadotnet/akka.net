@@ -187,6 +187,24 @@ namespace Akka.Dispatch
 
         private static void OnTaskStarted(ActorTaskScheduler actorScheduler, Task<Task> started)
         {
+            // RunTask is called on the actor's thread, so QueueTask has already run the handler inline. When the task
+            // it returned has completed successfully, the continuation below would be queued to this scheduler and run
+            // inline straight away; run the same completion directly instead of allocating the continuation task.
+            // Faulted, cancelled and incomplete tasks keep the continuation, so failures still reach supervision
+            // through ActorTaskSchedulerMessage exactly as before.
+            //
+            // Only the base scheduler takes this path. On the continuation path a subclass's OnAfterTaskCompleted (and
+            // TestKit's IAsyncResultInterceptor) runs inside the continuation task, so ExecutionContext changes it
+            // makes (such as clearing Activity.Current) and exceptions it throws stay inside that task instead of
+            // reaching the rest of the actor's receive.
+            if (actorScheduler.GetType() == typeof(ActorTaskScheduler)
+                && started.Status == TaskStatus.RanToCompletion
+                && started.Result is { Status: TaskStatus.RanToCompletion } completed)
+            {
+                actorScheduler.OnTaskCompleted(completed, null);
+                return;
+            }
+
             started.Unwrap().ContinueWith(actorScheduler._onTaskCompleted, null, actorScheduler);
         }
 

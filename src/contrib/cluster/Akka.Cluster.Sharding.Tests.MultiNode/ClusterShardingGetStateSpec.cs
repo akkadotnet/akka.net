@@ -5,15 +5,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Util;
 using FluentAssertions;
+using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -50,7 +55,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private sealed class MessageExtractor: IMessageExtractor
         {
-            public string EntityId(object message)
+            public string? EntityId(object message)
                 => message switch
                 {
                     PingPongActor.Ping p => p.Id.ToString(),
@@ -60,14 +65,14 @@ namespace Akka.Cluster.Sharding.Tests
             public object EntityMessage(object message)
                 => message;
 
-            public string ShardId(object message)
+            public string? ShardId(object message)
                 => message switch
                 {
                     PingPongActor.Ping p => (p.Id % NumberOfShards).ToString(),
                     _ => null
                 };
 
-            public string ShardId(string entityId, object messageHint = null)
+            public string ShardId(string entityId, object? messageHint = null)
                 => (int.Parse(entityId) % NumberOfShards).ToString();
         }
 
@@ -84,26 +89,33 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void Inspecting_cluster_sharding_state_specs()
+        public async Task Inspecting_cluster_sharding_state_specs()
         {
-            Inspecting_cluster_sharding_state_must_join_cluster();
-            Inspecting_cluster_sharding_state_must_return_empty_state_when_no_sharded_actors_has_started();
-            Inspecting_cluster_sharding_state_must_trigger_sharded_actors();
-            Inspecting_cluster_sharding_state_must_get_shard_state();
+            var cancellationToken = TestContext.Current.CancellationToken;
+            await StartShardingOnClusterAsync(cancellationToken);
+            var hostingRegions = new[]
+            {
+                (await NodeAsync(Config.First, cancellationToken)).Address,
+                (await NodeAsync(Config.Second, cancellationToken)).Address
+            };
+            await AssertEmptyShardStateAsync(hostingRegions, cancellationToken);
+            await StartEntitiesAsync(cancellationToken);
+            await AssertPopulatedShardStateAsync(hostingRegions, cancellationToken);
         }
 
-        private void Inspecting_cluster_sharding_state_must_join_cluster()
+        private async Task StartShardingOnClusterAsync(CancellationToken cancellationToken)
         {
-            Join(Config.Controller, Config.Controller);
-            Join(Config.First, Config.Controller);
-            Join(Config.Second, Config.Controller);
+            await JoinAsync(Config.Controller, Config.Controller, cancellationToken: cancellationToken);
+            await JoinAsync(Config.First, Config.Controller, cancellationToken: cancellationToken);
+            await JoinAsync(Config.Second, Config.Controller, cancellationToken: cancellationToken);
 
-            // make sure all nodes are up
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 Cluster.Get(Sys).SendCurrentClusterState(TestActor);
-                ExpectMsg<ClusterEvent.CurrentClusterState>().Members.Count.Should().Be(3);
-            });
+                var state = await ExpectMsgAsync<ClusterEvent.CurrentClusterState>(
+                    TimeSpan.FromSeconds(1), cancellationToken: cancellationToken);
+                state.Members.Count.Should().Be(3);
+            }, cancellationToken: cancellationToken);
 
             RunOn(() =>
             {
@@ -124,71 +136,67 @@ namespace Akka.Cluster.Sharding.Tests
                     messageExtractor: new MessageExtractor());
             }, Config.First, Config.Second);
 
-            EnterBarrier("sharding started");
+            await EnterBarrierAsync(cancellationToken, "sharding started");
         }
 
-        private void Inspecting_cluster_sharding_state_must_return_empty_state_when_no_sharded_actors_has_started()
+        private async Task AssertEmptyShardStateAsync(Address[] hostingRegions, CancellationToken cancellationToken)
         {
-            AwaitAssert(() =>
-            {
-                var probe = CreateTestProbe();
-                var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
-                region.Tell(GetCurrentRegions.Instance, probe.Ref);
-                probe.ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(0);
-            });
+            // The start barrier only waits for the region actors to be created.
+            await AwaitAssertAsync(() => AssertRegisteredRegionsAsync(hostingRegions, cancellationToken),
+                TimeSpan.FromSeconds(20), cancellationToken: cancellationToken);
 
-            EnterBarrier("empty sharding");
+            var states = await GetShardRegionStatesAsync(hostingRegions, cancellationToken);
+            foreach (var state in states)
+            {
+                state.Failed.Should().BeEmpty();
+                state.Shards.Should().BeEmpty();
+            }
+
+            await EnterBarrierAsync(cancellationToken, "empty sharding");
         }
 
-        private void Inspecting_cluster_sharding_state_must_trigger_sharded_actors()
+        private async Task StartEntitiesAsync(CancellationToken cancellationToken)
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
-
-                Within(TimeSpan.FromSeconds(10), () =>
-                {
-                    AwaitAssert(() =>
-                    {
-                        var pingProbe = CreateTestProbe();
-                        // trigger starting of 4 entities
-                        foreach (var n in Enumerable.Range(1, 4))
-                        {
-                            region.Tell(new PingPongActor.Ping(n), pingProbe.Ref);
-                        }
-                        pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
-                    });
-                });
+                await Task.WhenAll(Enumerable.Range(1, 4).Select(id => region.Ask<PingPongActor.Pong>(
+                    new PingPongActor.Ping(id), TimeSpan.FromSeconds(10), cancellationToken)));
             }, Config.Controller);
 
-            EnterBarrier("sharded actors started");
+            await EnterBarrierAsync(cancellationToken, "sharded actors started");
         }
 
-        private void Inspecting_cluster_sharding_state_must_get_shard_state()
+        private async Task AssertPopulatedShardStateAsync(Address[] hostingRegions, CancellationToken cancellationToken)
         {
-            Within(TimeSpan.FromSeconds(10), () =>
+            await AwaitAssertAsync(async () =>
             {
-                AwaitAssert(() =>
-                {
-                    var probe = CreateTestProbe();
-                    var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
-                    region.Tell(GetCurrentRegions.Instance, probe.Ref);
-                    var regions = probe.ExpectMsg<CurrentRegions>().Regions;
-                    regions.Count.Should().Be(2);
+                await AssertRegisteredRegionsAsync(hostingRegions, cancellationToken);
+                var states = await GetShardRegionStatesAsync(hostingRegions, cancellationToken);
+                states.Should().OnlyContain(state => state.Failed.Count == 0);
+                var allEntityIds = states.SelectMany(state => state.Shards)
+                    .SelectMany(shard => shard.EntityIds).ToImmutableHashSet();
+                allEntityIds.Should().BeEquivalentTo(new[] { "1", "2", "3", "4" });
+            }, TimeSpan.FromSeconds(10), cancellationToken: cancellationToken);
 
-                    foreach (var r in regions)
-                    {
-                        var path = new RootActorPath(r) / "system" / "sharding" / ShardTypeName;
-                        Sys.ActorSelection(path).Tell(GetShardRegionState.Instance, probe.Ref);
-                    }
-
-                    var states = probe.ReceiveWhile(null, m => (CurrentShardRegionState)m, regions.Count);
-                    var allEntityIds = states.SelectMany(i => i.Shards).SelectMany(j => j.EntityIds).ToImmutableHashSet();
-                    allEntityIds.Should().BeEquivalentTo(new string[] { "1", "2", "3", "4" });
-                });
-            });
-
-            EnterBarrier("done");
+            await EnterBarrierAsync(cancellationToken, "done");
         }
+
+        private async Task AssertRegisteredRegionsAsync(Address[] hostingRegions, CancellationToken cancellationToken)
+        {
+            var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
+            var current = await region.Ask<CurrentRegions>(
+                GetCurrentRegions.Instance, TimeSpan.FromSeconds(1), cancellationToken);
+            current.Regions.Should().BeEquivalentTo(hostingRegions);
+        }
+
+        private Task<CurrentShardRegionState[]> GetShardRegionStatesAsync(
+            Address[] hostingRegions, CancellationToken cancellationToken)
+            => Task.WhenAll(hostingRegions.Select(address =>
+            {
+                var path = new RootActorPath(address) / "system" / "sharding" / ShardTypeName;
+                return Sys.ActorSelection(path).Ask<CurrentShardRegionState>(
+                    GetShardRegionState.Instance, TimeSpan.FromSeconds(5), cancellationToken);
+            }));
     }
 }
