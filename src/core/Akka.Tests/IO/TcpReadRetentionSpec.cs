@@ -13,10 +13,12 @@ namespace Akka.Tests.IO;
 
 public class TcpReadRetentionSpec : AkkaSpec
 {
+    private const int Chunk = TcpConnection.PipeReadToActor.ReadCopyChunkSize;
+
     public TcpReadRetentionSpec(ITestOutputHelper output) : base(output) { }
 
     [Theory(DisplayName = "TCP split geometry is correct with awkward source segments")]
-    [InlineData(131073)]
+    [InlineData(2 * Chunk + 1)]
     public async Task Should_preserve_sequence_geometry_from_awkward_source(int length)
     {
         var expected = new byte[length];
@@ -48,10 +50,10 @@ public class TcpReadRetentionSpec : AkkaSpec
         var count = 0;
         foreach (var memory in data)
         {
-            Assert.InRange(memory.Length, 1, 65536);
+            Assert.InRange(memory.Length, 1, Chunk);
             count++;
         }
-        Assert.Equal((length + 65535) / 65536, count);
+        Assert.Equal((length + Chunk - 1) / Chunk, count);
         if (data.Start.GetObject() is ReadOnlySequenceSegment<byte> segment)
         {
             long running = 0;
@@ -64,7 +66,7 @@ public class TcpReadRetentionSpec : AkkaSpec
             }
             Assert.Equal(length, running);
             Assert.Equal(0, data.Start.GetInteger());
-            Assert.Equal(length % 65536 == 0 ? 65536 : length % 65536, data.End.GetInteger());
+            Assert.Equal(length % Chunk == 0 ? Chunk : length % Chunk, data.End.GetInteger());
         }
     }
 

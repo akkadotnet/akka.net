@@ -79,9 +79,9 @@ namespace Akka.Tests.IO
         }
 
         [Theory(DisplayName = "PipeReadToActor should deliver one complete read in fresh independent arrays below the LOH threshold")]
-        [InlineData(64 * 1024)]
-        [InlineData(64 * 1024 + 1)]
-        [InlineData(2 * 64 * 1024 + 29)]
+        [InlineData(TcpConnection.PipeReadToActor.ReadCopyChunkSize)]
+        [InlineData(TcpConnection.PipeReadToActor.ReadCopyChunkSize + 1)]
+        [InlineData(2 * TcpConnection.PipeReadToActor.ReadCopyChunkSize + 29)]
         public async Task Should_deliver_owned_chunks_and_retain_them_across_reads(int length)
         {
             var pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 0));

@@ -22,7 +22,7 @@ public class TcpRetainedReadSpec : AkkaSpec
     public async Task Should_preserve_retained_delivery_when_tail_is_written()
     {
         var pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 0));
-        var expected = new byte[65537];
+        var expected = new byte[TcpConnection.PipeReadToActor.ReadCopyChunkSize + 1];
         new Random(17).NextBytes(expected);
         await pipe.Writer.WriteAsync(expected);
         var probe = CreateTestProbe();
@@ -30,7 +30,7 @@ public class TcpRetainedReadSpec : AkkaSpec
         reader.Start();
         var delivered = (await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>()).Data;
         Assert.Equal(expected.Length, delivered.Length);
-        var tail = delivered.Slice(65536);
+        var tail = delivered.Slice(TcpConnection.PipeReadToActor.ReadCopyChunkSize);
         var completion = Source.Single(tail)
             .Via(new IncomingConnectionStage(probe.Ref, new IPEndPoint(IPAddress.Loopback, 1), true))
             .RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), Sys.Materializer());

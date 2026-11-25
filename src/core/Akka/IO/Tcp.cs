@@ -668,7 +668,7 @@ namespace Akka.IO
         /// <remarks>
         /// <see cref="Data"/> is a <see cref="ReadOnlySequence{T}"/> and can have more than one
         /// segment. The actor copies the pipe's pooled segments into fresh arrays before delivery:
-        /// one array for a read of up to 64 KiB, and several arrays of at most 64 KiB each for a
+        /// one array for a read of up to 80 KiB, and several arrays of at most 80 KiB each for a
         /// larger read. Consume the whole sequence rather than only its first segment. The arrays
         /// belong to the receiver and are safe to retain.
         /// </remarks>

@@ -29,12 +29,13 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
     private const string SenderPath = "akka://peer@127.0.0.1:4321/user/sender-é😀";
     private const string RecipientPath = "akka://local/user/receiver-é😀";
     private const string WireManifest = "boundary-é😀";
+    private const int Chunk = TcpConnection.PipeReadToActor.ReadCopyChunkSize;
 
     [Fact(DisplayName = "Artery frames match contiguous decoding at every field byte and nearby TCP chunk offset")]
     public async Task Should_match_contiguous_decoding_across_chunk_boundary_sweep()
     {
         var probe = CreateTestProbe();
-        foreach (var size in new[] { 0, 1, 65535, 65536, 65537, 131073, 1024 * 1024 })
+        foreach (var size in new[] { 0, 1, Chunk - 1, Chunk, Chunk + 1, 2 * Chunk + 1, 1024 * 1024 })
         {
             var payload = new byte[size];
             new Random(size).NextBytes(payload);
@@ -46,7 +47,7 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
             foreach (var offset in offsets)
             {
                 var empty = Frame(RecipientPath, Array.Empty<byte>());
-                var boundary = ((offset + empty.Length + 65535) / 65536) * 65536;
+                var boundary = ((offset + empty.Length + Chunk - 1) / Chunk) * Chunk;
                 var padding = Frame(RecipientPath, new byte[boundary - offset - empty.Length]);
                 var wire = padding.Concat(target).Concat(empty).ToArray();
                 var pipe = new System.IO.Pipelines.Pipe(new System.IO.Pipelines.PipeOptions(pauseWriterThreshold: 0));
@@ -90,19 +91,19 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
     [InlineData(4)]
     public async Task Should_decode_all_engineered_boundary_offsets(int lanes)
     {
-        var payload = new byte[65537];
+        var payload = new byte[Chunk + 1];
         new Random(91).NextBytes(payload);
         var target = Frame(RecipientPath, payload);
         var payloadStart = target.Length - payload.Length;
         // Every internal byte of the 4-byte prefix, 48-byte fixed header,
         // all three literal lengths and UTF-8 data, plus payload boundaries.
         var offsets = Enumerable.Range(1, payloadStart + 2)
-            .Concat(new[] { payloadStart + 65535, payloadStart + 65536 }).ToArray();
+            .Concat(new[] { payloadStart + Chunk - 1, payloadStart + Chunk }).ToArray();
         var materializer = Sys.Materializer();
         foreach (var offset in offsets)
         {
             var overhead = 5 + Frame(RecipientPath, Array.Empty<byte>()).Length;
-            var boundary = ((offset + overhead + 65535) / 65536) * 65536;
+            var boundary = ((offset + overhead + Chunk - 1) / Chunk) * Chunk;
             var padding = Frame(RecipientPath, new byte[boundary - offset - overhead]);
             var wire = new byte[] { 65, 75, 75, 65, (byte)ArteryStreamId.Ordinary }.Concat(padding).Concat(target).ToArray();
             var pipe = new System.IO.Pipelines.Pipe(new System.IO.Pipelines.PipeOptions(pauseWriterThreshold: 0));
@@ -110,7 +111,7 @@ public sealed class ArteryReadBoundarySpec : AkkaSpec
             await pipe.Writer.WriteAsync(wire);
             new TcpConnection.PipeReadToActor(pipe.Reader, CancellationToken.None, probe.Ref).Start();
             var data = (await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>()).Data;
-            Assert.Equal(65536, data.First.Length);
+            Assert.Equal(Chunk, data.First.Length);
             Assert.Equal(target[offset], data.Slice(boundary, 1).FirstSpan[0]);
             var registry = new AssociationRegistry();
             var context = new AssociationRegistryInboundContext(registry,

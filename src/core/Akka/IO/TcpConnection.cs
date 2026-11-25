@@ -1036,8 +1036,8 @@ namespace Akka.IO
         /// </summary>
         internal sealed class PipeReadToActor
         {
-            // Fresh receiver-owned arrays stay well below the 85,000-byte LOH threshold, including headers.
-            internal const int ReadCopyChunkSize = 64 * 1024;
+            // Fresh receiver-owned arrays stay below the 85,000-byte LOH threshold, including headers.
+            internal const int ReadCopyChunkSize = 80 * 1024;
 
             // Links are set only while building a delivery, before it is published to the receiver.
             // Keep these separate from write-owned segments: write coalescing must wrap, never move them.
