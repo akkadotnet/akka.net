@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Text;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -1116,6 +1117,50 @@ namespace Akka.Serialization
             finally
             {
                 Serialization.CurrentTransportInformation = oldInfo;
+            }
+        }
+
+        /// <summary>
+        /// Deserializes a byte array using a borrowed UTF-8 manifest, which must not be retained by the serializer.
+        /// </summary>
+        public object Deserialize(byte[] bytes, int serializerId, ReadOnlySequence<byte> manifest)
+        {
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                return Deserialize(bytes, serializerId, Encoding.UTF8.GetString(in manifest));
+
+            var oldInfo = CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    CurrentTransportInformation = SerializationInfo;
+
+                return serializer.FromBinary(bytes, manifest);
+            }
+            finally
+            {
+                CurrentTransportInformation = oldInfo;
+            }
+        }
+
+        /// <summary>
+        /// Deserializes sequence-backed bytes using a borrowed UTF-8 manifest, which must not be retained by the serializer.
+        /// </summary>
+        public object Deserialize(ReadOnlySequence<byte> bytes, int serializerId, ReadOnlySequence<byte> manifest)
+        {
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                return Deserialize(bytes, serializerId, Encoding.UTF8.GetString(in manifest));
+
+            var oldInfo = CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    CurrentTransportInformation = SerializationInfo;
+
+                return serializer.Deserialize(bytes, manifest);
+            }
+            finally
+            {
+                CurrentTransportInformation = oldInfo;
             }
         }
 

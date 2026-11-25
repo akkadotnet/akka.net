@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
+using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -122,6 +124,18 @@ namespace Akka.Serialization
                     "or register the type through a SerializationSetup.");
 
             return FromBinaryReflecting(bytes, manifest);
+        }
+
+        /// <summary>
+        /// Deserializes a byte array using a UTF-8 manifest. An empty sequence means an empty manifest.
+        /// </summary>
+        /// <remarks>
+        /// The manifest is borrowed for this call only and must not be retained. The default implementation
+        /// decodes UTF-8 using replacement fallback and calls the existing string overload.
+        /// </remarks>
+        public virtual object FromBinary(byte[] bytes, ReadOnlySequence<byte> manifest)
+        {
+            return FromBinary(bytes, Encoding.UTF8.GetString(in manifest));
         }
 
         [RequiresUnreferencedCode("Resolves manifest to a Type by reflection through TypeCache. The trimmer cannot tell which type that is, so it may have been trimmed away.")]
