@@ -178,12 +178,6 @@ namespace Akka.Remote.Serialization
         }
 
         /// <inheritdoc />
-        public override object FromBinary(byte[] bytes, ReadOnlySequence<byte> manifest)
-        {
-            return Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
-        }
-
-        /// <inheritdoc />
         public override object Deserialize(ReadOnlySequence<byte> bytes, ReadOnlySequence<byte> manifest)
         {
             if (Matches(manifest, "S"u8) || Matches(manifest, "System.String, System.Private.CoreLib"u8) || Matches(manifest, "System.String, mscorlib"u8))

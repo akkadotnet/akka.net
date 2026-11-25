@@ -42,29 +42,13 @@ public class ManifestBytesSpec : AkkaSpec
             var native = new Native((ExtendedActorSystem)Sys);
             Sys.Serialization.AddSerializer("manifest-bytes-legacy", legacy);
             Sys.Serialization.AddSerializer("manifest-bytes-native", native);
-            Assert.Equal(expected, legacy.FromBinary(bytes, raw));
             foreach (var serializer in new Serializer[] { legacy, native })
             {
-                Assert.Equal(expected, Sys.Serialization.Deserialize(bytes, serializer.Identifier, raw));
                 Assert.Equal(expected, Sys.Serialization.Deserialize(new ReadOnlySequence<byte>(bytes), serializer.Identifier, raw));
                 Assert.Equal(expected, serializer.FromBinary(bytes, expected));
-                Assert.Equal(expected, serializer.FromBinary(bytes, raw));
             }
             Assert.Null(Akka.Serialization.Serialization.CurrentTransportInformation);
         }
-    }
-
-    [Fact(DisplayName = "Should_forward_byte_opt_in_When_using_V1_adapter")]
-    public void Adapter_forwards_opt_in()
-    {
-        var array = new byte[] { 1, 2, 3 };
-        var arraySerializer = new ByteArraySerializer((ExtendedActorSystem)Sys);
-        Assert.Same(array, arraySerializer.FromBinary(array, ReadOnlySequence<byte>.Empty));
-        var inner = new OptIn((ExtendedActorSystem)Sys);
-        Sys.Serialization.AddSerializer("manifest-bytes-opt-in", inner);
-        var raw = new ReadOnlySequence<byte>(new byte[] { 0xFF });
-        Assert.Equal(42, Sys.Serialization.Deserialize(Array.Empty<byte>(), inner.Identifier, raw));
-        Assert.Equal(42, Sys.Serialization.Deserialize(ReadOnlySequence<byte>.Empty, inner.Identifier, raw));
     }
 
     [Fact(DisplayName = "Should_preserve_error_and_restore_transport_When_deserialization_fails")]
@@ -73,11 +57,10 @@ public class ManifestBytesSpec : AkkaSpec
         var raw = new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("unknown-Ω"));
         var bytes = Array.Empty<byte>();
         var expected = Assert.Throws<SerializationException>(() => Sys.Serialization.Deserialize(bytes, -98765, "unknown-Ω"));
-        Assert.Equal(expected.Message, Assert.Throws<SerializationException>(() => Sys.Serialization.Deserialize(bytes, -98765, raw)).Message);
         Assert.Equal(expected.Message, Assert.Throws<SerializationException>(() => Sys.Serialization.Deserialize(new ReadOnlySequence<byte>(bytes), -98765, raw)).Message);
         var serializer = new Native((ExtendedActorSystem)Sys);
         Sys.Serialization.AddSerializer("manifest-bytes-failure", serializer);
-        Assert.Throws<SerializationException>(() => Sys.Serialization.Deserialize(bytes, serializer.Identifier, new ReadOnlySequence<byte>("throw"u8.ToArray())));
+        Assert.Throws<SerializationException>(() => Sys.Serialization.Deserialize(new ReadOnlySequence<byte>(bytes), serializer.Identifier, new ReadOnlySequence<byte>("throw"u8.ToArray())));
         Assert.Null(Akka.Serialization.Serialization.CurrentTransportInformation);
     }
 
@@ -99,20 +82,6 @@ public class ManifestBytesSpec : AkkaSpec
             if (manifest == "throw")
                 throw new SerializationException("test failure");
             return manifest;
-        }
-    }
-
-    private sealed class OptIn(ExtendedActorSystem system) : Serializer(system)
-    {
-        public override int Identifier => -903;
-        public override bool IncludeManifest => true;
-        public override byte[] ToBinary(object obj) => Array.Empty<byte>();
-        public override object FromBinary(byte[] bytes, Type type) => throw new InvalidOperationException("Unexpected type dispatch");
-        public override object FromBinary(byte[] bytes, string manifest) => throw new InvalidOperationException("Unexpected string dispatch");
-        public override object FromBinary(byte[] bytes, ReadOnlySequence<byte> manifest)
-        {
-            Assert.NotNull(Akka.Serialization.Serialization.CurrentTransportInformation);
-            return 42;
         }
     }
 

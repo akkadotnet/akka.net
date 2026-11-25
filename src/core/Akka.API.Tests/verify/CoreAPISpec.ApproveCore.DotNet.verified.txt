@@ -5327,7 +5327,6 @@ namespace Akka.Serialization
         public void AddSerializer(string name, Akka.Serialization.SerializerV2 serializer) { }
         public object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, int serializerId, System.Buffers.ReadOnlySequence<byte> manifest) { }
         public object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, int serializerId, string manifest) { }
-        public object Deserialize(byte[] bytes, int serializerId, System.Buffers.ReadOnlySequence<byte> manifest) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Actor.IActorRef DeserializeActorRef(string path) { }
@@ -5354,7 +5353,6 @@ namespace Akka.Serialization
         protected Serializer(Akka.Actor.ExtendedActorSystem system) { }
         public virtual int Identifier { get; }
         public abstract bool IncludeManifest { get; }
-        public virtual object FromBinary(byte[] bytes, System.Buffers.ReadOnlySequence<byte> manifest) { }
         public abstract object FromBinary(byte[] bytes, System.Type type);
         public virtual object FromBinary(byte[] bytes, string manifest) { }
         public T FromBinary<T>(byte[] bytes) { }
@@ -5380,9 +5378,7 @@ namespace Akka.Serialization
         public SerializerV1Adapter(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.Serializer inner) { }
         public override int Identifier { get; }
         public Akka.Serialization.Serializer Inner { get; }
-        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, System.Buffers.ReadOnlySequence<byte> manifest) { }
         public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
-        public override object FromBinary(byte[] bytes, System.Buffers.ReadOnlySequence<byte> manifest) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }

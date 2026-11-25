@@ -192,9 +192,7 @@ namespace Akka.Remote.Tests.Serialization
 
             void Check(ReadOnlySequence<byte> raw)
             {
-                serializer.FromBinary(bytes, raw).Should().Be(expected);
                 serializer.Deserialize(Segments(bytes, bytes.Length / 2), raw).Should().Be(expected);
-                Sys.Serialization.Deserialize(bytes, serializer.Identifier, raw).Should().Be(expected);
                 Sys.Serialization.Deserialize(new ReadOnlySequence<byte>(bytes), serializer.Identifier, raw).Should().Be(expected);
             }
         }
@@ -246,7 +244,6 @@ namespace Akka.Remote.Tests.Serialization
             {
                 var text = Encoding.UTF8.GetString(in raw);
                 var expected = Assert.Throws<ArgumentException>(() => serializer.FromBinary(bytes, text));
-                Assert.Equal(expected.Message, Assert.Throws<ArgumentException>(() => serializer.FromBinary(bytes, raw)).Message);
                 Assert.Equal(expected.Message, Assert.Throws<ArgumentException>(() => serializer.Deserialize(new ReadOnlySequence<byte>(bytes), raw)).Message);
             }
         }

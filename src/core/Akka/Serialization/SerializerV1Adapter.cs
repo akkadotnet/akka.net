@@ -76,18 +76,6 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc />
-        public override object Deserialize(ReadOnlySequence<byte> bytes, ReadOnlySequence<byte> manifest)
-        {
-            return Inner.FromBinary(bytes.ToArray(), manifest);
-        }
-
-        /// <inheritdoc />
-        public override object FromBinary(byte[] bytes, ReadOnlySequence<byte> manifest)
-        {
-            return Inner.FromBinary(bytes, manifest);
-        }
-
-        /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
             return Inner.ToBinary(obj);
