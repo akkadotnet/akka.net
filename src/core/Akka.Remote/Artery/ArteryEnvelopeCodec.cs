@@ -701,13 +701,14 @@ namespace Akka.Remote.Artery
             if (length == 0)
                 return string.Empty;
 
-            if (_frameBody.IsSingleSegment)
-                return Encoding.UTF8.GetString(_frameBody.Slice(dataStart, length).FirstSpan);
+            var literal = _frameBody.Slice(dataStart, length);
+            if (literal.IsSingleSegment)
+                return Encoding.UTF8.GetString(literal.FirstSpan);
 
             var rented = ArrayPool<byte>.Shared.Rent(length);
             try
             {
-                _frameBody.Slice(dataStart, length).CopyTo(rented);
+                literal.CopyTo(rented);
                 return Encoding.UTF8.GetString(rented, 0, length);
             }
             finally

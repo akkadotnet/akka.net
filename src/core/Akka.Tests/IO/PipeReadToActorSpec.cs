@@ -7,8 +7,10 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,6 +76,66 @@ namespace Akka.Tests.IO
             var msg = await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>();
             Text(msg.Data).Should().Be("ready");
             msg.IsCompleted.Should().BeFalse();
+        }
+
+        [Theory(DisplayName = "PipeReadToActor should deliver one complete read in fresh independent arrays below the LOH threshold")]
+        [InlineData(TcpConnection.PipeReadToActor.ReadCopyChunkSize)]
+        [InlineData(TcpConnection.PipeReadToActor.ReadCopyChunkSize + 1)]
+        [InlineData(2 * TcpConnection.PipeReadToActor.ReadCopyChunkSize + 29)]
+        public async Task Should_deliver_owned_chunks_and_retain_them_across_reads(int length)
+        {
+            var pipe = new Pipe(new PipeOptions(pauseWriterThreshold: 0));
+            var probe = CreateTestProbe();
+            var reader = new TcpConnection.PipeReadToActor(pipe.Reader, CancellationToken.None, probe.Ref);
+            var expected = new byte[length];
+            new Random(42).NextBytes(expected);
+            var transport = pipe.Writer.GetMemory(length);
+            expected.CopyTo(transport);
+            MemoryMarshal.TryGetArray((ReadOnlyMemory<byte>)transport, out var transportArray).Should().BeTrue();
+            pipe.Writer.Advance(length);
+            await pipe.Writer.FlushAsync();
+
+            reader.Start();
+            var first = await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>();
+            // The reader sends the same message instance for every read, so keep the data, not the message.
+            var firstData = first.Data;
+            first.Data.Length.Should().Be(length);
+            first.Data.ToArray().Should().Equal(expected);
+            first.Data.IsSingleSegment.Should().Be(length <= TcpConnection.PipeReadToActor.ReadCopyChunkSize);
+            first.IsCompleted.Should().BeFalse();
+            first.IsCanceled.Should().BeFalse();
+            var arrays = new HashSet<byte[]>();
+            var segmentCount = 0;
+            foreach (var memory in first.Data)
+            {
+                memory.Length.Should().BeInRange(1, TcpConnection.PipeReadToActor.ReadCopyChunkSize);
+                MemoryMarshal.TryGetArray(memory, out var owned).Should().BeTrue();
+                owned.Array!.Length.Should().BeLessThan(85000);
+                owned.Array.Should().NotBeSameAs(transportArray.Array);
+                arrays.Add(owned.Array).Should().BeTrue("each segment must own a distinct array");
+                // Mutating receiver-owned bytes must not affect any later read or another segment.
+                owned.Array[owned.Offset] ^= 0xff;
+                expected[segmentCount * TcpConnection.PipeReadToActor.ReadCopyChunkSize] ^= 0xff;
+                segmentCount++;
+            }
+            segmentCount.Should().Be((length + TcpConnection.PipeReadToActor.ReadCopyChunkSize - 1)
+                / TcpConnection.PipeReadToActor.ReadCopyChunkSize);
+
+            var next = new byte[length];
+            new Random(99).NextBytes(next);
+            await pipe.Writer.WriteAsync(next);
+            reader.Start();
+            var second = await probe.ExpectMsgAsync<TcpConnection.PipeReadCompleted>();
+            second.Data.ToArray().Should().Equal(next);
+            foreach (var memory in second.Data)
+            {
+                MemoryMarshal.TryGetArray(memory, out var owned).Should().BeTrue();
+                arrays.Contains(owned.Array!).Should().BeFalse("receiver arrays must never be reused");
+            }
+            firstData.ToArray().Should().Equal(expected, "retained bytes must survive the next pipe read");
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await pipe.Writer.CompleteAsync();
+            await pipe.Reader.CompleteAsync();
         }
 
         [Fact(DisplayName = "PipeReadToActor should send PipeReadCanceled when the token is cancelled while a read is waiting")]
