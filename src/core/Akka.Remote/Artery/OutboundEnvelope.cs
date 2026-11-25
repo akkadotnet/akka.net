@@ -42,6 +42,13 @@ namespace Akka.Remote.Artery
         string? SenderPath { get; }
 
         /// <summary>
+        /// The sender's path, when the encoder formats the sender literal from it straight into the frame
+        /// (with the transport's own address standing in for a local address) instead of from
+        /// <see cref="SenderPath"/>. At most one of the two is set.
+        /// </summary>
+        Akka.Actor.ActorPath? SenderActorPath { get; }
+
+        /// <summary>
         /// The recipient's wire-format path, or <see langword="null"/> for control messages (which
         /// are recognized by serializer id/manifest on decode, not by recipient).
         /// </summary>
@@ -87,6 +94,22 @@ namespace Akka.Remote.Artery
         // NOTE: once this project targets .NET 11, replace this object-typed field with a union of
         // string and byte[] so the two cases are expressed in the type instead of by type tests.
         private object? _recipient = RecipientPath;
+
+        // Likewise one field holds the sender as either its path string or its ActorPath; the encoder
+        // formats an ActorPath into the frame, so an ordinary send builds no sender path string.
+        private object? _sender = SenderPath;
+
+        public string? SenderPath { get => _sender as string; init => _sender = value; }
+
+        public Akka.Actor.ActorPath? SenderActorPath
+        {
+            get => _sender as Akka.Actor.ActorPath;
+            init
+            {
+                if (value is not null)
+                    _sender = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string? RecipientPath { get => _recipient as string; init => _recipient = value; }

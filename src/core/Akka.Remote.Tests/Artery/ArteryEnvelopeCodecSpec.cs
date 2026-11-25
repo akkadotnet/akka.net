@@ -541,6 +541,45 @@ namespace Akka.Remote.Tests.Artery
             Assert.Equal(message, deserialized);
         }
 
+        public static TheoryData<string> SenderPaths() => new()
+        {
+            "root",
+            "local-with-uid",
+            "local-without-uid",
+            "remote-address",
+            "non-ascii",
+            "long",
+        };
+
+        [Theory(DisplayName = "Should_write_the_sender_literal_the_string_form_writes_When_the_sender_is_given_as_a_path")]
+        [MemberData(nameof(SenderPaths))]
+        public void Should_write_the_sender_literal_the_string_form_writes_When_the_sender_is_given_as_a_path(string kind)
+        {
+            var localAddress = new Address("akka", "Sys", "host", 1);
+            var root = new RootActorPath(new Address("akka", "Sys"));
+            ActorPath path = kind switch
+            {
+                "root" => root,
+                "local-with-uid" => (root / "user" / "sender").WithUid(42),
+                "local-without-uid" => root / "user" / "sender",
+                "remote-address" => (new RootActorPath(new Address("akka", "Other", "elsewhere", 2)) / "user" / "a").WithUid(7),
+                "non-ascii" => (root / "user" / "s\u00e9nder-\u4e2d").WithUid(3),
+                _ => (root / "user" / new string('x', 600) / "child").WithUid(5),
+            };
+            const string recipientPath = "akka://Sys@host:1/user/recipient";
+            const string message = "payload";
+
+            using var fromString = ArteryEnvelopeCodec.Encode(Sys.Serialization, 1L,
+                path.ToSerializationFormatWithAddress(localAddress), recipientPath, message);
+            using var fromPath = ArteryEnvelopeCodec.Encode(Sys.Serialization, 1L, null, recipientPath, message,
+                senderActorPath: path, senderAddress: localAddress);
+
+            Assert.Equal(fromString.WrittenSpan.ToArray(), fromPath.WrittenSpan.ToArray());
+            var decoded = ArteryEnvelopeCodec.Decode(new ReadOnlySequence<byte>(fromPath.WrittenMemory.Slice(4)));
+            Assert.True(decoded.TryGetSenderPath(out var sender));
+            Assert.Equal(path.ToSerializationFormatWithAddress(localAddress), sender);
+        }
+
         [Fact(DisplayName = "Should_encode_absent_sender_and_recipient_tags_When_none_are_supplied_to_the_V2_overload")]
         public void Should_encode_absent_sender_and_recipient_tags_When_none_are_supplied_to_the_V2_overload()
         {

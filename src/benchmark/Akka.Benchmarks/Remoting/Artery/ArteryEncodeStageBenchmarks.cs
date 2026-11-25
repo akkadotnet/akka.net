@@ -110,7 +110,8 @@ namespace Akka.Benchmarks.Remoting.Artery
             // The real production stage -- constructed once, materialized fresh every iteration
             // below so each iteration starts from a clean CreateLogic() (fresh _pendingDispose /
             // _pendingDisposeOlder fields at baseline; nothing to reset at treatment).
-            _flow = Flow.FromGraph(new ArteryEncodeStage(_system.Serialization, OriginUid));
+            var localAddress = ActorPath.Parse(SenderPath).Address;
+            _flow = Flow.FromGraph(new ArteryEncodeStage(_system.Serialization, OriginUid, localAddress));
         }
 
         [GlobalCleanup]

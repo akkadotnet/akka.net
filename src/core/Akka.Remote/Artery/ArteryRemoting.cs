@@ -868,7 +868,9 @@ namespace Akka.Remote.Artery
                 return;
             }
 
-            var senderPath = sender.IsNobody() ? null : sender.Path.ToSerializationFormatWithAddress(DefaultAddress);
+            // An ordinary send hands the encoder the sender's path, which it formats straight into the frame;
+            // only the remote-deployment path below needs the sender path as a string.
+            var senderActorPath = sender.IsNobody() ? null : sender.Path;
 
             if (message is DaemonMsgCreate)
             {
@@ -882,14 +884,15 @@ namespace Akka.Remote.Artery
                 // Pekko's direct controlQueue.offer (Association.scala: "must be sent over the control
                 // stream because remote deployment process depends on message ordering for
                 // DaemonMsgCreate and Watch messages").
-                EnqueueDaemonMsgCreate(remoteAddress, message, senderPath, recipient.Path.ToSerializationFormatWithAddress(remoteAddress));
+                EnqueueDaemonMsgCreate(remoteAddress, message, senderActorPath?.ToSerializationFormatWithAddress(DefaultAddress),
+                    recipient.Path.ToSerializationFormatWithAddress(remoteAddress));
                 return;
             }
 
             // Only a local sender carries an id: an id is unique only on the system that issued it.
             // Caching the sender here lets the reply to it skip path resolution.
             long senderId = 0;
-            if (senderPath is not null && sender is IInternalActorRef { IsLocal: true } localSender)
+            if (senderActorPath is not null && sender is IInternalActorRef { IsLocal: true } localSender)
             {
                 senderId = ArteryLocalRefCache.IdOf(localSender);
                 _localRefs.Put(senderId, localSender);
@@ -897,7 +900,7 @@ namespace Akka.Remote.Artery
 
             // The recipient literal is the ref's serialized path bytes, formatted at most once per ref.
             var recipientId = recipient.WireId != 0 ? recipient.WireId : recipient.PathUid;
-            EnqueueOutbound(remoteAddress, message, senderPath, recipient.SerializedPathUtf8, recipient, senderId, recipientId);
+            EnqueueOutbound(remoteAddress, message, senderActorPath, recipient.SerializedPathUtf8, recipient, senderId, recipientId);
         }
 
         /// <inheritdoc/>
@@ -1606,7 +1609,7 @@ namespace Akka.Remote.Artery
             return computed;
         }
 
-        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, byte[] recipientPathUtf8, RemoteActorRef recipient,
+        private void EnqueueOutbound(Address remoteAddress, object message, ActorPath? senderPath, byte[] recipientPathUtf8, RemoteActorRef recipient,
             long senderId, long recipientId)
         {
             var association = _registry.AssociationFor(remoteAddress);
@@ -1626,7 +1629,7 @@ namespace Akka.Remote.Artery
             // the same anchor -- never leaks into a selection send's routing.
             if (route == LargeMessageRoute && message is not ActorSelectionMessage)
             {
-                if (!association.TryEnqueueLarge(new OutboundEnvelope(message, senderPath, null, senderId, recipientId) { RecipientPathUtf8 = recipientPathUtf8 }))
+                if (!association.TryEnqueueLarge(new OutboundEnvelope(message, null, null, senderId, recipientId) { SenderActorPath = senderPath, RecipientPathUtf8 = recipientPathUtf8 }))
                 {
                     // Same direct-to-event-stream Dropped semantics as the ordinary queue's PR
                     // #8346 fix (see below) -- soft drop, never a quarantine.
@@ -1651,7 +1654,7 @@ namespace Akka.Remote.Artery
                 : senderId != 0 && recipientId != 0 ? Association.SelectPairLane(senderId, recipientId, association.OutboundLanes)
                 : route;
 
-            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, null, senderId, recipientId) { RecipientPathUtf8 = recipientPathUtf8 }, laneIndex))
+            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, null, null, senderId, recipientId) { SenderActorPath = senderPath, RecipientPathUtf8 = recipientPathUtf8 }, laneIndex))
             {
                 // Publish DIRECTLY to the event stream -- mirrors Pekko's Association.dropped().
                 // NOT routed through System.DeadLetters.Tell (that would double-wrap: Tell to the
@@ -2230,7 +2233,7 @@ namespace Akka.Remote.Artery
                     var encodeStage = new ArteryBatchEncodeStage(
                         System.Serialization, _localUniqueAddress.Uid, OrdinaryEncodeBatchMaxFrames,
                         LaneWriteBatchMaxBytes, _laneEncodeBufferPools![i],
-                        held => CarryOverHeldEnvelopes(remoteAddress, association, lane, held));
+                        held => CarryOverHeldEnvelopes(remoteAddress, association, lane, held), DefaultAddress);
 
                     // RecoverWithRetries sits AFTER WatchTermination -- the ordering is load-bearing:
                     // the termination task (upstream of the recovery) must still observe the lane's
@@ -2489,9 +2492,10 @@ namespace Akka.Remote.Artery
                 ? (IGraph<FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>, NotUsed>)new ArteryBatchEncodeStage(
                     System.Serialization, _localUniqueAddress.Uid, OrdinaryEncodeBatchMaxFrames,
                     LaneWriteBatchMaxBytes, _encodeBufferPool,
-                    held => CarryOverHeldEnvelopes(remoteAddress, association, 0, held))
+                    held => CarryOverHeldEnvelopes(remoteAddress, association, 0, held), DefaultAddress)
                 : new ArteryEncodeStage(
-                    System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
+                    System.Serialization, _localUniqueAddress.Uid, DefaultAddress,
+                    isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
 
             var source = streamId == ArteryStreamId.Ordinary
                 ? OrdinaryLaneSource(association, 0)
@@ -3024,7 +3028,7 @@ namespace Akka.Remote.Artery
         /// <b>Invariant (throws if violated).</b> Both inputs are always
         /// <see cref="OwnedSequenceSegment"/>-backed. Every element on this path is pushed by
         /// <see cref="ArteryBatchEncodeStage"/> as a chain of one or more owner-carrying
-        /// <see cref="OwnedSequenceSegment"/>s, one per frame, and reaches the batch stage
+        /// <see cref="OwnedSequenceSegment"/>s holding whole frames, and reaches the batch stage
         /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
         /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
         /// INSIDE the downstream restart factory, so it never passes through this stage. The batch

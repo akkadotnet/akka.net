@@ -10,7 +10,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using Akka.IO;
 using Akka.Streams;
 using Akka.Streams.Stage;
 
@@ -22,7 +21,7 @@ namespace Akka.Remote.Artery
     /// Encode stage of the ORDINARY outbound stream that can hand several frames downstream as one
     /// element. While downstream is busy it keeps pulling upstream and holds up to
     /// <c>maxFrames</c> envelopes, still unencoded. On the next downstream pull it encodes held
-    /// envelopes in FIFO order into one multi-segment sequence, stopping once <c>maxBytes</c> is
+    /// envelopes in FIFO order into one pooled buffer, stopping once <c>maxBytes</c> is
     /// reached, and pushes that. When downstream is already waiting, the single envelope that
     /// arrives is encoded and pushed at once, exactly as <see cref="ArteryEncodeStage"/> does, so
     /// batches only form while downstream backpressures and no latency is added.
@@ -45,6 +44,7 @@ namespace Akka.Remote.Artery
         private readonly long _maxBytes;
         private readonly ArrayPool<byte>? _pool;
         private readonly Action<Queue<IOutboundEnvelope>> _onStopHolding;
+        private readonly Akka.Actor.Address _localAddress;
 
         /// <param name="serialization">The sending actor system's serialization extension.</param>
         /// <param name="originUid">The sending system's UID, stamped into every encoded envelope's fixed header.</param>
@@ -52,13 +52,15 @@ namespace Akka.Remote.Artery
         /// <param name="maxBytes">No further frame is added to a pushed element once it holds this many bytes.</param>
         /// <param name="pool">Encode buffer pool; <see langword="null"/> means <see cref="ArrayPool{T}.Shared"/>.</param>
         /// <param name="onStopHolding">Invoked once from PostStop with the envelopes still held, oldest first, if any.</param>
+        /// <param name="localAddress">The address a sender given as a path is formatted with.</param>
         public ArteryBatchEncodeStage(
             Akka.Serialization.Serialization serialization,
             long originUid,
             int maxFrames,
             long maxBytes,
             ArrayPool<byte>? pool,
-            Action<Queue<IOutboundEnvelope>> onStopHolding)
+            Action<Queue<IOutboundEnvelope>> onStopHolding,
+            Akka.Actor.Address localAddress)
         {
             _serialization = serialization;
             _originUid = originUid;
@@ -66,6 +68,7 @@ namespace Akka.Remote.Artery
             _maxBytes = maxBytes;
             _pool = pool;
             _onStopHolding = onStopHolding;
+            _localAddress = localAddress ?? throw new ArgumentNullException(nameof(localAddress));
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 
@@ -82,6 +85,10 @@ namespace Akka.Remote.Artery
             private readonly Queue<IOutboundEnvelope> _held;
             private Exception? _failure;
 
+            // Created once: a lambda capturing the exception in PushBatch's catch would be allocated on
+            // every PushBatch call, because the compiler creates its closure when the method is entered.
+            private Action<Exception>? _failLater;
+
             public Logic(ArteryBatchEncodeStage stage) : base(stage.Shape)
             {
                 _stage = stage;
@@ -90,7 +97,11 @@ namespace Akka.Remote.Artery
                 SetHandler(stage.Out, this);
             }
 
-            public override void PreStart() => Pull(_stage.In);
+            public override void PreStart()
+            {
+                _failLater = GetAsyncCallback<Exception>(FailStage);
+                Pull(_stage.In);
+            }
 
             public void OnPush()
             {
@@ -129,19 +140,17 @@ namespace Akka.Remote.Artery
 
             private void PushBatch()
             {
-                OwnedSequenceSegment? head = null, tail = null;
-                long bytes = 0;
+                // Every frame of the batch is encoded into one pooled buffer, so a batch allocates one
+                // segment rather than one per frame.
+                var encoded = 0;
                 try
                 {
                     do
                     {
-                        var frame = Encode(_held.Dequeue());
-                        // A whole segment is linked as is (it comes back as the new tail).
-                        tail = OwnedSequenceSegment.MoveLink(tail, frame, frame.Memory, false);
-                        head ??= tail;
-                        bytes += frame.Memory.Length;
+                        Encode(_held.Dequeue(), append: encoded > 0);
+                        encoded++;
                     }
-                    while (bytes < _stage._maxBytes && _held.Count > 0);
+                    while (_writer!.WrittenCount < _stage._maxBytes && _held.Count > 0);
                 }
                 catch (Exception e)
                 {
@@ -150,15 +159,16 @@ namespace Akka.Remote.Artery
                     // the failure, and PostStop carries over the envelopes after it. The stage fails
                     // on its interpreter's next turn, not here, because an envelope it already
                     // pulled may still be on its way and would be lost; OnPush holds it meanwhile.
-                    if (head is not null)
-                        Push(_stage.Out, new ReadOnlySequence<byte>(head, 0, tail!, tail!.Memory.Length));
+                    // The failed encode has already cut the writer back to the frames before it.
+                    if (encoded > 0)
+                        Push(_stage.Out, _writer!.DetachSequence());
                     _failure = e;
-                    GetAsyncCallback(() => FailStage(e))();
+                    _failLater!(e);
                     return;
                 }
 
-                // Ownership of every encoded buffer moves downstream with the pushed sequence.
-                Push(_stage.Out, new ReadOnlySequence<byte>(head!, 0, tail!, tail!.Memory.Length));
+                // Ownership of the encoded buffer moves downstream with the pushed sequence.
+                Push(_stage.Out, _writer.DetachSequence());
 
                 if (!IsClosed(_stage.In))
                     PullIfRoom();
@@ -172,18 +182,16 @@ namespace Akka.Remote.Artery
                     Pull(_stage.In);
             }
 
-            // One writer for the life of the stage: each encode detaches its buffer into a segment that owns it,
-            // and the next encode re-arms the writer, so a frame allocates its segment only.
+            // One writer for the life of the stage: a batch's first encode re-arms it, the rest append to it,
+            // and the batch detaches its buffer into one segment that owns it.
             private Akka.Serialization.PooledPayloadWriter? _writer;
 
-            private OwnedSequenceSegment Encode(IOutboundEnvelope envelope)
+            private void Encode(IOutboundEnvelope envelope, bool append)
             {
-                var writer = ArteryEnvelopeCodec.Encode(
+                _writer = ArteryEnvelopeCodec.Encode(
                     _stage._serialization, _stage._originUid, envelope.SenderPath, envelope.RecipientPath,
                     envelope.Message, _stage._pool, envelope.SenderId, envelope.RecipientId, envelope.RecipientPathUtf8,
-                    _writer);
-                _writer = writer;
-                return writer.DetachSegment();
+                    _writer, envelope.SenderActorPath, _stage._localAddress, append);
             }
         }
     }

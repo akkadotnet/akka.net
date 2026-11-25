@@ -37,12 +37,26 @@ namespace Akka.Remote.Tests.Artery
     public class ArteryBatchEncodeStageSpec : AkkaSpec
     {
         private const long OriginUid = 4242;
+        private static readonly Address LocalAddress = new("akka", "s", "h", 1);
 
         public ArteryBatchEncodeStageSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString($$"""
             akka.actor.serializers.poison = "{{typeof(PoisonSerializer).AssemblyQualifiedName}}"
             akka.actor.serialization-bindings { "{{typeof(Poison).AssemblyQualifiedName}}" = poison }
             """), output)
         {
+        }
+
+        [Fact(DisplayName = "The single-frame encoder rejects a null local address at construction")]
+        public void Should_RejectNullLocalAddress_When_ConstructingSingleFrameEncoder()
+        {
+            Assert.Throws<ArgumentNullException>("localAddress", () => new ArteryEncodeStage(Ser, OriginUid, null!));
+        }
+
+        [Fact(DisplayName = "The batch encoder rejects a null local address at construction")]
+        public void Should_RejectNullLocalAddress_When_ConstructingBatchEncoder()
+        {
+            Assert.Throws<ArgumentNullException>("localAddress",
+                () => new ArteryBatchEncodeStage(Ser, OriginUid, 32, 16 * 1024, null, CarryInto(new()), null!));
         }
 
         public sealed record Poison(int Seq);
@@ -110,7 +124,7 @@ namespace Akka.Remote.Tests.Artery
         {
             var carried = new List<IOutboundEnvelope>();
             var (pub, sub) = this.SourceProbe<IOutboundEnvelope>()
-                .Via(new ArteryBatchEncodeStage(Ser, OriginUid, maxFrames, maxBytes, pool, CarryInto(carried)))
+                .Via(new ArteryBatchEncodeStage(Ser, OriginUid, maxFrames, maxBytes, pool, CarryInto(carried), LocalAddress))
                 .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                 .Run(Sys.Materializer(ActorMaterializerSettings.Create(Sys).WithInputBuffer(1, 1)));
             return (pub, sub, carried);
@@ -190,7 +204,7 @@ namespace Akka.Remote.Tests.Artery
             // everything after it is kept for the next materialization. Only the poison one is lost.
             Frames(element).Should().BeEquivalentTo(envs.Take(5).Select(Reference), o => o.WithStrictOrdering());
             carried.Should().Equal(envs.Skip(6));
-            pool.Outstanding.Should().Be(5, "only the buffers handed downstream are outstanding");
+            pool.Outstanding.Should().Be(1, "only the one buffer holding the frames handed downstream is outstanding");
             element.DisposeOwnedSegments();
             pool.Outstanding.Should().Be(0, "buffers rented for envelopes 0..4 must be returned");
         }
@@ -205,7 +219,7 @@ namespace Akka.Remote.Tests.Artery
 
             var carried = new List<IOutboundEnvelope>();
             var (ks, sub) = ChannelSource.FromReader(channel.Reader)
-                .Via(new ArteryBatchEncodeStage(Ser, OriginUid, 32, 16 * 1024, null, CarryInto(carried)))
+                .Via(new ArteryBatchEncodeStage(Ser, OriginUid, 32, 16 * 1024, null, CarryInto(carried), LocalAddress))
                 .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
                 .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                 .Run(Sys.Materializer());

@@ -283,6 +283,19 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// INTERNAL API. Discards everything written after the first <paramref name="count"/> bytes, keeping the buffer.
+        /// </summary>
+        /// <param name="count">How many of the written bytes to keep.</param>
+        internal void Truncate(int count)
+        {
+            ThrowIfSpent();
+            if (count < 0 || count > _written)
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Can only keep bytes that have been written.");
+
+            _written = count;
+        }
+
+        /// <summary>
         /// Resets the writer for reuse without re-renting: the currently rented array is kept and
         /// the written count is set back to zero. Only valid while the writer is still alive (has
         /// not been detached or disposed).

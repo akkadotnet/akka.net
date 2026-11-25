@@ -108,6 +108,31 @@ namespace Akka.Tests.Actor
             ActorPath.Parse(wide.ToSerializationFormat()).Should().Be(wide);
         }
 
+        [Fact(DisplayName = "Should_format_the_serialization_string_into_a_span_When_formatting_with_an_address")]
+        public void Should_format_the_serialization_string_into_a_span_When_formatting_with_an_address()
+        {
+            var address = new Address("akka", "mysys", "host", 1);
+            var root = new RootActorPath(new Address("akka", "mysys"));
+            var paths = new ActorPath[]
+            {
+                root,
+                root / "user" / "a",
+                (root / "user" / "a").WithUid(17),
+                (new RootActorPath(new Address("akka", "other", "elsewhere", 2)) / "user" / "b").WithUid(long.MaxValue),
+                (root / "user" / "\u00e9t\u00e9").WithUid(1),
+                IgnoreActorRef.StaticPath,
+            };
+
+            foreach (var path in paths)
+            {
+                var expected = path.ToSerializationFormatWithAddress(address);
+                var length = path.SerializationFormatWithAddressLength(address);
+                var buffer = new char[length];
+                path.FormatSerializationWithAddress(address, buffer);
+                new string(buffer).Should().Be(expected);
+            }
+        }
+
         private ActorPath ActorPathParse(string path)
         {
             if (ActorPath.TryParse(path, out var actorPath))
