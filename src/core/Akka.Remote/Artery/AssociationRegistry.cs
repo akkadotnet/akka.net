@@ -157,7 +157,7 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Default capacity for <see cref="LargeReader"/>'s bounded channel (task 10.2, "Large
         /// Message Stream") -- matches Pekko's <c>outbound-large-message-queue-size</c> default.
-        /// This channel is allocated unconditionally, exactly like <see cref="_laneChannels"/>/
+        /// This channel is allocated unconditionally, exactly like <see cref="_laneQueues"/>/
         /// <see cref="_controlChannel"/> (task group 6, task 6.1's "factor the shared shape"
         /// precedent) -- whether it is EVER materialized/enqueued to is entirely a transport-layer
         /// decision (<c>ArteryRemoting</c> only routes to it, and only ever calls
@@ -171,31 +171,18 @@ namespace Akka.Remote.Artery
 
         private volatile AssociationState _state;
 
-        // Typed as the IOutboundEnvelope INTERFACE (not the concrete OutboundEnvelope record) so
-        // ChannelSource.FromReader(OutboundReader) yields a Source<IOutboundEnvelope, _> that feeds
-        // OutboundHandshakeStage's Inlet<IOutboundEnvelope> directly -- no upcast .Select needed
-        // between the channel and the handshake stage (design.md Decision 9's ChannelSource.FromReader
-        // mandate; see the G3 opening-refactor task report for why the interface, not the concrete
-        // type, is the channel's type parameter).
-        //
         // <b>Ordinary lanes (outbound-lanes).</b> What used to be a single `_outboundChannel` field
-        // is now an ARRAY of independently-bounded channels, one per outbound lane -- Pekko-faithful
+        // is now an ARRAY of independently-bounded queues, one per outbound lane -- Pekko-faithful
         // (Association.scala's `queues` array, `OrdinaryQueueIndex + i`). At the shipping default
         // `outbound-lanes = 1` this array has exactly one element and every existing accessor below
         // (<see cref="OutboundReader"/>, the zero-arg <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>
         // overload, <see cref="OutboundQueueCount"/>) resolves to lane 0 -- i.e. EXACTLY today's
-        // single channel, just addressed through `_laneChannels[0]` instead of a solo field. This is
+        // single queue, just addressed through `_laneQueues[0]` instead of a solo field. This is
         // what makes lanes=1 gate B (zero behavioral change) hold at the Association level: nothing
         // observable differs, only the storage shape. <see cref="ArteryRemoting"/> is what decides
         // WHICH lane a given send's envelope lands in (<see cref="SelectLane"/>, cached per
         // <see cref="RemoteActorRef"/>) and which lane(s) a materialized stream reads from.
-        private readonly Channel<IOutboundEnvelope>[] _laneChannels;
-
-        // Per lane: envelopes the lane's ArteryBatchEncodeStage had taken from the channel but not
-        // sent when its materialization stopped. The next materialization emits them before reading
-        // the channel, so the lane keeps its order; transport shutdown drains them with the channel.
-        // Guarded by locking the array itself.
-        private readonly Queue<IOutboundEnvelope>?[] _laneCarryOver;
+        private readonly OutboundLaneQueue[] _laneQueues;
         private readonly Channel<IOutboundEnvelope> _controlChannel;
 
         /// <summary>
@@ -420,7 +407,7 @@ namespace Akka.Remote.Artery
         /// <param name="largeQueueCapacity">Capacity of the bounded LARGE-MESSAGE outbound channel (see <see cref="DefaultLargeQueueCapacity"/>).</param>
         /// <param name="outboundLanes">
         /// Number of independent, bounded ordinary-outbound channels this association owns (see
-        /// <see cref="_laneChannels"/>'s remarks) -- <c>akka.remote.artery.advanced.outbound-lanes</c>
+        /// <see cref="_laneQueues"/>'s remarks) -- <c>akka.remote.artery.advanced.outbound-lanes</c>
         /// (<see cref="ArterySettings.OutboundLanes"/>). Defaults to 1 -- today's single-channel
         /// shape (gate B). Clamped to a minimum of 1 defensively; <see cref="ArterySettings"/>
         /// already rejects a configured value below 1 at parse time.
@@ -445,17 +432,9 @@ namespace Akka.Remote.Artery
             OutboundLanes = Math.Max(1, outboundLanes);
             _state = AssociationState.Create();
 
-            _laneChannels = new Channel<IOutboundEnvelope>[OutboundLanes];
-            _laneCarryOver = new Queue<IOutboundEnvelope>?[OutboundLanes];
+            _laneQueues = new OutboundLaneQueue[OutboundLanes];
             for (var i = 0; i < OutboundLanes; i++)
-            {
-                _laneChannels[i] = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
-                {
-                    SingleReader = true,
-                    SingleWriter = false,
-                    FullMode = BoundedChannelFullMode.Wait
-                });
-            }
+                _laneQueues[i] = new OutboundLaneQueue(outboundQueueCapacity);
 
             _controlChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(controlQueueCapacity)
             {
@@ -499,7 +478,7 @@ namespace Akka.Remote.Artery
 
         /// <summary>
         /// The number of ordinary-outbound lanes this association was constructed with (see
-        /// <see cref="_laneChannels"/>) -- <see cref="ArterySettings.OutboundLanes"/>. Always
+        /// <see cref="_laneQueues"/>) -- <see cref="ArterySettings.OutboundLanes"/>. Always
         /// &gt;= 1. <c>ArteryRemoting</c> uses THIS value (not its own settings snapshot) as the
         /// single source of truth for lane-array bounds, so it can never drift from the actual
         /// shape of this association's channel array.
@@ -514,13 +493,13 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// The reading side of this association's bounded ORDINARY outbound queue -- LANE 0.
         /// Consumed by exactly one materialized outbound stream
-        /// (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>), per
+        /// (<see cref="OutboundLaneSource"/>), per
         /// <see cref="EnsureOutboundMaterialized"/>. At <c>outbound-lanes = 1</c> (the shipping
-        /// default) this is the association's ONLY ordinary channel -- i.e. today's shape,
+        /// default) this is the association's ONLY ordinary queue -- i.e. today's shape,
         /// unchanged (gate B). At <c>outbound-lanes &gt; 1</c>, use <see cref="LaneReader"/> to
         /// reach lanes 1..N-1; this property still resolves to lane 0 either way.
         /// </summary>
-        public ChannelReader<IOutboundEnvelope> OutboundReader => _laneChannels[0].Reader;
+        public OutboundLaneQueue OutboundReader => _laneQueues[0];
 
         /// <summary>
         /// The reading side of ordinary-outbound LANE <paramref name="lane"/> (0-based,
@@ -528,7 +507,7 @@ namespace Akka.Remote.Artery
         /// equivalent accessor. Only ever called by <c>ArteryRemoting</c>'s lanes-aware
         /// materialization path (<c>outbound-lanes &gt; 1</c>).
         /// </summary>
-        public ChannelReader<IOutboundEnvelope> LaneReader(int lane) => _laneChannels[lane].Reader;
+        public OutboundLaneQueue LaneReader(int lane) => _laneQueues[lane];
 
         /// <summary>
         /// The reading side of this association's bounded CONTROL outbound queue -- separate
@@ -869,16 +848,7 @@ namespace Akka.Remote.Artery
             HandshakeReq or HandshakeRsp or ArteryHeartbeat or ArteryHeartbeatRsp or Ack or Nack;
 
         /// <summary>Whether any ordinary lane still contains accepted user traffic, carried over or in its channel.</summary>
-        public bool HasQueuedOutbound
-        {
-            get
-            {
-                lock (_laneCarryOver)
-                    if (Array.Exists(_laneCarryOver, carried => carried is { Count: > 0 }))
-                        return true;
-                return Array.Exists(_laneChannels, channel => channel.Reader.Count > 0);
-            }
-        }
+        public bool HasQueuedOutbound => !Array.TrueForAll(_laneQueues, queue => queue.IsEmpty);
 
         /// <summary>
         /// Keeps <paramref name="held"/> -- envelopes a stopped encode stage of ordinary lane
@@ -886,36 +856,7 @@ namespace Akka.Remote.Artery
         /// materialization of that lane. Returns <see langword="false"/> once the outbound stream
         /// is shut down; the caller then reports them as dropped.
         /// </summary>
-        public bool TryCarryOver(int lane, Queue<IOutboundEnvelope> held)
-        {
-            lock (_laneCarryOver)
-            {
-                if (_outboundShutDown)
-                    return false;
-
-                // Anything still carried was read after `held`, so it goes behind it.
-                if (_laneCarryOver[lane] is { } older)
-                    foreach (var envelope in older)
-                        held.Enqueue(envelope);
-
-                _laneCarryOver[lane] = held;
-                return true;
-            }
-        }
-
-        /// <summary>Whether ordinary lane <paramref name="lane"/> has carried-over envelopes.</summary>
-        public bool HasCarryOver(int lane)
-        {
-            lock (_laneCarryOver)
-                return _laneCarryOver[lane] is { Count: > 0 };
-        }
-
-        /// <summary>Takes the oldest carried-over envelope of ordinary lane <paramref name="lane"/>, or <see langword="null"/>.</summary>
-        public IOutboundEnvelope? TakeCarryOver(int lane)
-        {
-            lock (_laneCarryOver)
-                return _laneCarryOver[lane] is { Count: > 0 } carried ? carried.Dequeue() : null;
-        }
+        public bool TryCarryOver(int lane, Queue<IOutboundEnvelope> held) => _laneQueues[lane].TryCarryOver(held);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> onto ordinary-outbound LANE 0. Non-blocking
@@ -936,7 +877,7 @@ namespace Akka.Remote.Artery
         /// per <see cref="SelectLane"/>) which lane a given send belongs on. Same non-blocking/
         /// overflow discipline as <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>.
         /// </summary>
-        public bool TryEnqueueOutbound(IOutboundEnvelope element, int lane) => _laneChannels[lane].Writer.TryWrite(element);
+        public bool TryEnqueueOutbound(IOutboundEnvelope element, int lane) => _laneQueues[lane].TryWrite(element);
 
         /// <summary>
         /// Deterministically selects which ordinary-outbound lane a message to
@@ -1027,22 +968,21 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// The number of elements CURRENTLY buffered in ordinary-outbound LANE 0, awaiting a
         /// consumer. Test-observability surface added for design.md task 8.5 ("slow receiver tests
-        /// proving queues do not grow unbounded") -- <c>System.Threading.Channels</c>' bounded
-        /// channel implementation supports O(1) <see cref="ChannelReader{T}.Count"/>, so this is
-        /// cheap enough to sample repeatedly from a test without perturbing the property under
+        /// proving queues do not grow unbounded") -- <see cref="OutboundLaneQueue.Count"/> is O(1),
+        /// so this is cheap enough to sample repeatedly from a test without perturbing the property under
         /// test. Restart callbacks also sample queued demand after releasing a stopped stream's
         /// gate; producers enqueue before checking that gate so no accepted work is stranded.
         /// See <see cref="LaneQueueCount"/>
         /// for lanes 1..N-1.
         /// </summary>
-        public int OutboundQueueCount => _laneChannels[0].Reader.Count;
+        public int OutboundQueueCount => _laneQueues[0].Count;
 
         /// <summary>
         /// The LANE-indexed analog of <see cref="OutboundQueueCount"/>: the number of elements
         /// CURRENTLY buffered in ordinary-outbound LANE <paramref name="lane"/>. See
         /// <see cref="OutboundQueueCount"/>'s remarks.
         /// </summary>
-        public int LaneQueueCount(int lane) => _laneChannels[lane].Reader.Count;
+        public int LaneQueueCount(int lane) => _laneQueues[lane].Count;
 
         /// <summary>
         /// The CONTROL-channel analog of <see cref="OutboundQueueCount"/>. See its remarks.
@@ -1081,8 +1021,8 @@ namespace Akka.Remote.Artery
             _largeGate.EnsureStarted(() => materialize(this));
 
         /// <summary>
-        /// Marks EVERY ordinary-outbound lane channel complete (no further writes accepted) so
-        /// their materialized <see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/> consumers
+        /// Marks EVERY ordinary-outbound lane queue complete (no further writes accepted) so
+        /// their materialized <see cref="OutboundLaneSource"/> consumers
         /// all finish gracefully. Called on transport shutdown -- also latches
         /// <see cref="IsOutboundShutDown"/> so design.md group 9's reconnect logic never
         /// re-materializes this stream again. At <c>outbound-lanes = 1</c> this completes exactly
@@ -1090,8 +1030,8 @@ namespace Akka.Remote.Artery
         /// </summary>
         public void CompleteOutbound()
         {
-            foreach (var laneChannel in _laneChannels)
-                laneChannel.Writer.TryComplete();
+            foreach (var laneQueue in _laneQueues)
+                laneQueue.Complete();
 
             _outboundShutDown = true;
         }
@@ -1136,28 +1076,14 @@ namespace Akka.Remote.Artery
         /// contract). Without the drain, a completed channel strands its remaining elements forever,
         /// SILENTLY -- nothing will ever read them once the consumer is gone (observed live: 34 dead
         /// channels holding 456 undrained items). Drained elements are NEVER re-fed into any
-        /// stream. Racing the live consumer is benign: <c>TryRead</c> hands each element to exactly
-        /// one reader.
+        /// stream. Racing the live consumer is benign: each envelope goes to exactly one reader, and
+        /// what is left when the lane's stream stops is reported then
+        /// (<see cref="OutboundLaneQueue.DrainToDropped"/>).
         /// </summary>
         public void DrainOutboundToDropped(Action<IOutboundEnvelope> onDrained)
         {
-            for (var lane = 0; lane < _laneChannels.Length; lane++)
-            {
-                // Carried-over envelopes are older than the channel's, so they are reported first.
-                Queue<IOutboundEnvelope>? carried;
-                lock (_laneCarryOver)
-                {
-                    carried = _laneCarryOver[lane];
-                    _laneCarryOver[lane] = null;
-                }
-
-                if (carried is not null)
-                    foreach (var envelope in carried)
-                        onDrained(envelope);
-
-                while (_laneChannels[lane].Reader.TryRead(out var envelope))
-                    onDrained(envelope);
-            }
+            foreach (var laneQueue in _laneQueues)
+                laneQueue.DrainToDropped(onDrained);
         }
 
         /// <summary>

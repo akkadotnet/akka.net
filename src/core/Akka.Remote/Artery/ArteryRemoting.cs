@@ -1976,22 +1976,11 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// The source of ordinary lane <paramref name="lane"/>: the lane's channel, preceded by any
-        /// envelopes the previous materialization's encode stage carried over, so they are sent first.
-        /// Carried-over envelopes are taken one per pull, so any not yet taken when this
-        /// materialization stops stay carried over.
+        /// The source of ordinary lane <paramref name="lane"/>: the lane's queue, which hands out any
+        /// envelopes the previous materialization's encode stage carried over before the rest.
         /// </summary>
-        private static Source<IOutboundEnvelope, NotUsed> OrdinaryLaneSource(Association association, int lane)
-        {
-            var channel = ChannelSource.FromReader(association.LaneReader(lane));
-            if (!association.HasCarryOver(lane))
-                return channel;
-
-            return Source.Unfold(lane, l => association.TakeCarryOver(l) is { } envelope
-                    ? Option<(int, IOutboundEnvelope)>.Create((l, envelope))
-                    : Option<(int, IOutboundEnvelope)>.None)
-                .Concat(channel);
-        }
+        private static Source<IOutboundEnvelope, NotUsed> OrdinaryLaneSource(Association association, int lane) =>
+            Source.FromGraph(new OutboundLaneSource(association.LaneReader(lane)));
 
         /// <summary>
         /// Materializes this association's ORDINARY outbound stream. GATE B: at
@@ -2449,12 +2438,7 @@ namespace Akka.Remote.Artery
 
             var isControlStream = streamId == ArteryStreamId.Control;
             var isLargeStream = streamId == ArteryStreamId.Large;
-            var reader = streamId switch
-            {
-                ArteryStreamId.Control => association.ControlReader,
-                ArteryStreamId.Large => association.LargeReader,
-                _ => association.OutboundReader
-            };
+            var reader = isControlStream ? association.ControlReader : association.LargeReader;
 
             var outboundContext = new AssociationRegistryOutboundContext(
                 _registry,
