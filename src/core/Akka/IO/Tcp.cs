@@ -666,12 +666,11 @@ namespace Akka.IO
         /// class to the handler actor which was designated in the <see cref="Register" /> message.
         /// </summary>
         /// <remarks>
-        /// <see cref="Data"/> is a <see cref="ReadOnlySequence{T}"/> to allow potentially
-        /// non-contiguous buffers from the underlying transport. Today the actor copies
-        /// the pipe's pooled segments into a single contiguous array before delivery, so
-        /// the sequence is single-segment in practice; downstream framing stages should
-        /// still treat it as multi-segment to remain compatible with future zero-copy
-        /// optimizations.
+        /// <see cref="Data"/> is a <see cref="ReadOnlySequence{T}"/> and can have more than one
+        /// segment. The actor copies the pipe's pooled segments into fresh arrays before delivery:
+        /// one array for a read of up to 64 KiB, and several arrays of at most 64 KiB each for a
+        /// larger read. Consume the whole sequence rather than only its first segment. The arrays
+        /// belong to the receiver and are safe to retain.
         /// </remarks>
         public sealed class Received : Event
         {
