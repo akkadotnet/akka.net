@@ -136,44 +136,33 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
-        PropagateNestedFailures(candidateSchemas, failures);
-
         return new MetadataSchemaTable(candidateSchemas.ToImmutableDictionary(), failures.ToImmutableDictionary());
     }
 
-    /// <summary>
-    /// A candidate schema that itself names a type now known to be a failure is a failure too
-    /// (Decision 16: "the failure can sit one level down, inside A's own schema ... it does not stop
-    /// at the property in B that referenced it"). Runs to a fixed point: propagating one failure can
-    /// turn a second, previously-clean candidate into a failure too, when it nests the first.
-    /// Attributes the propagated failure to whichever nested reference was found broken, in
-    /// <see cref="TypeKey.MetadataName"/> order, for a deterministic choice when a candidate nests
-    /// more than one broken reference. Only ever does real work when <paramref name="candidateSchemas"/>
-    /// is non-empty, which requires at least one referenced-assembly type to have resolved -- never
-    /// the case for a compilation with no cross-assembly references at all.
-    /// </summary>
-    private static void PropagateNestedFailures(Dictionary<TypeKey, MessageInfo> candidateSchemas, Dictionary<TypeKey, AccessibilityFailure> failures)
+    // A formatter handles the whole position, so its nested schema cannot invalidate this serializer.
+    private static (ImmutableDictionary<TypeKey, MessageInfo> Schemas, ImmutableDictionary<TypeKey, AccessibilityFailure> Failures)
+        PropagateNestedFailures(
+            ImmutableDictionary<TypeKey, MessageInfo> allSchemas, MetadataSchemaTable metadataSchemas,
+            Dictionary<TypeKey, FormatterInfo> serializerFormatters)
     {
-        if (candidateSchemas.Count == 0)
-            return;
-
+        var schemas = allSchemas.ToBuilder();
+        var failures = metadataSchemas.AccessibilityFailuresByType.ToBuilder();
         var nestedKeys = new HashSet<TypeKey>();
         bool changed;
         do
         {
             changed = false;
-            foreach (var key in candidateSchemas.Keys.ToImmutableArray())
+            foreach (var imported in metadataSchemas.SchemasByType)
             {
-                if (failures.ContainsKey(key))
+                if (!schemas.TryGetValue(imported.Key, out var schema) || !ReferenceEquals(schema, imported.Value))
                     continue;
 
                 nestedKeys.Clear();
-                CollectForeignReferences(candidateSchemas[key], nestedKeys);
-
+                CollectForeignReferences(schema, nestedKeys, serializerFormatters);
                 TypeKey? brokenNestedKey = null;
                 foreach (var nestedKey in nestedKeys)
                 {
-                    if (!failures.ContainsKey(nestedKey))
+                    if (schemas.ContainsKey(nestedKey) || !failures.ContainsKey(nestedKey))
                         continue;
 
                     if (brokenNestedKey == null || string.CompareOrdinal(nestedKey.MetadataName, brokenNestedKey.Value.MetadataName) < 0)
@@ -183,11 +172,13 @@ public sealed partial class AkkaSerializerGenerator
                 if (brokenNestedKey == null)
                     continue;
 
-                failures[key] = failures[brokenNestedKey.Value];
-                candidateSchemas.Remove(key);
+                failures[imported.Key] = failures[brokenNestedKey.Value];
+                schemas.Remove(imported.Key);
                 changed = true;
             }
         } while (changed);
+
+        return (schemas.ToImmutable(), failures.ToImmutable());
     }
 
     /// <summary>
@@ -206,7 +197,7 @@ public sealed partial class AkkaSerializerGenerator
     /// over every declared message, so it deliberately avoids an iterator-method per message: an
     /// iterator method allocates its state machine the moment it is called, even when it yields
     /// nothing, which is the overwhelmingly common case (a message with no cross-assembly reference
-    /// at all). <see cref="CollectForeignReferences(MessageInfo,HashSet{TypeKey})"/> instead writes
+    /// at all). <see cref="CollectForeignReferences"/> instead writes
     /// directly into a reused <see cref="HashSet{T}"/>.
     /// </remarks>
     private static ImmutableArray<TypeKey> ComputeReferencedTypeKeys(ImmutableArray<MessageInfo?> messages, ImmutableArray<SerializerInfo?> serializers, CompilationFacts facts)
@@ -258,11 +249,15 @@ public sealed partial class AkkaSerializerGenerator
     /// the common case for every message in a compilation with none -- costs no allocation beyond the
     /// (already-materialized) field/mapping walk itself.
     /// </summary>
-    private static void CollectForeignReferences(MessageInfo message, HashSet<TypeKey> destination)
+    private static void CollectForeignReferences(
+        MessageInfo message, HashSet<TypeKey> destination, Dictionary<TypeKey, FormatterInfo>? serializerFormatters = null)
     {
         foreach (var field in message.Fields)
         {
-            CollectForeignObjectMappings(field.Mapping, destination);
+            if (FindFormatter(field.Mapping, message.Formatters, serializerFormatters) != null)
+                continue;
+
+            CollectForeignObjectMappings(field.Mapping, message.Formatters, destination, serializerFormatters);
 
             foreach (var unionMember in field.UnionMembers)
             {
@@ -277,13 +272,18 @@ public sealed partial class AkkaSerializerGenerator
     /// non-generic Object mappings and writing directly into <paramref name="destination"/> instead
     /// of yielding every Object mapping regardless of origin.
     /// </summary>
-    private static void CollectForeignObjectMappings(TypeMapping mapping, HashSet<TypeKey> destination)
+    private static void CollectForeignObjectMappings(
+        TypeMapping mapping, ImmutableArray<FormatterInfo> messageFormatters, HashSet<TypeKey> destination,
+        Dictionary<TypeKey, FormatterInfo>? serializerFormatters)
     {
         if (mapping.Kind == FieldKind.Object && mapping.ForeignAssemblyName.Length > 0 && !mapping.IsGenericConstruction && mapping.Key.TypeArguments.IsEmpty)
             destination.Add(mapping.Key);
 
         foreach (var argument in mapping.TypeArguments)
-            CollectForeignObjectMappings(argument, destination);
+        {
+            if (FindFormatter(argument, messageFormatters, serializerFormatters) == null)
+                CollectForeignObjectMappings(argument, messageFormatters, destination, serializerFormatters);
+        }
     }
 
     /// <summary>

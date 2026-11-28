@@ -39,6 +39,7 @@
          transitively; both are used directly by this app's code, but do not need their own
          ProjectReference here. -->
     <ProjectReference Include="..\..\contrib\hosting\Akka.Hosting\Akka.Hosting.csproj" />
+    <ProjectReference Include="..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- Turns Akka.DynamicTypeLoading off, same as Akka.AOT.App and for the same reason:

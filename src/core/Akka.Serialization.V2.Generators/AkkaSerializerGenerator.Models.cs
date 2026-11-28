@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -268,6 +269,51 @@ public sealed partial class AkkaSerializerGenerator
             // were never distinguishable from their own display string in the first place.
             var fallbackName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             return new TypeKey(fallbackName, ImmutableArray<TypeKey>.Empty, includeDisplayName ? fallbackName : string.Empty);
+        }
+
+        private static readonly SymbolDisplayFormat FormatterSimpleTypeDisplayFormat =
+            SymbolDisplayFormat.FullyQualifiedFormat.RemoveMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
+
+        // Formatter matching also needs assembly identity and constructed containing-type arguments.
+        public static TypeKey FromFormatterSymbol(ITypeSymbol type, bool includeDisplayName = true, TypeKey schemaKey = default)
+        {
+            var displayName = includeDisplayName
+                ? type.ToDisplayString(type is INamedTypeSymbol { IsGenericType: false }
+                    ? FormatterSimpleTypeDisplayFormat
+                    : SymbolDisplayFormat.FullyQualifiedFormat)
+                : string.Empty;
+
+            if (type is INamedTypeSymbol named)
+            {
+                var metadataName = schemaKey.MetadataName ?? BuildMetadataName(named);
+                var assemblyName = named.ContainingAssembly?.Identity.GetDisplayName() ?? string.Empty;
+                var arguments = ImmutableArray<TypeKey>.Empty;
+                if (named.IsGenericType)
+                {
+                    var builder = ImmutableArray.CreateBuilder<TypeKey>();
+                    AddFormatterTypeArguments(named, builder);
+                    arguments = builder.ToImmutable();
+                }
+
+                return new TypeKey(assemblyName + "|" + metadataName, arguments, displayName);
+            }
+
+            if (type is IArrayTypeSymbol array)
+            {
+                var shape = array.IsSZArray ? "[]" : "[" + array.Rank.ToString(CultureInfo.InvariantCulture) + "]";
+                return new TypeKey(shape, ImmutableArray.Create(FromFormatterSymbol(array.ElementType, includeDisplayName: false)), displayName);
+            }
+
+            return new TypeKey(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), ImmutableArray<TypeKey>.Empty, displayName);
+        }
+
+        private static void AddFormatterTypeArguments(INamedTypeSymbol type, ImmutableArray<TypeKey>.Builder arguments)
+        {
+            if (type.ContainingType is { IsGenericType: true } containing)
+                AddFormatterTypeArguments(containing, arguments);
+
+            foreach (var argument in type.TypeArguments)
+                arguments.Add(FromFormatterSymbol(argument, includeDisplayName: false));
         }
 
         private static ImmutableArray<TypeKey> BuildTypeArguments(INamedTypeSymbol symbol, bool includeDisplayName)
@@ -558,8 +604,10 @@ public sealed partial class AkkaSerializerGenerator
             bool isValueType = false,
             string foreignAssemblyName = "",
             ImmutableArray<string> baseTypeNames = default,
-            string inaccessibleReason = "")
+            string inaccessibleReason = "",
+            ImmutableArray<FormatterInfo> formatters = default)
         {
+            Formatters = formatters.IsDefault ? ImmutableArray<FormatterInfo>.Empty : formatters;
             SimpleName = simpleName;
             Key = key;
             Manifest = manifest;
@@ -588,6 +636,7 @@ public sealed partial class AkkaSerializerGenerator
 
         public string Manifest { get; }
         public ImmutableArray<FieldInfo> Fields { get; }
+        public ImmutableArray<FormatterInfo> Formatters { get; }
 
         // A synthetic unnamed field lets the existing reachability and union validation pipeline
         // process the union's cases. It is emitted directly, without a message-field map.
@@ -678,7 +727,7 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName, BaseTypeNames, InaccessibleReason);
+            return new MessageInfo(SimpleName, Key, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName, IsSealed, IsAbstract, IsValueType, ForeignAssemblyName, BaseTypeNames, InaccessibleReason, Formatters);
         }
 
         public bool Equals(MessageInfo? other)
@@ -704,7 +753,8 @@ public sealed partial class AkkaSerializerGenerator
                 && ValueEquality.SequenceEquals(Fields, other.Fields)
                 && ValueEquality.SequenceEquals(Protocols, other.Protocols)
                 && ValueEquality.SequenceEquals(InvalidFields, other.InvalidFields)
-                && ValueEquality.SequenceEquals(BaseTypeNames, other.BaseTypeNames);
+                && ValueEquality.SequenceEquals(BaseTypeNames, other.BaseTypeNames)
+                && ValueEquality.SequenceEquals(Formatters, other.Formatters);
         }
 
         public override bool Equals(object? obj) => Equals(obj as MessageInfo);
@@ -728,6 +778,7 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, Protocols);
             hash = ValueEquality.Combine(hash, InvalidFields);
             hash = ValueEquality.Combine(hash, BaseTypeNames);
+            hash = ValueEquality.Combine(hash, Formatters);
             return hash;
         }
     }
@@ -1354,7 +1405,7 @@ public sealed partial class AkkaSerializerGenerator
 
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, IsDiscoveredUnion);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter);
         }
 
         /// <summary>
@@ -1420,8 +1471,10 @@ public sealed partial class AkkaSerializerGenerator
             string foreignAssemblyName = "",
             bool suggestsEnvelopeOrUnion = false,
             bool isGenericConstruction = false,
-            FormatterInfo? formatter = null)
+            FormatterInfo? formatter = null,
+            TypeKey formatterTarget = default)
         {
+            FormatterTarget = formatterTarget;
             Kind = kind;
             Key = key;
             IsValueType = isValueType;
@@ -1514,21 +1567,23 @@ public sealed partial class AkkaSerializerGenerator
         /// For a <see cref="FieldKind.Formatted"/> collection element/key/value: the registered
         /// formatter that reads and writes it. Set only by formatter resolution (see
         /// <see cref="AkkaSerializerGenerator.ResolveMessages"/>) -- never at extraction time, because
-        /// the formatter set belongs to the serializer, not the message. A <see cref="FieldKind.Formatted"/>
+        /// the final formatter depends on both the serializer and the declaring message. A <see cref="FieldKind.Formatted"/>
         /// FIELD keeps its formatter on <see cref="FieldInfo.Formatter"/> instead, so every field-position
         /// model stays exactly as it was; null for every other mapping.
         /// </summary>
         public FormatterInfo? Formatter { get; }
 
-        public TypeMapping WithKey(TypeKey key)
-            => new(Kind, key, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter);
+        public TypeKey FormatterTarget { get; }
+
+        public TypeMapping WithFormatterTarget(TypeKey key, TypeKey formatterTarget)
+            => new(Kind, key, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter, formatterTarget);
 
         public TypeMapping AsCollectionElement(string declaredTypeName, bool isNullable)
-            => new(Kind, Key, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter);
+            => new(Kind, Key, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter, FormatterTarget);
 
         /// <summary>Replaces the child mappings of a collection kind, keeping everything else.</summary>
         public TypeMapping WithTypeArguments(ImmutableArray<TypeMapping> typeArguments)
-            => new(Kind, Key, IsValueType, DeclaredTypeName, IsNullable, typeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter);
+            => new(Kind, Key, IsValueType, DeclaredTypeName, IsNullable, typeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion, IsGenericConstruction, Formatter, FormatterTarget);
 
         // Explicit IEquatable implementation: the compiler-provided struct equality would compare
         // the TypeArguments ImmutableArray by underlying-array REFERENCE, breaking value equality
@@ -1545,6 +1600,7 @@ public sealed partial class AkkaSerializerGenerator
                 && SuggestsEnvelopeOrUnion == other.SuggestsEnvelopeOrUnion
                 && IsGenericConstruction == other.IsGenericConstruction
                 && Equals(Formatter, other.Formatter)
+                && FormatterTarget.Equals(other.FormatterTarget)
                 && ValueEquality.SequenceEquals(TypeArguments, other.TypeArguments);
         }
 
@@ -1563,27 +1619,27 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, SuggestsEnvelopeOrUnion);
             hash = ValueEquality.Combine(hash, IsGenericConstruction);
             hash = ValueEquality.Combine(hash, Formatter?.GetHashCode() ?? 0);
+            hash = ValueEquality.Combine(hash, FormatterTarget.GetHashCode());
             hash = ValueEquality.Combine(hash, TypeArguments);
             return hash;
         }
     }
 
     /// <summary>
-    /// A serializer-scoped hand-written formatter registration extracted from
-    /// <c>[AkkaSerializerFormatter&lt;TTarget, TFormatter&gt;]</c>. Carries only
-    /// strings/bools/enums (no <see cref="ISymbol"/> references) so it stays cheap to hold across
-    /// incremental generator passes.
+    /// A formatter registration from a serializer or a message.
     /// </summary>
     internal sealed class FormatterInfo : IEquatable<FormatterInfo>
     {
-        public FormatterInfo(TypeKey targetTypeKey, bool isTargetValueType, string formatterTypeFullName, bool isAbstract, FormatterCtorKind ctorKind, bool isTargetSupported)
+        public FormatterInfo(TypeKey targetTypeKey, bool isTargetValueType, TypeKey formatterTypeKey, bool isAbstract, FormatterCtorKind ctorKind, bool isTargetSupported, bool isAccessible, bool isMessageDefault)
         {
             TargetTypeKey = targetTypeKey;
             IsTargetValueType = isTargetValueType;
-            FormatterTypeFullName = formatterTypeFullName;
+            FormatterTypeKey = formatterTypeKey;
             IsAbstract = isAbstract;
             CtorKind = ctorKind;
             IsTargetSupported = isTargetSupported;
+            IsAccessible = isAccessible;
+            IsMessageDefault = isMessageDefault;
         }
 
         /// <summary>Key of the formatter's target type -- what the formatter dictionary in <c>ResolveMessages</c> is keyed by.</summary>
@@ -1593,7 +1649,8 @@ public sealed partial class AkkaSerializerGenerator
         public string TargetTypeFullName => TargetTypeKey.DisplayName ?? string.Empty;
 
         public bool IsTargetValueType { get; }
-        public string FormatterTypeFullName { get; }
+        public TypeKey FormatterTypeKey { get; }
+        public string FormatterTypeFullName => FormatterTypeKey.DisplayName ?? string.Empty;
 
         /// <summary>
         /// Whether TFormatter is an abstract type. The `where TFormatter :
@@ -1603,6 +1660,8 @@ public sealed partial class AkkaSerializerGenerator
         public bool IsAbstract { get; }
         public FormatterCtorKind CtorKind { get; }
         public bool IsTargetSupported { get; }
+        public bool IsAccessible { get; }
+        public bool IsMessageDefault { get; }
 
         public bool Equals(FormatterInfo? other)
         {
@@ -1614,10 +1673,12 @@ public sealed partial class AkkaSerializerGenerator
 
             return TargetTypeKey.Equals(other.TargetTypeKey)
                 && IsTargetValueType == other.IsTargetValueType
-                && string.Equals(FormatterTypeFullName, other.FormatterTypeFullName, StringComparison.Ordinal)
+                && FormatterTypeKey.Equals(other.FormatterTypeKey)
                 && IsAbstract == other.IsAbstract
                 && CtorKind == other.CtorKind
-                && IsTargetSupported == other.IsTargetSupported;
+                && IsTargetSupported == other.IsTargetSupported
+                && IsAccessible == other.IsAccessible
+                && IsMessageDefault == other.IsMessageDefault;
         }
 
         public override bool Equals(object? obj) => Equals(obj as FormatterInfo);
@@ -1627,10 +1688,12 @@ public sealed partial class AkkaSerializerGenerator
             var hash = ValueEquality.Seed;
             hash = ValueEquality.Combine(hash, TargetTypeKey.GetHashCode());
             hash = ValueEquality.Combine(hash, IsTargetValueType);
-            hash = ValueEquality.Combine(hash, FormatterTypeFullName);
+            hash = ValueEquality.Combine(hash, FormatterTypeKey.GetHashCode());
             hash = ValueEquality.Combine(hash, IsAbstract);
             hash = ValueEquality.Combine(hash, (int)CtorKind);
             hash = ValueEquality.Combine(hash, IsTargetSupported);
+            hash = ValueEquality.Combine(hash, IsAccessible);
+            hash = ValueEquality.Combine(hash, IsMessageDefault);
             return hash;
         }
     }
@@ -1822,7 +1885,8 @@ public sealed partial class AkkaSerializerGenerator
         UnionImplementorNotSerializable,
         SerializableOnCSharpUnion,
         ManifestOnNonGenericInclude,
-        NestedValueHasSubclasses
+        NestedValueHasSubclasses,
+        FormatterTypeNotAccessible
     }
 
     /// <summary>
@@ -2492,7 +2556,7 @@ public sealed partial class AkkaSerializerGenerator
     /// message text can drop in directly. When the broken member sits one or more levels below the
     /// type a local property names directly (Money is fine, but its own nested field Address is not),
     /// this describes THAT failing type/member, not Money -- see
-    /// <see cref="AkkaSerializerGenerator.ComputeMetadataSchemas"/>'s propagation step.
+    /// <see cref="AkkaSerializerGenerator.PropagateNestedFailures"/>.
     /// </summary>
     internal sealed class AccessibilityFailure : IEquatable<AccessibilityFailure>
     {

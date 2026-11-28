@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using Akka.Actor;
 using Akka.DependencyInjection;
 using Akka.Event;
@@ -56,6 +57,8 @@ appBuilder.Services.AddAkka("hosting-aot", (builder, _) =>
         // WithExtension<T>: a custom Akka.NET extension, started automatically at boot through
         // ExtensionsSetup (see CanaryExtension.cs).
         .WithExtension<CanaryExtensionProvider>()
+
+        .WithCustomSerializer(TypedRefSerializer.CreateSerializerDetails)
 
         // WithActorSystemLivenessCheck: the built-in health check every typical Hosting app wires
         // into Microsoft.Extensions.Diagnostics.HealthChecks - unhealthy once the ActorSystem

@@ -1129,6 +1129,33 @@ single transport-aware string. It follows the same convention the generator appl
 the owning system's default address, when constructed with an `ExtendedActorSystem`. Otherwise it
 uses the path's own address.
 
+### Formatter Defaults on a Message
+
+An `[AkkaMessageFormatter<TTarget, TFormatter>]` declaration supplies a default for matching
+fields on an `[AkkaSerializable]` message. It also applies to matching collection elements,
+keys and values on that message. An explicit registration for the same target on the serializer
+takes precedence. When a serializer embeds a message from another assembly, it can use the
+default declared in that message's schema. Each nested message supplies its own defaults.
+
+Akka.Streams provides `SourceRefFormatter<T>` and `SinkRefFormatter<T>` for typed stream
+references. A registered serializer for `IOrderProtocol` can include the following message.
+
+```csharp
+using Akka.Serialization.V2;
+using Akka.Streams;
+using Akka.Streams.Serialization;
+
+[AkkaSerializable(Manifest = "orders-available")]
+[AkkaMessageFormatter<ISourceRef<Order>, SourceRefFormatter<Order>>]
+public sealed record OrdersAvailable(
+    [property: AkkaField(1)] ISourceRef<Order> Orders) : IOrderProtocol;
+```
+
+The formatter writes the partner actor path. The reader resolves it through the receiving
+actor system and constructs the reference with the field's element type. This typed path
+supports dynamic type loading disabled. An `object` field uses the runtime serializer
+envelope, which has the same dynamic loading requirements as a bare stream reference.
+
 ## Wire Format
 
 Every generated message writes a MessagePack **map**. Its keys are the field indexes from
@@ -1237,9 +1264,9 @@ property's type, the attribute was removed, and those ids stay permanent gaps.
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
 | AKKASG007 | Error | Nested value object serialization definition is required | A field's type isn't `[AkkaSerializable]` with its own `[AkkaField]`s and has no registered formatter. For a type declared in another assembly (including the BCL), the message names the assembly and offers a formatter, or `[AkkaSerializable]` in the type's own assembly. |
 | AKKASG008 | Error | Formatter type must not be abstract | A registered `TFormatter` is abstract and can't be instantiated. |
-| AKKASG009 | Error | Duplicate formatter registration | A serializer registers more than one formatter for the same target type. |
+| AKKASG009 | Error | Duplicate formatter registration | A serializer or message declares more than one formatter for the same target type in its own scope. |
 | AKKASG010 | Error | Formatter constructor not usable | A formatter has neither a public parameterless constructor nor one taking `ExtendedActorSystem`. |
-| AKKASG011 | Error | Formatter target type is not supported | A formatter's target type is generic, an array, or otherwise not a plain named type. |
+| AKKASG011 | Error | Formatter target type is not supported | Use a closed named type. For `Nullable<T>` fields, register a formatter for the underlying `T`. |
 | AKKASG012 | Error | Duplicate top-level message manifest | Two top-level messages on the same serializer share a manifest. |
 | AKKASG013 | Error | Duplicate serializer id | Two `[AkkaSerializer]` classes in the compilation declare the same `SerializerId`. |
 | AKKASG014 | Error | Enum underlying type is not supported | An enum field's underlying type isn't fully `int32`-representable (for example `long` or `uint`). |
@@ -1275,6 +1302,7 @@ property's type, the attribute was removed, and those ids stay permanent gaps.
 | AKKASG051 | Error | A C# union requires a manifest | Set an explicit `Manifest` on `[AkkaSerializable]` when marking a C# 15 union declaration. |
 | AKKASG052 | Error | Nested value type has subclasses | A property writes a concrete `[AkkaSerializable]` class that is not sealed as a nested value (as its own type, or as a collection element, key, or value), and a class in this compilation derives from it. A nested value is written as the base class's own fields, so a subclass value would lose its own. Seal the class; for the property's own type you can instead make it abstract and remove its `[AkkaSerializable]` so the property becomes a [union](#unions). |
 | AKKASG053 | Error | Manifest belongs on the included type | `[AkkaSerializerIncludes<T>]` sets `Manifest`, but `T` is not generic. A non-generic type declares its manifest on its own `[AkkaSerializable]`; remove `Manifest` from the include and declare it there. See [Including Messages Outside the Protocol](#including-messages-outside-the-protocol). |
+| AKKASG054 | Error | Selected formatter cannot be named by the generated serializer | Make the formatter type accessible to the generated serializer or register an accessible override for the same target on the serializer. |
 
 ## Limitations Today and Planned Changes
 
